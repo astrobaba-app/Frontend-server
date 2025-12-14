@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, ArrowLeft, Sparkles, Clock, Wallet as WalletIcon, Trash2, Plus, MessageSquare, Phone, PhoneOff, Mic, MicOff } from 'lucide-react';
 import Link from 'next/link';
@@ -764,9 +763,32 @@ const AIChatPage = () => {
       >
         {/* Sidebar Header */}
         <div 
-          className="p-4 border-b space-y-2"
+          className="p-4 border-b space-y-3"
           style={{ borderColor: colors.gray + '20' }}
         >
+          {/* AI Astrologer summary */}
+          <div className="flex flex-col items-center gap-2 text-center">
+            {/* Astrobaba icon / avatar (AB) */}
+            <div className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden"
+              style={{ backgroundColor: colors.primeYellow }}
+            >
+              <span className="text-xs font-bold text-white">AB</span>
+            </div>
+
+            {/* Text lines under the icon */}
+            <div className="flex flex-col gap-0.5 items-center">
+              <p className="text-xs font-semibold tracking-wide" style={{ color: colors.darkGray }}>
+                AI Astrologer
+              </p>
+              <p className="text-[11px]" style={{ color: colors.gray }}>
+                Live Vedic guidance powered by Astrobaba
+              </p>
+              <p className="text-[11px] font-semibold" style={{ color: colors.primeGreen }}>
+                ₹50/min
+              </p>
+            </div>
+          </div>
+
           <button
             onClick={handleNewChat}
             disabled={isLoading}
@@ -774,7 +796,7 @@ const AIChatPage = () => {
             style={{ backgroundColor: colors.primeYellow, color: colors.white }}
           >
             <Plus size={20} />
-            <span className="font-semibold">New Chat</span>
+            <span className="font-semibold text-sm">New Chat</span>
           </button>
           
           <button
@@ -784,7 +806,7 @@ const AIChatPage = () => {
             style={{ backgroundColor: colors.primeGreen, color: colors.white }}
           >
             <Phone size={20} />
-            <span className="font-semibold">
+            <span className="font-semibold text-sm">
               {isConnecting ? 'Connecting...' : isCallActive ? 'Call Active' : 'Voice Call'}
             </span>
           </button>
