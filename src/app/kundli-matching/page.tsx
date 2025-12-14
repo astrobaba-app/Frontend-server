@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/useToast";
 import { colors } from "@/utils/colors";
 import { createKundliMatching, type KundliMatchingRequest } from "@/store/api/kundlimatiching";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import api from "@/store/api";
 
 export default function KundliMatchingPage() {
   const router = useRouter();
@@ -23,8 +24,8 @@ export default function KundliMatchingPage() {
     birthLocation: "",
     timeOfBirth: "",
     dontKnowTime: false,
-    latitude: 0,
-    longitude: 0,
+    latitude: "",
+    longitude: "",
   });
 
   const [boyData, setBoyData] = useState({
@@ -33,9 +34,22 @@ export default function KundliMatchingPage() {
     birthLocation: "",
     timeOfBirth: "",
     dontKnowTime: false,
-    latitude: 0,
-    longitude: 0,
+    latitude: "",
+    longitude: "",
   });
+
+  const [girlPlaceSuggestions, setGirlPlaceSuggestions] = useState<{
+    description: string;
+    placeId: string;
+  }[]>([]);
+  const [boyPlaceSuggestions, setBoyPlaceSuggestions] = useState<{
+    description: string;
+    placeId: string;
+  }[]>([]);
+  const [girlIsLoadingPlaces, setGirlIsLoadingPlaces] = useState(false);
+  const [boyIsLoadingPlaces, setBoyIsLoadingPlaces] = useState(false);
+  const [girlPlacesError, setGirlPlacesError] = useState<string | null>(null);
+  const [boyPlacesError, setBoyPlacesError] = useState<string | null>(null);
 
   const savedMatches = [
     {
@@ -88,6 +102,136 @@ export default function KundliMatchingPage() {
     },
   ];
 
+  // Fetch location suggestions for Indian cities via backend proxy (avoids CORS)
+  const fetchPlaceSuggestions = async (query: string, forWhom: "girl" | "boy") => {
+    if (!query || query.trim().length < 2) {
+      if (forWhom === "girl") {
+        setGirlPlaceSuggestions([]);
+      } else {
+        setBoyPlaceSuggestions([]);
+      }
+      return;
+    }
+
+    try {
+      if (forWhom === "girl") {
+        setGirlIsLoadingPlaces(true);
+        setGirlPlacesError(null);
+      } else {
+        setBoyIsLoadingPlaces(true);
+        setBoyPlacesError(null);
+      }
+
+      const res = await api.get("/maps/autocomplete", {
+        params: { input: query.trim() },
+      });
+
+      const data = res.data;
+      if (data.status !== "OK") {
+        console.warn("Places API returned non-OK status:", data.status, data.error_message);
+        if (forWhom === "girl") {
+          setGirlPlaceSuggestions([]);
+        } else {
+          setBoyPlaceSuggestions([]);
+        }
+        return;
+      }
+
+      const suggestions = (data.predictions || []).map((p: any) => {
+        const terms = p.terms || [];
+        const city = terms[0]?.value || "";
+        const state = terms[1]?.value || "";
+        const country = terms[terms.length - 1]?.value || "";
+        const description = [city, state, country].filter(Boolean).join(", ");
+        return {
+          description: description || p.description,
+          placeId: p.place_id,
+        };
+      });
+
+      if (forWhom === "girl") {
+        setGirlPlaceSuggestions(suggestions);
+      } else {
+        setBoyPlaceSuggestions(suggestions);
+      }
+    } catch (error: any) {
+      console.error("Error fetching place suggestions:", error);
+      const message = error?.message || "Failed to fetch place suggestions";
+      if (forWhom === "girl") {
+        setGirlPlacesError(message);
+        setGirlPlaceSuggestions([]);
+      } else {
+        setBoyPlacesError(message);
+        setBoyPlaceSuggestions([]);
+      }
+    } finally {
+      if (forWhom === "girl") {
+        setGirlIsLoadingPlaces(false);
+      } else {
+        setBoyIsLoadingPlaces(false);
+      }
+    }
+  };
+
+  // When user selects a suggestion, update birthLocation and fetch lat/lng via backend proxy
+  const handleSelectPlaceSuggestion = async (
+    placeId: string,
+    description: string,
+    forWhom: "girl" | "boy"
+  ) => {
+    try {
+      if (forWhom === "girl") {
+        setGirlIsLoadingPlaces(true);
+        setGirlPlacesError(null);
+      } else {
+        setBoyIsLoadingPlaces(true);
+        setBoyPlacesError(null);
+      }
+
+      const res = await api.get("/maps/details", {
+        params: { placeId },
+      });
+
+      const data = res.data;
+      const location = data.result?.geometry?.location;
+      if (!location) {
+        throw new Error("Location details not available for selected place");
+      }
+
+      if (forWhom === "girl") {
+        setGirlData((prev) => ({
+          ...prev,
+          birthLocation: description,
+          latitude: String(location.lat),
+          longitude: String(location.lng),
+        }));
+        setGirlPlaceSuggestions([]);
+      } else {
+        setBoyData((prev) => ({
+          ...prev,
+          birthLocation: description,
+          latitude: String(location.lat),
+          longitude: String(location.lng),
+        }));
+        setBoyPlaceSuggestions([]);
+      }
+    } catch (error: any) {
+      console.error("Error fetching place details:", error);
+      const message = error?.message || "Failed to fetch place details";
+      if (forWhom === "girl") {
+        setGirlPlacesError(message);
+      } else {
+        setBoyPlacesError(message);
+      }
+    } finally {
+      if (forWhom === "girl") {
+        setGirlIsLoadingPlaces(false);
+      } else {
+        setBoyIsLoadingPlaces(false);
+      }
+    }
+  };
+
   const handleMatchHoroscopes = async () => {
     // Validation
     if (!girlData.name || !girlData.dob || !girlData.birthLocation) {
@@ -99,6 +243,31 @@ export default function KundliMatchingPage() {
       return;
     }
 
+    if (!girlData.latitude || !girlData.longitude) {
+      showToast("Please select a valid Girl's birth place from suggestions", "error");
+      return;
+    }
+
+    if (!boyData.latitude || !boyData.longitude) {
+      showToast("Please select a valid Boy's birth place from suggestions", "error");
+      return;
+    }
+
+    const girlLatitude = Number(girlData.latitude);
+    const girlLongitude = Number(girlData.longitude);
+    const boyLatitude = Number(boyData.latitude);
+    const boyLongitude = Number(boyData.longitude);
+
+    if (
+      Number.isNaN(girlLatitude) ||
+      Number.isNaN(girlLongitude) ||
+      Number.isNaN(boyLatitude) ||
+      Number.isNaN(boyLongitude)
+    ) {
+      showToast("Invalid coordinates for birth locations. Please select from suggestions again.", "error");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -107,14 +276,14 @@ export default function KundliMatchingPage() {
         girlDateOfBirth: girlData.dob,
         girlTimeOfBirth: girlData.dontKnowTime ? "12:00" : girlData.timeOfBirth,
         girlPlaceOfBirth: girlData.birthLocation,
-        girlLatitude: girlData.latitude || 0,
-        girlLongitude: girlData.longitude || 0,
+        girlLatitude,
+        girlLongitude,
         boyName: boyData.name,
         boyDateOfBirth: boyData.dob,
         boyTimeOfBirth: boyData.dontKnowTime ? "12:00" : boyData.timeOfBirth,
         boyPlaceOfBirth: boyData.birthLocation,
-        boyLatitude: boyData.latitude || 0,
-        boyLongitude: boyData.longitude || 0,
+        boyLatitude,
+        boyLongitude,
       };
 
       const response = await createKundliMatching(requestData);
@@ -200,8 +369,37 @@ export default function KundliMatchingPage() {
                     type="text"
                     placeholder="Enter Birth Location"
                     value={girlData.birthLocation}
-                    onChange={(e) => setGirlData({ ...girlData, birthLocation: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setGirlData({ ...girlData, birthLocation: value, latitude: "", longitude: "" });
+                      fetchPlaceSuggestions(value, "girl");
+                    }}
                   />
+                  {girlPlacesError && (
+                    <p className="mt-1 text-sm text-red-500">{girlPlacesError}</p>
+                  )}
+                  {girlIsLoadingPlaces && (
+                    <p className="mt-1 text-sm text-gray-500">Searching places...</p>
+                  )}
+                  {!girlIsLoadingPlaces && girlPlaceSuggestions.length > 0 && (
+                    <div className="mt-2 border rounded-md bg-white max-h-48 overflow-y-auto shadow-sm">
+                      {girlPlaceSuggestions.map((s) => (
+                        <button
+                          key={s.placeId}
+                          type="button"
+                          onClick={() => handleSelectPlaceSuggestion(s.placeId, s.description, "girl")}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                        >
+                          {s.description}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {girlData.birthLocation && !girlData.latitude && !girlData.longitude && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      Please select a place from the suggestions so we can detect its exact location.
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -273,8 +471,37 @@ export default function KundliMatchingPage() {
                     type="text"
                     placeholder="Enter Birth Location"
                     value={boyData.birthLocation}
-                    onChange={(e) => setBoyData({ ...boyData, birthLocation: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setBoyData({ ...boyData, birthLocation: value, latitude: "", longitude: "" });
+                      fetchPlaceSuggestions(value, "boy");
+                    }}
                   />
+                  {boyPlacesError && (
+                    <p className="mt-1 text-sm text-red-500">{boyPlacesError}</p>
+                  )}
+                  {boyIsLoadingPlaces && (
+                    <p className="mt-1 text-sm text-gray-500">Searching places...</p>
+                  )}
+                  {!boyIsLoadingPlaces && boyPlaceSuggestions.length > 0 && (
+                    <div className="mt-2 border rounded-md bg-white max-h-48 overflow-y-auto shadow-sm">
+                      {boyPlaceSuggestions.map((s) => (
+                        <button
+                          key={s.placeId}
+                          type="button"
+                          onClick={() => handleSelectPlaceSuggestion(s.placeId, s.description, "boy")}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                        >
+                          {s.description}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {boyData.birthLocation && !boyData.latitude && !boyData.longitude && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      Please select a place from the suggestions so we can detect its exact location.
+                    </p>
+                  )}
                 </div>
 
                 <div>

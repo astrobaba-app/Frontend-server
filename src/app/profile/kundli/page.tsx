@@ -13,6 +13,7 @@ import Toast from '@/components/atoms/Toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/useToast';
 import { getAllKundlis, createKundli } from '@/store/api/kundli';
+import api from '@/store/api';
 import { getProfile } from '@/store/api/auth/profile';
 import { KundliCardSkeleton } from '@/components/skeletons/KundliCardSkeleton';
 import { ProfileSkeleton } from '@/components/skeletons/ProfileSkeleton';
@@ -37,7 +38,16 @@ export default function FreeKundliPage() {
     dateOfbirth: '',
     timeOfbirth: '',
     placeOfBirth: '',
+    latitude: '',
+    longitude: '',
   });
+
+  const [placeSuggestions, setPlaceSuggestions] = useState<{
+    description: string;
+    placeId: string;
+  }[]>([]);
+  const [isLoadingPlaces, setIsLoadingPlaces] = useState(false);
+  const [placesError, setPlacesError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !isLoggedIn) {
@@ -88,6 +98,8 @@ export default function FreeKundliPage() {
           dateOfbirth: profileUser.dateOfbirth || '',
           timeOfbirth: profileUser.timeOfbirth || '',
           placeOfBirth: profileUser.placeOfBirth || '',
+          latitude: '',
+          longitude: '',
         });
         
         setFetchFromProfile(true);
@@ -127,6 +139,12 @@ export default function FreeKundliPage() {
       return;
     }
 
+    // User must select a location suggestion so that latitude/longitude are set
+    if (!formData.latitude || !formData.longitude) {
+      showToast('Please select a valid birth place from suggestions', 'error');
+      return;
+    }
+
     try {
       setSubmitting(true);
       
@@ -136,8 +154,8 @@ export default function FreeKundliPage() {
         dateOfbirth: formData.dateOfbirth,
         timeOfbirth: formData.timeOfbirth,
         placeOfBirth: formData.placeOfBirth,
-        latitude: 0,
-        longitude: 0,
+        latitude: Number(formData.latitude),
+        longitude: Number(formData.longitude),
       };
 
       console.log('Sending kundli request:', requestData);
@@ -155,6 +173,8 @@ export default function FreeKundliPage() {
           dateOfbirth: '',
           timeOfbirth: '',
           placeOfBirth: '',
+          latitude: '',
+          longitude: '',
         });
         
         // Refresh kundli history
@@ -188,6 +208,80 @@ export default function FreeKundliPage() {
       month: 'short',
       year: 'numeric',
     });
+  };
+
+  // Fetch location suggestions for Indian cities via backend proxy (avoids CORS)
+  const fetchPlaceSuggestions = async (query: string) => {
+    if (!query || query.trim().length < 2) {
+      setPlaceSuggestions([]);
+      return;
+    }
+
+    try {
+      setIsLoadingPlaces(true);
+      setPlacesError(null);
+      const res = await api.get('/maps/autocomplete', {
+        params: { input: query.trim() },
+      });
+
+      const data = res.data;
+      if (data.status !== 'OK') {
+        console.warn('Places API returned non-OK status:', data.status, data.error_message);
+        setPlaceSuggestions([]);
+        return;
+      }
+
+      const suggestions = (data.predictions || []).map((p: any) => {
+        const terms = p.terms || [];
+        const city = terms[0]?.value || '';
+        const state = terms[1]?.value || '';
+        const country = terms[terms.length - 1]?.value || '';
+        const description = [city, state, country].filter(Boolean).join(', ');
+        return {
+          description: description || p.description,
+          placeId: p.place_id,
+        };
+      });
+
+      setPlaceSuggestions(suggestions);
+    } catch (error: any) {
+      console.error('Error fetching place suggestions:', error);
+      setPlacesError(error?.message || 'Failed to fetch place suggestions');
+      setPlaceSuggestions([]);
+    } finally {
+      setIsLoadingPlaces(false);
+    }
+  };
+
+  // When user selects a suggestion, update placeOfBirth and fetch lat/lng via backend proxy
+  const handleSelectPlaceSuggestion = async (placeId: string, description: string) => {
+    try {
+      setIsLoadingPlaces(true);
+      setPlacesError(null);
+      const res = await api.get('/maps/details', {
+        params: { placeId },
+      });
+
+      const data = res.data;
+      const location = data.result?.geometry?.location;
+      if (!location) {
+        throw new Error('Location details not available for selected place');
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        placeOfBirth: description,
+        latitude: String(location.lat),
+        longitude: String(location.lng),
+      }));
+
+      setPlaceSuggestions([]);
+    } catch (error: any) {
+      console.error('Error fetching place details:', error);
+      setPlacesError(error?.message || 'Failed to fetch place details');
+    } finally {
+      setIsLoadingPlaces(false);
+    }
   };
 
   if (loading) {
@@ -315,18 +409,54 @@ export default function FreeKundliPage() {
             <div className="text-center mb-8">
               <Heading level={3} align="center">What is your Birth Place ?</Heading>
             </div>
-            <Input
-              label="Birth Place"
-              required
-              value={formData.placeOfBirth}
-              onChange={(e) => setFormData({ ...formData, placeOfBirth: e.target.value })}
-              placeholder="Mumbai, Maharashtra, India"
-            />
+            <div>
+              <Input
+                label="Birth Place"
+                required
+                value={formData.placeOfBirth}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFormData({ ...formData, placeOfBirth: value, latitude: '', longitude: '' });
+                  fetchPlaceSuggestions(value);
+                }}
+                placeholder="Mumbai, Maharashtra, India"
+              />
+              {placesError && (
+                <p className="mt-1 text-sm text-red-500">{placesError}</p>
+              )}
+              {isLoadingPlaces && (
+                <p className="mt-1 text-sm text-gray-500">Searching places...</p>
+              )}
+              {!isLoadingPlaces && placeSuggestions.length > 0 && (
+                <div className="mt-2 border rounded-md bg-white max-h-48 overflow-y-auto shadow-sm">
+                  {placeSuggestions.map((s) => (
+                    <button
+                      key={s.placeId}
+                      type="button"
+                      onClick={() => handleSelectPlaceSuggestion(s.placeId, s.description)}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                    >
+                      {s.description}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {formData.placeOfBirth && !formData.latitude && !formData.longitude && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Please select a place from the suggestions so we can detect its exact location.
+                </p>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <Button onClick={handleBack} variant="secondary" fullWidth size="lg">
                 Previous
               </Button>
-              <Button onClick={handleGenerate} disabled={!formData.placeOfBirth || submitting} fullWidth size="lg">
+              <Button
+                onClick={handleGenerate}
+                disabled={!formData.placeOfBirth || !formData.latitude || !formData.longitude || submitting}
+                fullWidth
+                size="lg"
+              >
                 {submitting ? (
                   <>
                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
