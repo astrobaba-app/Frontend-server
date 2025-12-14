@@ -1,47 +1,45 @@
+'use client';
+
 import type { Metadata } from "next";
-import { Inter, Poppins, Poly } from 'next/font/google';
+import { Inter, Kanit } from 'next/font/google';
 import "./globals.css";
+import ChatButton from "@/components/layout/ChatButton";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import ChatButton from "@/components/layout/ChatButton";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { usePathname } from "next/navigation";
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
 });
 
-const poppins = Poppins({
-  subsets: ['latin'],
+const kanit = Kanit({ 
+  variable: "--font-kanit",
+  subsets: ["latin"],
+  weight: ['400', '500', '600', '700'],
   display: 'swap',
-  weight: ['400', '700', '900'],
-  variable: '--font-poppins', 
 });
-
-const poly = Poly({
-  subsets: ['latin'],
-  display: 'swap',
-  weight: ['400'],
-  variable: '--font-poly',
-});
-
-export const metadata: Metadata = {
-  title: "AstroBaba",
-  description: "Shubh Drishti, Shubh Marg",
-};
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
+  const isAIChatPage = pathname === '/aichat';
+
   return (
     <html lang="en">
       <body
-        className={`${inter.variable} ${poppins.variable} ${poly.variable} antialiased`}
+        className={`${inter.variable} ${kanit.variable} antialiased`}
       >
-       
-        {children}
-        <ChatButton />
+        <AuthProvider>
+          {!isAIChatPage && <Header />}
+          {children}
+          {!isAIChatPage && <Footer />}
+          {/* <ChatButton /> */}
+        </AuthProvider>
       </body>
     </html>
   );

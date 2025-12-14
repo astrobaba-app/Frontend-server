@@ -1,135 +1,202 @@
 "use client";
-import React, { useState } from "react";
-// Import the necessary components and icons
-import { Menu, X, Mail, Phone } from "lucide-react";
-import { FcGoogle } from "react-icons/fc";
-// 1. Import the Register component (assuming it's in the same directory or a child path)
-import RegisterModal from "@/components/modals/Register";
-
+import React, { useState, useEffect } from "react";
+import { Menu, X, User } from "lucide-react";
+import { BsChatLeftTextFill } from "react-icons/bs";
+import { FiPhone } from "react-icons/fi";
+import { useAuth } from "@/contexts/AuthContext";
+import { colors } from "@/utils/colors";
+import Link from "next/link";
+import type { AstrologerProfile } from "@/store/api/astrologer/auth";
 const NAV_LINKS = [
   { name: "Home", href: "/" },
-  { name: "About Us", href: "/" },
-  { name: "Free Kundli", href: "/" },
-  { name: "Live Chat", href: "/" },
-  { name: "Horoscope", href: "/" },
-  { name: "Contact us", href: "/" },
+  { name: "About Us", href: "/about" },
+  { name: "Free Kundli", href: "/profile/kundli" },
+  { name: "Live Chat", href: "/astrologer?mode=chat" },
+  { name: "Horoscope", href: "/horoscope" },
+  { name: "Contact us", href: "/contact" },
 ];
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
-  // 2. Add state to control the Register Modal
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { isLoggedIn, user } = useAuth();
+  const [astrologerProfile, setAstrologerProfile] = useState<AstrologerProfile | null>(null);
+  const [isAstrologer, setIsAstrologer] = useState(false);
+
+  // Check if astrologer is logged in - runs on mount and when dependencies change
+  useEffect(() => {
+    const checkAstrologerAuth = () => {
+      if (typeof window !== "undefined") {
+        const astrologerToken = localStorage.getItem("astrologer_token");
+        const astrologerProfileData = localStorage.getItem("astrologer_profile");
+        
+        if (astrologerToken && astrologerProfileData) {
+          try {
+            const parsedProfile = JSON.parse(astrologerProfileData);
+            setAstrologerProfile(parsedProfile);
+            setIsAstrologer(true);
+          } catch (error) {
+            console.error("Error parsing astrologer profile:", error);
+            setAstrologerProfile(null);
+            setIsAstrologer(false);
+          }
+        } else {
+          setAstrologerProfile(null);
+          setIsAstrologer(false);
+        }
+      }
+    };
+
+    // Check on mount
+    checkAstrologerAuth();
+
+    // Also check whenever storage changes (when user logs in/out)
+    const handleStorageChange = () => {
+      checkAstrologerAuth();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also add a custom event for same-tab login/logout
+    window.addEventListener('astrologer-auth-change', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('astrologer-auth-change', handleStorageChange);
+    };
+  }, []);
 
   return (
-    <header className="w-full font-inter">
-      <div className="bg-gray-100 p-4 md:py-3 border-b border-gray-300">
-        <div className="max-w-7xl mx-auto flex justify-between items-center flex-wrap">
-          <a
-            href="/" 
-            className="flex items-center space-x-2 no-underline hover:opacity-80 transition duration-150" 
+    <header className="w-full bg-white shadow-md font-inter">
+      <div className="p-3 md:p-4 md:py-3">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <Link
+            href="/"
+            className="flex items-center space-x-2 no-underline hover:opacity-80 transition duration-150"
           >
             <img
               src="/images/logo.png"
               alt="Astrobaba Logo"
-              className="h-20 sm:h-20 md:h-30 w-auto rounded-full object-cover"
+              className="h-14 sm:h-16 md:h-20 w-auto object-cover"
             />
             <div className="hidden sm:block">
-              <p className="text-4xl font-bold text-[#F0DF20]">Astrobaba</p>
-              <p className="text-sm text-gray-600">Shubh Drishti, Shubh Marg</p>
+              <p
+                style={{ color: colors.primeYellow }}
+                className="text-2xl sm:text-3xl md:text-4xl font-bold"
+              >
+                Graho
+              </p>
+              <p
+                style={{ color: colors.gray }}
+                className="text-xs sm:text-sm text-gray-600"
+              >
+                Grah Disha, Jeevan Disha
+              </p>
             </div>
-          </a>
+          </Link>
 
-          {/* Contact Details Section (hidden on mobile) */}
           <div className="hidden md:flex items-center justify-center space-x-8">
-            <a
-              href="mailto:contact@astrobaba.live"
-              className="flex items-center space-x-2 p-2 rounded-lg group"
+            <Link
+              href="/astrologer?mode=chat"
+              style={{ color: colors.darkGray }}
+              className="flex gap-2 text-base font-bold hover:opacity-80 transition duration-150"
             >
-              <div className="text-red-600 group-hover:text-red-700 transition duration-150 flex items-center justify-center">
-                <Mail className="w-7 h-7" />
-              </div>
-              <div className="flex flex-col items-start">
-                <span className="text-base font-bold text-gray-900 group-hover:text-black transition duration-150">
-                  Reach us
-                </span>
-                <span className="text-sm text-gray-600 font-medium">
-                  contact@astrobaba.live
-                </span>
-              </div>
-            </a>
+              <BsChatLeftTextFill
+                style={{ color: colors.primeRed }}
+                className="mt-2"
+              />
+              Chat Astrologers
+            </Link>
 
-            <a
-              href="#"
-              className="flex items-center space-x-2 p-2 rounded-lg group"
+            <Link
+              href="/astrologer?mode=call"
+              style={{ color: colors.darkGray }}
+              className="flex gap-2 text-base font-bold hover:opacity-80 transition duration-150"
             >
-              <div className="text-green-600 group-hover:text-green-700 transition duration-150 flex items-center justify-center">
-                <Phone className="w-5 h-5" />
-              </div>
-              <div className="flex flex-col items-start">
-                <span className="text-base font-bold text-gray-900 group-hover:text-black transition duration-150">
-                  Talk with Astrologer
-                </span>
-              </div>
-            </a>
+              <FiPhone style={{ color: colors.primeGreen }} className="mt-2" />
+              Talk with Astrologers
+            </Link>
           </div>
 
-          {/* Register / Google Sign-in / Menu Toggle Section */}
-          <div className="flex items-center space-x-4 text-sm">
-            <div className="flex items-center space-x-3">
-              {/* 💡 FIX: Changed <a> to <button> and added onClick handler */}
-              <button
-                onClick={() => setIsModalOpen(true)} // 3. Open the modal on click
-                className="px-4 py-2 bg-[#F0DF20] text-sm font-semibold rounded-full shadow-md hover:bg-[#ffea00] transition duration-150 ease-in-out"
-              >
-                Register
-              </button>
-
-              <button
-                className="p-1 h-10 w-10 bg-white rounded-full shadow-md transition duration-150 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gray-300 flex items-center justify-center"
-                aria-label="Sign in with Google"
-              >
-                <FcGoogle className="text-2xl" />
-              </button>
+          <div className="flex items-center space-x-2 sm:space-x-4 text-sm">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              {isAstrologer ? (
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <Link
+                    href="/astrologer/dashboard/profile"
+                    style={{ background: colors.primeYellow, color: colors.black }}
+                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-full shadow-md hover:opacity-80 transition duration-150 ease-in-out whitespace-nowrap"
+                  >
+                    <User className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden xs:inline">Hi, </span>{astrologerProfile?.fullName?.split(' ')[0] || "Astrologer"}
+                  </Link>
+                </div>
+              ) : isLoggedIn ? (
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <Link
+                    href="/profile"
+                    style={{ background: colors.primeYellow, color: colors.black }}
+                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-full shadow-md hover:opacity-80 transition duration-150 ease-in-out whitespace-nowrap"
+                  >
+                    <User className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden xs:inline">Hi, </span>{user?.fullName?.split(' ')[0] || "User"}
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  <Link
+                    href="/auth/login"
+                    style={{
+                      background: colors.primeYellow,
+                      color: colors.black,
+                    }}
+                    className="px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-full shadow-md hover:opacity-80 transition duration-150 ease-in-out whitespace-nowrap"
+                  >
+                   Register/Login
+                  </Link>
+                </>
+              )}
             </div>
 
             <button
-              className="md:hidden text-gray-800 p-2 rounded-full bg-white shadow-md transition duration-150 hover:bg-gray-200"
+              style={{ color: colors.darkGray }}
+              className="md:hidden p-1.5 sm:p-2 rounded-full bg-white shadow-md transition duration-150 hover:bg-gray-200"
               onClick={() => setIsOpen(!isOpen)}
               aria-label="Toggle Menu"
             >
               {isOpen ? (
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
               ) : (
-                <Menu className="w-6 h-6" />
+                <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
               )}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Main Navigation Bar (Desktop) */}
-      <nav className="bg-[#F0DF20] shadow-xl">
+      <nav style={{ background: colors.primeYellow }} className=" shadow-xl">
         <div className="max-w-7xl mx-auto hidden md:flex items-center justify-center lg:space-x-12 px-4">
           {NAV_LINKS.map((link) => (
-            <a
+            <Link 
               key={link.name}
               href={link.href}
-              className=" text-base font-semibold uppercase tracking-wider hover:text-yellow-900 transition duration-150 ease-in-out py-2"
+              style={{ color: colors.black }} // Added text color from variable
+              className="text-base font-semibold uppercase tracking-wider hover:opacity-80 transition duration-150 ease-in-out py-2"
             >
               {link.name}
-            </a>
+            </Link>
           ))}
         </div>
 
-        {/* Mobile Navigation Menu */}
         <div
-          className={`fixed inset-0 z-40 bg-[#F0DF20] bg-opacity-95 transform transition-transform duration-300 ease-in-out ${
+          style={{ background: colors.primeYellow }}
+          className={`fixed inset-0 z-40 bg-opacity-95 transform transition-transform duration-300 ease-in-out ${
             isOpen ? "translate-x-0" : "translate-x-full"
           } md:hidden`}
         >
           <div className="flex justify-end p-4">
             <button
-              className=" p-2 rounded-full hover:bg-[#F0DF20]"
+              style={{ color: colors.black }}
+              className="p-2 rounded-full hover:opacity-80"
               onClick={() => setIsOpen(false)}
               aria-label="Close Menu"
             >
@@ -138,21 +205,19 @@ const Header = () => {
           </div>
           <div className="flex flex-col items-center space-y-6 mt-8">
             {NAV_LINKS.map((link) => (
-              <a
+              <Link // Switched from <a> to Link
                 key={link.name}
                 href={link.href}
-                className=" text-xl font-medium hover:text-[#F0DF20] transition duration-150"
+                style={{ color: colors.black }} // Added text color from variable
+                className="text-xl font-medium hover:opacity-80 transition duration-150"
                 onClick={() => setIsOpen(false)}
               >
                 {link.name}
-              </a>
+              </Link>
             ))}
           </div>
         </div>
       </nav>
-
-      {/* Register Modal */}
-      <RegisterModal isOpen={isModalOpen} setIsOpen={setIsModalOpen} />
     </header>
   );
 };
