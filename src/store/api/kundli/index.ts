@@ -17,15 +17,18 @@ export interface KundliResponse {
     id: string;
     requestId: string;
     basicDetails: any;
+    astroDetails?: any;
     manglikAnalysis: any;
     panchang: any;
     charts: any;
     dasha: any;
     yogini: any;
     personality: any;
-    planetary: any[];
+    planetary: any;
     remedies: any;
+    ashtakvarga?: any;
     yogas?: any[];
+    horoscope?: any;
     createdAt: string;
     updatedAt: string;
     userRequest: {

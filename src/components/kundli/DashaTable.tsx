@@ -11,7 +11,8 @@ interface DashaData {
 }
 
 interface DashaTableProps {
-  dashaData?: { dashas?: DashaData[] } | null;
+  // Supports both new shape { dashas: DashaData[] } and legacy plain array
+  dashaData?: { dashas?: DashaData[] } | DashaData[] | null;
 }
 
 const DashaTable: React.FC<DashaTableProps> = ({ dashaData }) => {
@@ -22,7 +23,12 @@ const DashaTable: React.FC<DashaTableProps> = ({ dashaData }) => {
 
   const tabs = ["Mahadasha", "Antardasha", "Pratyantardasha", "Sookshmadasha"] as const;
 
-  const mahadashaData = dashaData?.dashas || [];
+  // Handle both new and legacy dasha shapes
+  const mahadashaData: DashaData[] = Array.isArray((dashaData as any)?.dashas)
+    ? ((dashaData as { dashas?: DashaData[] }).dashas || [])
+    : Array.isArray(dashaData)
+    ? (dashaData as DashaData[])
+    : [];
 
   // Generate Antardasha for a given Mahadasha
   const generateAntardasha = (mahadasha: DashaData): DashaData[] => {

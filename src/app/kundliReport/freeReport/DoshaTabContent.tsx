@@ -7,12 +7,14 @@ interface DoshaTabContentProps {
   manglikAnalysis: any;
   sadesatiData?: any;
   kalsarpaData?: any;
+  aiDoshaNarratives?: any;
 }
 
 const DoshaTabContent: React.FC<DoshaTabContentProps> = ({ 
   manglikAnalysis, 
   sadesatiData, 
-  kalsarpaData 
+  kalsarpaData,
+  aiDoshaNarratives,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<"manglik" | "kalsarpa" | "sadesati">("manglik");
 
@@ -83,13 +85,15 @@ const DoshaTabContent: React.FC<DoshaTabContentProps> = ({
             <div className="flex items-start gap-4">
               <YesNoIndicator value={manglikAnalysis?.is_manglik || false} />
               <div className="flex-1">
-                {getValue(manglikAnalysis?.mangal_dosha) !== "--" && (
+                {manglikAnalysis?.mangal_dosha && (
                   <p className="text-gray-900 font-medium mb-2">
-                    {manglikAnalysis.mangal_dosha}
+                    {getValue(manglikAnalysis.mangal_dosha.description)}
                   </p>
                 )}
                 <p className="text-gray-700 text-sm">
-                  {getValue(manglikAnalysis?.description)} 
+                  {getValue(aiDoshaNarratives?.manglik) !== "--"
+                    ? getValue(aiDoshaNarratives?.manglik)
+                    : getValue(manglikAnalysis?.description)} 
                 </p>
                 <p className="text-gray-500 text-xs mt-2 italic">
                   [This is a computer generated result. Please consult an Astrologer to confirm & understand this in detail.]
@@ -107,15 +111,37 @@ const DoshaTabContent: React.FC<DoshaTabContentProps> = ({
             <div className="p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Kalsarpa Analysis</h3>
               <div className="flex items-start gap-4">
-                <YesNoIndicator value={kalsarpaData?.is_kalsarpa || false} />
+                <YesNoIndicator value={kalsarpaData?.is_kalsarpa ?? kalsarpaData?.present ?? false} />
                 <div className="flex-1">
                   <p className="text-gray-700 text-sm">
-                    {getValue(kalsarpaData?.description)}
+                    {getValue(aiDoshaNarratives?.kalsarpa) !== "--"
+                      ? getValue(aiDoshaNarratives?.kalsarpa)
+                      : getValue(kalsarpaData?.description)}
                   </p>
                   {kalsarpaData?.type && (
                     <p className="text-gray-700 text-sm mt-2">
                       <span className="font-medium">Type:</span> {getValue(kalsarpaData.type)}
                     </p>
+                  )}
+                  {kalsarpaData?.severity && (
+                    <p className="text-gray-700 text-sm mt-1">
+                      <span className="font-medium">Severity:</span> {getValue(kalsarpaData.severity)}
+                    </p>
+                  )}
+                  {kalsarpaData?.effects && getValue(kalsarpaData.effects) !== "--" && (
+                    <p className="text-gray-700 text-sm mt-1">
+                      <span className="font-medium">Effects:</span> {getValue(kalsarpaData.effects)}
+                    </p>
+                  )}
+                  {Array.isArray(kalsarpaData?.remedies) && kalsarpaData.remedies.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-gray-900 font-medium text-sm mb-1">Suggested Remedies</p>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
+                        {kalsarpaData.remedies.map((item: string, idx: number) => (
+                          <li key={idx}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </div>
               </div>
@@ -135,7 +161,9 @@ const DoshaTabContent: React.FC<DoshaTabContentProps> = ({
                 <div className="flex-1">
                   <p className="text-gray-900 font-medium mb-2">Current Sadesati Status</p>
                   <p className="text-gray-700 text-sm mb-2">
-                    {getValue(sadesatiData?.status)}
+                    {getValue(aiDoshaNarratives?.sadesati) !== "--"
+                      ? getValue(aiDoshaNarratives?.sadesati)
+                      : getValue(sadesatiData?.status)}
                   </p>
                   {sadesatiData?.current_phase && (
                     <p className="text-gray-700 text-sm">

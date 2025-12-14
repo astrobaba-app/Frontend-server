@@ -51,7 +51,7 @@ const getFixedValue = (
 
 const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
   const { kundli } = kundliData;
-  const { basicDetails, planetary, personality, panchang, remedies, userRequest } = kundli || {};
+  const { basicDetails, planetary, personality, panchang, remedies, userRequest, horoscope } = kundli || {};
 
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "--";
@@ -89,6 +89,15 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
       if (field === "yog") return getValue(panchang.yoga?.name);
       if (field === "karan") return getValue(panchang.karana?.name);
       if (field === "nakshatra") return getValue(panchang.nakshatra?.name);
+      if (field === "tatva") return getValue(panchang.nakshatra?.tatva);
+      if (field === "paya") return getValue(panchang.nakshatra?.paya);
+      if (field === "varna") return getValue(panchang.nakshatra?.varna);
+      if (field === "yoni") return getValue(panchang.nakshatra?.yoni);
+      if (field === "yunja") return getValue(panchang.nakshatra?.yoni);
+      if (field === "gan") return getValue(panchang.nakshatra?.gan);
+      if (field === "nadi") return getValue(panchang.nakshatra?.nadi);
+      if (field === "vashya") return getValue(panchang.nakshatra?.vashya);
+      if (field === "charan") return getValue(panchang.nakshatra?.pada);
     }
     return getValue(undefined);
   };
@@ -112,6 +121,39 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
     return getValue(fromBasic || fromPersonality);
   };
 
+  const getSignLordFromSign = (sign: string | null | undefined): string | null => {
+    if (!sign) return null;
+    const map: Record<string, string> = {
+      "Aries": "Mars",
+      "Taurus": "Venus",
+      "Gemini": "Mercury",
+      "Cancer": "Moon",
+      "Leo": "Sun",
+      "Virgo": "Mercury",
+      "Libra": "Venus",
+      "Scorpio": "Mars",
+      "Sagittarius": "Jupiter",
+      "Capricorn": "Saturn",
+      "Aquarius": "Saturn",
+      "Pisces": "Jupiter",
+    };
+    return map[sign] || null;
+  };
+
+  const getNameAlphabet = () => {
+    const name = (userRequest?.fullName || "").trim();
+    if (name) return name.charAt(0).toUpperCase();
+    return getValue(undefined);
+  };
+
+  const getNumerologyValue = (field: string) => {
+    const numerology = horoscope?.numerology || personality || {};
+    if (numerology && field in numerology) {
+      return getValue((numerology as any)[field]);
+    }
+    return getPersonalityValue(field);
+  };
+
   const basicDetailsLeft: DisplayField[] = [
     { label: "Name", value: getValue(userRequest?.fullName), isGrey: true },
     { label: "Birth Date", value: birthDate },
@@ -133,7 +175,7 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
     { label: "Tatva", value: getBasicDetailValue("tatva"), isGrey: true },
     { label: "Paya", value: getBasicDetailValue("paya") },
     { label: "Varna", value: getBasicDetailValue("varna"), isGrey: true },
-    { label: "Sign Lord", value: getValue(undefined) },
+    { label: "Sign Lord", value: getValue(getSignLordFromSign(getPlanetaryValue("Moon", "sign") as string)) },
     { label: "Yoni", value: getBasicDetailValue("yoni"), isGrey: true },
   ];
 
@@ -141,7 +183,7 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
     { label: "Charan", value: getBasicDetailValue("charan") },
     { label: "Karan", value: getBasicDetailValue("karan"), isGrey: true },
     { label: "Yunja", value: getBasicDetailValue("yunja") },
-    { label: "Name Alphabet", value: getBasicDetailValue("nameAlphabet"), isGrey: true },
+    { label: "Name Alphabet", value: getNameAlphabet(), isGrey: true },
     { label: "Gan", value: getBasicDetailValue("gan") },
     { label: "Nadi", value: getBasicDetailValue("nadi"), isGrey: true },
     { label: "Vashya", value: getBasicDetailValue("vashya") },
@@ -150,29 +192,43 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
 
   const favourableDetailsleft: DisplayField[] = [
     { label: "Name", value: getValue(userRequest?.fullName) },
-    { label: "Destiny Number", value: getPersonalityValue("destinyNumber"), isGrey: true },
-    { label: "Evil Number", value: getPersonalityValue("evilNumber") },
-    { label: "Lucky Day", value: getPersonalityValue("luckyDay"), isGrey: true },
-    { label: "Lucky Mantra", value: getPersonalityValue("luckyMantra") },
-    { label: "Lucky Stone", value: getPersonalityValue("luckyStone"), isGrey: true },
-    { label: "Friendly Number", value: getPersonalityValue("friendlyNumber") },
-    { label: "Radical Number", value: getPersonalityValue("radicalNumber"), isGrey: true },
+    { label: "Destiny Number", value: getNumerologyValue("destinyNumber"), isGrey: true },
+    { label: "Evil Number", value: getNumerologyValue("evilNumber") },
+    { label: "Lucky Day", value: getNumerologyValue("luckyDay"), isGrey: true },
+    { label: "Lucky Mantra", value: getNumerologyValue("luckyMantra") },
+    { label: "Lucky Stone", value: getNumerologyValue("luckyStone"), isGrey: true },
+    { label: "Friendly Number", value: getNumerologyValue("friendlyNumber") },
+    { label: "Radical Number", value: getNumerologyValue("radicalNumber"), isGrey: true },
   ];
 
   const favourableDetailsright: DisplayField[] = [
     { label: "Date", value: birthDate },
-    { label: "Name Number", value: getPersonalityValue("nameNumber"), isGrey: true },
-    { label: "Lucky Color", value: getPersonalityValue("luckyColor") },
-    { label: "Lucky God", value: getPersonalityValue("luckyGod"), isGrey: true },
-    { label: "Lucky Metal", value: getPersonalityValue("luckyMetal") },
-    { label: "Lucky Substone", value: getPersonalityValue("luckySubstone"), isGrey: true },
-    { label: "Neutral Number", value: getPersonalityValue("neutralNumber") },
-    { label: "Radical Ruler", value: getPersonalityValue("radicalRuler"), isGrey: true },
+    { label: "Name Number", value: getNumerologyValue("nameNumber"), isGrey: true },
+    { label: "Lucky Color", value: getNumerologyValue("luckyColor") },
+    { label: "Lucky God", value: getNumerologyValue("luckyGod"), isGrey: true },
+    { label: "Lucky Metal", value: getNumerologyValue("luckyMetal") },
+    { label: "Lucky Substone", value: getNumerologyValue("luckySubstone"), isGrey: true },
+    { label: "Neutral Number", value: getNumerologyValue("neutralNumber") },
+    { label: "Radical Ruler", value: getNumerologyValue("radicalRuler"), isGrey: true },
   ];
 
   const luckyInfo = [
-    { label: "Lucky Number", value: getPersonalityValue("radicalNumber") },
-    { label: "Lucky Color", value: getPersonalityValue("luckyColor") },
+    {
+      label: "Lucky Number",
+      value:
+        (horoscope?.recommendations?.lucky_numbers &&
+          Array.isArray(horoscope.recommendations.lucky_numbers) &&
+          horoscope.recommendations.lucky_numbers.join(", ")) ||
+        getPersonalityValue("radicalNumber"),
+    },
+    {
+      label: "Lucky Color",
+      value:
+        (horoscope?.recommendations?.lucky_colors &&
+          Array.isArray(horoscope.recommendations.lucky_colors) &&
+          horoscope.recommendations.lucky_colors.join(", ")) ||
+        getPersonalityValue("luckyColor"),
+    },
     { label: "Lucky Gems", value: getValue(remedies?.gemstones?.primary) },
   ];
 

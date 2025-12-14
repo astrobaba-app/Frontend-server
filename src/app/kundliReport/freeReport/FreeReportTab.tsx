@@ -13,7 +13,7 @@ const FreeReportTab: React.FC<FreeReportTabProps> = ({ kundliData }) => {
   const [activeMainTab, setActiveMainTab] = useState<"general" | "planetary" | "vimshottari" | "yoga">("general");
   const [activeSubTab, setActiveSubTab] = useState<string>("General");
   
-  const { personality, basicDetails, planetary, dasha, remedies } = kundliData;
+  const { personality, basicDetails, planetary, dasha, remedies, horoscope, yogas, aiFreeReport } = kundliData as any;
 
   // General sub-tabs
   const generalSubTabs = ["General", "Planetary", "Vimshottari Dasha", "Yoga"];
@@ -46,22 +46,37 @@ const FreeReportTab: React.FC<FreeReportTabProps> = ({ kundliData }) => {
 
   // Get planetary description from backend
   const getPlanetaryConsideration = (planetName: string): { title: string; subtitle: string; description: string } => {
-    const planet = Array.isArray(planetary) 
-      ? planetary.find((p: any) => p.name === planetName)
+    // Prefer rich analysis from complete horoscope if available
+    const planetaryAnalysis = horoscope?.planetary_analysis || {};
+    const analysis = planetaryAnalysis[planetName];
+
+    if (analysis) {
+      const sign = analysis.position || "--";
+      const description = analysis.condition || analysis.effects || "---";
+
+      return {
+        title: `${planetName} Consideration`,
+        subtitle: sign,
+        description,
+      };
+    }
+
+    const planetaryData = planetary as any;
+    const byKey = planetaryData ? planetaryData[planetName] : null;
+    const byArray = Array.isArray(planetaryData)
+      ? planetaryData.find((p: any) => p.name === planetName || p.planet === planetName)
       : null;
-    
+    const planet = byKey || byArray;
+
     if (!planet) return { title: planetName, subtitle: "--", description: "---" };
 
     const sign = planet.sign || "--";
-    const house = planet.house || "--";
-    
-    // Get description from backend planetary_consideration if available
     const description = planet.consideration || planet.description || "---";
 
     return {
       title: `${planetName} Consideration`,
       subtitle: `${planetName} in ${sign}`,
-      description: description
+      description,
     };
   };
 
@@ -73,8 +88,12 @@ const FreeReportTab: React.FC<FreeReportTabProps> = ({ kundliData }) => {
 
   // Render General content with sub-tabs
   const renderGeneralContent = () => {
-    const ascendantReport = personality?.asc_report;
-    const ascendantSign = ascendantReport?.ascendant || getValue(basicDetails?.ascendant?.sign) || "--";
+    const ascInfluence = horoscope?.personality_analysis?.ascendant_influence;
+    const overallPersonality = horoscope?.personality_analysis?.overall_personality;
+    const healthAnalysis = horoscope?.health_indications;
+    const ascendantSign = ascInfluence?.sign || personality?.ascendant_sign || getValue(basicDetails?.ascendant?.sign) || "--";
+
+    const aiGeneral = aiFreeReport?.general || {};
 
     if (activeSubTab === "General") {
       return (
@@ -82,8 +101,10 @@ const FreeReportTab: React.FC<FreeReportTabProps> = ({ kundliData }) => {
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Ascendant Report</h3>
             <p className="text-sm text-gray-700 leading-relaxed mb-4">
-              {getValue(ascendantReport?.description) !== "--" 
-                ? ascendantReport.description
+              {getValue(aiGeneral?.ascendant_overview) !== "--"
+                ? aiGeneral.ascendant_overview
+                : getValue(ascInfluence?.description) !== "--" 
+                ? ascInfluence.description
                 : "---"}
             </p>
             {ascendantSign !== "--" && (
@@ -96,8 +117,10 @@ const FreeReportTab: React.FC<FreeReportTabProps> = ({ kundliData }) => {
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Personality</h3>
             <p className="text-sm text-gray-700 leading-relaxed">
-              {getValue(ascendantReport?.report) !== "--" 
-                ? ascendantReport.report
+              {getValue(aiGeneral?.personality) !== "--"
+                ? aiGeneral.personality
+                : getValue(overallPersonality) !== "--"
+                ? overallPersonality
                 : getValue(personality?.personality_report)
                 ? personality.personality_report
                 : "---"}
@@ -107,7 +130,11 @@ const FreeReportTab: React.FC<FreeReportTabProps> = ({ kundliData }) => {
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Physical Characteristics</h3>
             <p className="text-sm text-gray-700 leading-relaxed">
-              {getValue(personality?.physical_characteristics) !== "--"
+              {getValue(aiGeneral?.physical) !== "--"
+                ? aiGeneral.physical
+                : getValue(ascInfluence?.physical_appearance) !== "--"
+                ? ascInfluence.physical_appearance
+                : getValue(personality?.physical_characteristics) !== "--"
                 ? personality.physical_characteristics
                 : "---"}
             </p>
@@ -116,7 +143,11 @@ const FreeReportTab: React.FC<FreeReportTabProps> = ({ kundliData }) => {
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Health</h3>
             <p className="text-sm text-gray-700 leading-relaxed">
-              {getValue(personality?.health_report) !== "--"
+              {getValue(aiGeneral?.health) !== "--"
+                ? aiGeneral.health
+                : getValue(healthAnalysis?.constitution) !== "--"
+                ? healthAnalysis.constitution
+                : getValue(personality?.health_report) !== "--"
                 ? personality.health_report
                 : "---"}
             </p>
@@ -183,9 +214,9 @@ const FreeReportTab: React.FC<FreeReportTabProps> = ({ kundliData }) => {
     }
 
     if (activeSubTab === "Yoga") {
-      const yogas = kundliData?.yogas || [];
+      const yogaList = yogas || horoscope?.yoga_analysis || [];
 
-      if (!yogas || yogas.length === 0) {
+      if (!yogaList || yogaList.length === 0) {
         return (
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <p className="text-center text-gray-600">No Yoga data available</p>
@@ -195,14 +226,16 @@ const FreeReportTab: React.FC<FreeReportTabProps> = ({ kundliData }) => {
 
       return (
         <div className="space-y-6">
-          {yogas.map((yoga: any, index: number) => (
+          {yogaList.map((yoga: any, index: number) => (
             <div key={index} className="bg-white rounded-lg border border-gray-200 p-6">
               <div className="mb-4">
                 <h3 className="text-lg font-bold text-gray-900">{getValue(yoga.name)}</h3>
-                <p className="text-sm text-gray-600 mt-1">{getValue(yoga.condition) || getValue(yoga.subtitle)}</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  {getValue(yoga.condition || yoga.type || yoga.subtitle)}
+                </p>
               </div>
               <p className="text-sm text-gray-700 leading-relaxed">
-                {getValue(yoga.description)}
+                {getValue(yoga.description || yoga.effects)}
               </p>
             </div>
           ))}
@@ -287,12 +320,19 @@ const FreeReportTab: React.FC<FreeReportTabProps> = ({ kundliData }) => {
       {/* Tab Content */}
       <div className="mt-6">
         {activeMainTab === "general" && renderGeneralContent()}
-        {activeMainTab === "planetary" && <RemediesTabContent remedies={remedies} basicDetails={basicDetails} />}
+        {activeMainTab === "planetary" && (
+          <RemediesTabContent
+            remedies={remedies}
+            basicDetails={basicDetails}
+            aiNarratives={aiFreeReport?.remedies}
+          />
+        )}
         {activeMainTab === "vimshottari" && (
           <DoshaTabContent 
             manglikAnalysis={kundliData.manglikAnalysis}
             sadesatiData={kundliData.manglikAnalysis?.sadesati}
-            kalsarpaData={kundliData.manglikAnalysis?.kalsarpa}
+            kalsarpaData={kundliData.manglikAnalysis?.all_doshas?.kaal_sarp_dosha}
+            aiDoshaNarratives={aiFreeReport?.dosha}
           />
         )}
       </div>

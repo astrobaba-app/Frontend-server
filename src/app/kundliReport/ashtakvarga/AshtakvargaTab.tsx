@@ -128,13 +128,17 @@ const AshtakvargaTab: React.FC<AshtakvargaTabProps> = ({ kundliData }) => {
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {planets.map((planet) => (
-          <AshtakvargaChart
-            key={planet.key}
-            title={planet.label}
-            data={getPlanetData(planet.key)}
-          />
-        ))}
+        {planets.map((planet) => {
+          const data = getPlanetData(planet.key);
+          if (!data) return null;
+          return (
+            <AshtakvargaChart
+              key={planet.key}
+              title={planet.label}
+              data={data}
+            />
+          );
+        })}
       </div>
 
      

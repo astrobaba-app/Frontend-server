@@ -22,7 +22,25 @@ interface PlanetData {
   nakshatra_num: number;
   nakshatra_pada: number;
   is_retrograde: boolean;
+  is_combust?: boolean;
+  combust_orb?: number;
+  avastha?: string | null;
 }
+
+const SIGN_NAME_TO_NUM: Record<string, number> = {
+  Aries: 0,
+  Taurus: 1,
+  Gemini: 2,
+  Cancer: 3,
+  Leo: 4,
+  Virgo: 5,
+  Libra: 6,
+  Scorpio: 7,
+  Sagittarius: 8,
+  Capricorn: 9,
+  Aquarius: 10,
+  Pisces: 11,
+};
 
 const KundliTab: React.FC<KundliTabProps> = ({ kundliData }) => {
   const [chartStyle, setChartStyle] = useState<"north" | "south">("north");
@@ -78,7 +96,7 @@ const KundliTab: React.FC<KundliTabProps> = ({ kundliData }) => {
   // Calculate house number based on ascendant and planet longitude
   const getHouseNumber = (planetLongitude: number): number => {
     // Get ascendant from planetary data if available
-    const ascendantData = Object.values(planetaryData).find((p: any) => p?.planet === 'Ascendant');
+    const ascendantData = Object.values(planetaryData).find((p: any) => p?.planet === 'Ascendant') as PlanetData | undefined;
     const ascendantLongitude = ascendantData?.longitude || 0;
     let house = Math.floor((planetLongitude - ascendantLongitude + 360) / 30) + 1;
     if (house > 12) house -= 12;
@@ -131,6 +149,10 @@ const KundliTab: React.FC<KundliTabProps> = ({ kundliData }) => {
     return chartData && chartData.planets && typeof chartData.planets === 'object';
   };
 
+  const ascendantSignName = kundliData?.astroDetails?.ascendant?.sign as string | undefined;
+  const ascendantDegree = kundliData?.astroDetails?.ascendant?.degree as number | undefined;
+  const ascendantSignNum = ascendantSignName ? SIGN_NAME_TO_NUM[ascendantSignName] : undefined;
+
   return (
     <div className="max-w-6xl mx-auto px-4">
       {/* Chart Style Toggle */}
@@ -164,7 +186,13 @@ const KundliTab: React.FC<KundliTabProps> = ({ kundliData }) => {
         {/* D1 Chart - Lagna/Ascendant */}
         <div className="">
           {isValidChartData(kundliData.charts?.D1) ? (
-            <KundliChart chartData={kundliData.charts.D1} chartType="Lagna / Ascendant / Basic Birth Chart" style={chartStyle} />
+            <KundliChart
+              chartData={kundliData.charts.D1}
+              chartType="Lagna / Ascendant / Basic Birth Chart"
+              style={chartStyle}
+              ascSignNum={ascendantSignNum}
+              ascDegree={ascendantDegree}
+            />
           ) : (
             <>
               <p style={{color:colors.darkGray }} className="text-sm font-semibold  mb-4 text-start">
@@ -273,10 +301,14 @@ const KundliTab: React.FC<KundliTabProps> = ({ kundliData }) => {
                         {getRetroStatus(planet.is_retrograde)}
                       </td>
                       <td className="border border-gray-300 px-3 py-2 text-sm text-gray-800">
-                        --
+                            {planet.is_combust === true
+                              ? "Yes"
+                              : planet.is_combust === false
+                              ? "No"
+                              : "--"}
                       </td>
                       <td className="border border-gray-300 px-3 py-2 text-sm text-gray-800">
-                        --
+                            {getValue(planet.avastha)}
                       </td>
                       <td className="border border-gray-300 px-3 py-2 text-sm text-gray-800">
                         {houseNumber}

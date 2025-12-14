@@ -136,10 +136,15 @@ export default function KundliReportPage() {
   };
 
   const getPlanetaryValue = (planetName: string, field: string) => {
-    const planetaryArray = Array.isArray(kundliData.planetary)
-      ? kundliData.planetary
-      : [];
-    const planet = planetaryArray.find((p) => p?.name === planetName);
+    const planetary = kundliData.planetary as any;
+    if (!planetary) return getValue(undefined);
+
+    // Support both keyed object and array formats
+    const byKey = planetary[planetName];
+    const byArray = Array.isArray(planetary)
+      ? planetary.find((p: any) => p?.name === planetName || p?.planet === planetName)
+      : null;
+    const planet = byKey || byArray;
     return getValue(planet?.[field as keyof typeof planet]);
   };
 

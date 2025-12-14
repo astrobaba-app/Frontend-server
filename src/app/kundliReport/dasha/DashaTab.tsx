@@ -23,6 +23,38 @@ interface MahadashaPeriod {
   house?: number;
 }
 
+const getMahadashaDescription = (planet: string): string => {
+  const key = (planet || "").trim();
+  const baseDescriptions: Record<string, string> = {
+    Ketu:
+      "Ketu Mahadasha often brings detachment, spiritual growth, sudden separations, and strong inner experiences. It can disconnect you from material attachments so that you focus more on inner peace, intuition, and past‑life karmas.",
+    Venus:
+      "Venus Mahadasha is a period of relationships, comforts, luxuries, beauty and creativity. It can enhance love life, partnerships and artistic talents, but may also increase indulgence or attachment to pleasure if Venus is weak.",
+    Sun:
+      "Sun Mahadasha highlights authority, self‑expression, ego, father figures and career recognition. It can bring leadership opportunities and visibility, but also ego clashes or health strain if the Sun is afflicted.",
+    Moon:
+      "Moon Mahadasha is strongly emotional and mental. It influences peace of mind, mother, home, fluids and public popularity. This period can make you more sensitive and intuitive, but also prone to mood swings if Moon is weak.",
+    Mars:
+      "Mars Mahadasha activates courage, energy, ambition, competition and aggression. It can support bold actions, sports and technical pursuits, yet may also bring conflicts, injuries or impulsive decisions when not handled wisely.",
+    Rahu:
+      "Rahu Mahadasha often brings sudden events, foreign connections, unconventional paths and strong material desires. It can give rapid rise and worldly gains, but also confusion, obsessions or scandals if not guided properly.",
+    Jupiter:
+      "Jupiter Mahadasha is usually considered highly benefic, supporting wisdom, education, wealth, children, dharma and protection. It can open doors for growth and blessings, depending on Jupiter's strength and house placement.",
+    Saturn:
+      "Saturn Mahadasha emphasizes discipline, responsibilities, hard work, delays and karmic lessons. It can be demanding but ultimately stabilizing, rewarding consistent effort and maturity over time.",
+    Mercury:
+      "Mercury Mahadasha focuses on intellect, communication, business, networking and analytical ability. It supports studies, trade, writing and negotiations, but may bring restlessness or overthinking if Mercury is weak.",
+  };
+
+  if (baseDescriptions[key]) return baseDescriptions[key];
+
+  if (!key) {
+    return "This Mahadasha period brings results according to the planet's strength, sign and house placement in your birth chart.";
+  }
+
+  return `This Mahadasha period is governed by ${key}, and its results will depend on how ${key} is placed and aspected in your horoscope.`;
+};
+
 const DashaTab: React.FC<DashaTabProps> = ({ kundliData }) => {
   const [dashaType, setDashaType] = useState<"vimshottari" | "yogini">(
     "vimshottari"
@@ -122,7 +154,7 @@ const DashaTab: React.FC<DashaTabProps> = ({ kundliData }) => {
       planet: `${dasha.planet || "--"} Mahadasha`,
       startDate: `(${formatDate(dasha.start_date)} - ${formatDate(dasha.end_date)})`,
       endDate: formatDate(dasha.end_date),
-      description: dasha.description || "---",
+      description: dasha.description || getMahadashaDescription(dasha.planet),
       sign: dasha.sign || "--",
       house: dasha.house || 0,
     }));

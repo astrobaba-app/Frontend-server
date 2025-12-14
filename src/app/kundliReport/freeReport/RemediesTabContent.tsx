@@ -5,9 +5,10 @@ import { colors } from "@/utils/colors";
 interface RemediesTabContentProps {
   remedies: any;
   basicDetails?: any;
+  aiNarratives?: any;
 }
 
-const RemediesTabContent: React.FC<RemediesTabContentProps> = ({ remedies, basicDetails }) => {
+const RemediesTabContent: React.FC<RemediesTabContentProps> = ({ remedies, basicDetails, aiNarratives }) => {
   const [activeSubTab, setActiveSubTab] = useState<"rudraksha" | "gemstone">("rudraksha");
   
   // Get suggested rudrakshas from backend (e.g., "4-Mukhi" or "5-Mukhi")
@@ -36,6 +37,7 @@ const RemediesTabContent: React.FC<RemediesTabContentProps> = ({ remedies, basic
 
   const renderRudraksha = () => {
     const currentData = getRudrakshaMukhiData(activeMukhiTab);
+    const aiRemedies = aiNarratives || {};
 
     return (
       <div className="space-y-6">
@@ -43,7 +45,9 @@ const RemediesTabContent: React.FC<RemediesTabContentProps> = ({ remedies, basic
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h3 className="text-lg font-bold text-gray-900 mb-4">Rudraksha Suggestion Report</h3>
           <p className="text-sm text-gray-700 leading-relaxed mb-4">
-            {getValue(remedies?.rudraksha?.suggestion_report)}
+            {getValue(aiRemedies?.rudraksha) !== "--"
+              ? aiRemedies.rudraksha
+              : getValue(remedies?.rudraksha?.suggestion_report)}
           </p>
           {getValue(remedies?.rudraksha?.importance) !== "--" && (
             <>
@@ -142,9 +146,19 @@ const RemediesTabContent: React.FC<RemediesTabContentProps> = ({ remedies, basic
     const lifeStone = gemstones.life_stone || {};
     const luckyStone = gemstones.lucky_stone || {};
     const fortuneStone = gemstones.fortune_stone || {};
+    const aiRemedies = aiNarratives || {};
 
     return (
       <div className="space-y-6">
+        {/* Overall Gemstone Guidance */}
+        {getValue(aiRemedies?.gemstones) !== "--" && (
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Gemstone Guidance</h3>
+            <p className="text-sm text-gray-700 leading-relaxed mb-4">
+              {aiRemedies.gemstones}
+            </p>
+          </div>
+        )}
         {/* Life Stone */}
         {getValue(lifeStone.description) !== "--" && (
           <div className="bg-white rounded-lg border border-gray-200 p-6">

@@ -22,7 +22,7 @@ interface KundliChartProps {
   style?: "north" | "south";
 }
 
-const KundliChart: React.FC<KundliChartProps> = ({ chartData, chartType, style = "north" }) => {
+const KundliChart: React.FC<KundliChartProps & { ascSignNum?: number; ascDegree?: number }> = ({ chartData, chartType, style = "north", ascSignNum, ascDegree }) => {
   // Map to store planets by sign number with degrees
   const signPlanetsMap = new Map<number, Array<{ name: string; degree: number }>>();
   
@@ -50,6 +50,14 @@ const KundliChart: React.FC<KundliChartProps> = ({ chartData, chartType, style =
     });
   }
 
+  // Add Ascendant marker to the appropriate sign (for D1 charts)
+  if (typeof ascSignNum === "number") {
+    const existing = signPlanetsMap.get(ascSignNum) || [];
+    const ascDeg = typeof ascDegree === "number" ? ascDegree : 0;
+    existing.unshift({ name: "Asc", degree: ascDeg });
+    signPlanetsMap.set(ascSignNum, existing);
+  }
+
   const getSignName = (signNum: number): string => {
     const signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 
                    'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
@@ -69,7 +77,7 @@ const KundliChart: React.FC<KundliChartProps> = ({ chartData, chartType, style =
     return <SouthIndianChart signPlanetsMap={signPlanetsMap} chartType={chartType} getSignName={getSignName} getPlanetColor={getPlanetColor} />;
   }
 
-  return <NorthIndianChart signPlanetsMap={signPlanetsMap} chartType={chartType} getSignName={getSignName} getPlanetColor={getPlanetColor} />;
+  return <NorthIndianChart signPlanetsMap={signPlanetsMap} chartType={chartType} getSignName={getSignName} getPlanetColor={getPlanetColor} ascSignNum={ascSignNum} />;
 };
 
 // North Indian Chart Component
@@ -78,7 +86,8 @@ const NorthIndianChart: React.FC<{
   chartType: string;
   getSignName: (signNum: number) => string;
   getPlanetColor: (planetName: string) => string;
-}> = ({ signPlanetsMap, chartType, getSignName, getPlanetColor }) => {
+  ascSignNum?: number;
+}> = ({ signPlanetsMap, chartType, getSignName, getPlanetColor, ascSignNum }) => {
 
   // Diamond positions for North Indian style - 12 houses in triangular sections
   // Based on reference image: house numbers in corners, planets in center of each section
@@ -97,10 +106,12 @@ const NorthIndianChart: React.FC<{
     { house: 12, top: '14%', left: '35%', numberTop: '21%', numberLeft: '40%' },     // Top left
   ];
 
-  // North Indian house to sign mapping (based on Ascendant in house 1)
-  const houseToSignMap: Record<number, number> = {
-    1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8, 10: 9, 11: 10, 12: 11
-  };
+  // North Indian house to sign mapping (rotate so house 1 = Ascendant sign)
+  const asc = typeof ascSignNum === "number" ? ascSignNum : 0;
+  const houseToSignMap: Record<number, number> = {};
+  for (let house = 1; house <= 12; house++) {
+    houseToSignMap[house] = (asc + house - 1) % 12;
+  }
 
   return (
     <div className="flex flex-col items-center w-full">

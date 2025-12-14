@@ -55,6 +55,57 @@ const KPTab: React.FC<KPTabProps> = ({ kundliData }) => {
     return nakshatraLords[nakshatra] || '--';
   };
 
+  // KP star-lord and sub-lord helpers (mirroring astro-engine kp_system)
+  const KP_NAKSHATRA_LORDS: string[] = [
+    'Ketu', 'Venus', 'Sun', 'Moon', 'Mars',
+    'Rahu', 'Jupiter', 'Saturn', 'Mercury',
+  ];
+
+  const KP_SUB_LORD_PERIODS: Record<string, number> = {
+    Ketu: 7,
+    Venus: 20,
+    Sun: 6,
+    Moon: 10,
+    Mars: 7,
+    Rahu: 18,
+    Jupiter: 16,
+    Saturn: 19,
+    Mercury: 17,
+  };
+
+  const KP_TOTAL_PERIOD = 120;
+
+  const getKPStarLord = (longitude: number): string => {
+    const nakshatraNum = Math.floor((longitude % 360) / 13.333333333333334);
+    return KP_NAKSHATRA_LORDS[nakshatraNum % 9] || '--';
+  };
+
+  const getKPSubLord = (longitude: number): string => {
+    const normalized = ((longitude % 360) + 360) % 360;
+    const nakshatraSpan = 13.333333333333334;
+    const nakshatraPosition = normalized % nakshatraSpan;
+    const nakshatraNum = Math.floor(normalized / nakshatraSpan);
+    const startLordIndex = nakshatraNum % 9;
+
+    const proportion = nakshatraPosition / nakshatraSpan;
+    let cumulative = 0;
+
+    for (let i = 0; i < 9; i++) {
+      const lordIndex = (startLordIndex + i) % 9;
+      const lord = KP_NAKSHATRA_LORDS[lordIndex];
+      const period = KP_SUB_LORD_PERIODS[lord] || 0;
+      const lordProportion = period / KP_TOTAL_PERIOD;
+
+      if (proportion < cumulative + lordProportion) {
+        return lord;
+      }
+
+      cumulative += lordProportion;
+    }
+
+    return KP_NAKSHATRA_LORDS[startLordIndex] || '--';
+  };
+
   // Helper function to calculate house from longitude
   const getHouseFromLongitude = (planetLongitude: number, ascendantLongitude: number): number => {
     let house = Math.floor((planetLongitude - ascendantLongitude + 360) % 360 / 30) + 1;
@@ -73,14 +124,15 @@ const KPTab: React.FC<KPTabProps> = ({ kundliData }) => {
     }
     
     return Object.values(planetary).map((planet: any) => {
-      const house = getHouseFromLongitude(planet.longitude || 0, ascendantLongitude);
+      const longitude = planet.longitude || 0;
+      const house = getHouseFromLongitude(longitude, ascendantLongitude);
       return {
         name: planet.planet || '--',
         cusp: house,
         sign: planet.sign || '--',
         signLord: getSignLord(planet.sign || ''),
-        starLord: getNakshatraLord(planet.nakshatra || ''),
-        subLord: '--', // KP sub-lord calculation requires specialized algorithms
+        starLord: getKPStarLord(longitude),
+        subLord: getKPSubLord(longitude),
       };
     });
   };
@@ -122,8 +174,8 @@ const KPTab: React.FC<KPTabProps> = ({ kundliData }) => {
           degree: cuspLongitude,
           sign: sign,
           signLord: getSignLord(sign),
-          starLord: getNakshatraLord(nakshatra),
-          subLord: '--', // Sub lord requires specialized KP calculations
+          starLord: getKPStarLord(cuspLongitude),
+          subLord: getKPSubLord(cuspLongitude),
         });
       }
     } else {
@@ -161,6 +213,7 @@ const KPTab: React.FC<KPTabProps> = ({ kundliData }) => {
     // Get Moon data
     const moonData = (planetary as any)?.Moon;
     const moonSign = moonData?.sign || '--';
+    const moonLongitude = moonData?.longitude || 0;
     const moonNakshatra = moonData?.nakshatra || '--';
     
     // Get Ascendant data
@@ -178,8 +231,8 @@ const KPTab: React.FC<KPTabProps> = ({ kundliData }) => {
         asc: getNakshatraLord(ascNakshatra),
       },
       subLord: {
-        mo: '--', // Sub lord requires specialized KP calculations
-        asc: '--',
+        mo: getKPSubLord(moonLongitude),
+        asc: getKPSubLord(ascLongitude),
       },
       dayLord: getDayLord(),
     };
@@ -211,7 +264,7 @@ const KPTab: React.FC<KPTabProps> = ({ kundliData }) => {
               <thead>
                 <tr className="bg-yellow-50">
                   <th className="border border-gray-300 px-4 py-2.5 text-center text-sm font-semibold text-gray-700 w-1/4">
-                    --
+                    Planet
                   </th>
                   <th className="border border-gray-300 px-4 py-2.5 text-center text-sm font-semibold text-gray-700 w-1/4">
                     Sign Lord
