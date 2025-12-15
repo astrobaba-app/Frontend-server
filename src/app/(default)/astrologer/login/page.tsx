@@ -67,9 +67,9 @@ export default function AstrologerLogin() {
       if (response.success) {
         // Store tokens with correct astrologer keys
         if (typeof window !== "undefined") {
-          localStorage.setItem("astrologer_token", response.token);
-          localStorage.setItem("astrologer_middleware_token", response.middlewareToken);
-          localStorage.setItem("astrologer_profile", JSON.stringify(response.astrologer));
+          localStorage.setItem("astrolobaba_token", response.token);
+          localStorage.setItem("astrolobaba_middleware_token", response.middlewareToken);
+          localStorage.setItem("astrolobaba_profile", JSON.stringify(response.astrologer));
           
           // Notify header component that astrologer auth changed
           window.dispatchEvent(new Event('astrologer-auth-change'));

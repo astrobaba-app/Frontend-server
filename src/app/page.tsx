@@ -9,7 +9,6 @@ import Hero2 from "@/components/sections/home/Hero2";
 import PopularQuestions from "@/components/sections/home/PopularQues";
 import LatestBlogsSection from "@/components/sections/home/LatestBlog";
 import Testinomials from "@/components/sections/home/Testinomials";
-import LoginToast from "@/components/client/LoginToast";
 
 // SEO Metadata for better search engine optimization
 export const metadata: Metadata = {
@@ -50,9 +49,6 @@ export default function Home() {
       <PopularQuestions/>
       <Testinomials/>
       <LatestBlogsSection/>
-
-      {/* Toast Notification - Client Component */}
-      <LoginToast />
     </div>
   );
 }

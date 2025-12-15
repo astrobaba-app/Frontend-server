@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, ArrowLeft, User, Phone, ChevronRight } from 'lucide-react';
+import { Send, ArrowLeft, Phone, ChevronRight, MessageSquare, X } from 'lucide-react';
 import { IoChatbubblesSharp } from "react-icons/io5";
 import Link from 'next/link';
 import Image from 'next/image';
@@ -8,6 +8,7 @@ import { FiCheckCircle } from 'react-icons/fi'; // Used for message status check
 import { colors } from '@/utils/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { FaVideo } from "react-icons/fa";
 // Custom colors based on the design
 
 
@@ -41,6 +42,7 @@ const PREVIOUS_CHATS = [
 const ChatPage = () => {
   const { isLoggedIn, loading } = useAuth();
   const router = useRouter();
+  const [showSidebar, setShowSidebar] = useState(false);
   const [messages, setMessages] = useState<
     { id: number; text: string; sender: "user" | "bot"; timestamp: string }[]
   >([]);
@@ -103,13 +105,27 @@ const ChatPage = () => {
   const showInitialContent = messages.length === 0;
 
   return (
-    <div className=" flex font-inter bg-gray-50">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* 1. Left Sidebar (Fixed) */}
-      <div className="hidden lg:flex flex-col w-80  border-r border-gray-200">
+      <div
+        className={`${showSidebar ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:relative left-0 top-0 w-80 h-full bg-gray-50 border-r border-gray-200 transition-transform duration-300 z-30 flex flex-col`}
+      >
+        {/* Mobile Sidebar Header */}
+        <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
+          <p className="text-sm font-semibold text-gray-900">Chats</p>
+          <button
+            type="button"
+            onClick={() => setShowSidebar(false)}
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            aria-label="Close sidebar"
+          >
+            <X className="w-5 h-5 text-gray-900" />
+          </button>
+        </div>
         {/* Astrologer Info Header */}
-        <div className="p-4 flex items-center gap-3 border-b border-gray-100">
+        <div className="p-8 flex items-center gap-3 border-b border-gray-100">
           <div className="relative shrink-0">
-            <div className="w-12 h-12 rounded-full overflow-hidden">
+            <div className="w-16 h-16 rounded-full overflow-hidden">
               <Image 
                 src={ASTROLOGER_INFO.photo || "/images/logo.png"} 
                 alt={ASTROLOGER_INFO.name} 
@@ -123,8 +139,8 @@ const ChatPage = () => {
             )}
           </div>
           <div>
-            <h2 className="text-sm font-bold text-gray-900">{ASTROLOGER_INFO.name}</h2>
-            <p className="text-xs text-gray-500">{ASTROLOGER_INFO.title}</p>
+            <p className="text-lg font-bold text-gray-900">{ASTROLOGER_INFO.name}</p>
+            <p className="text-sm text-gray-500">{ASTROLOGER_INFO.title}</p>
           </div>
         </div>
         
@@ -152,8 +168,8 @@ const ChatPage = () => {
 
         {/* New Chat & Past Conversations */}
         <div className="p-4 flex-1 overflow-y-auto">
-          <h3 className="text-xs font-bold text-gray-800 mb-3 uppercase">+ New Chat</h3>
-          <h3 className="text-sm font-bold text-gray-800 mb-2">Past Conversation</h3>
+          <p className="text-md font-bold text-gray-800 mb-3 uppercase">+ New Chat</p>
+          <p className="text-md font-bold text-gray-800 mb-2">Past Conversation</p>
           
           <ul className="space-y-1">
             {PREVIOUS_CHATS.map((chat, index) => (
@@ -171,25 +187,49 @@ const ChatPage = () => {
       {/* 2. Right Chat Area (Main Content) */}
       <div className="flex-1 flex flex-col">
         {/* Header - Back, Timer, Profile */}
-        <div className=" border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="lg:hidden hover:bg-gray-100 p-2 rounded-full transition-colors">
+        <div className="border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between sticky top-0 z-10 bg-gray-50">
+          <div className="flex items-center gap-2 sm:gap-3  min-w-0">
+            <button
+              type="button"
+              onClick={() => setShowSidebar(true)}
+              className="lg:hidden hover:bg-gray-100 p-2 rounded-full transition-colors"
+              aria-label="Open sidebar"
+            >
+              <MessageSquare className="w-5 h-5 text-gray-900" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                try {
+                  router.back();
+                } catch {
+                  router.push('/');
+                }
+              }}
+              className="hover:bg-gray-100 p-2 rounded-full transition-colors"
+              aria-label="Go back"
+            >
               <ArrowLeft className="w-5 h-5 text-gray-900" />
-            </Link>
-            <span className="text-sm text-gray-600 ml-2">2:39 min</span>
+            </button>
           </div>
-          <div className="flex items-center gap-3">
-            <Phone className="w-5 h-5 text-green-500 cursor-pointer" />
-            <div className="flex items-center bg-gray-100 rounded-full pl-3 pr-2 py-1 cursor-pointer">
-              <span className="text-sm font-semibold text-gray-700 mr-2">Profile</span>
-              <User className="w-5 h-5 text-gray-700" />
-            </div>
+
+          <div className="flex items-center gap-3 me-10 sm:me-0 shrink-0">
+            <span className="text-sm text-gray-600 whitespace-nowrap">2:39 min</span>
+            <FaVideo className="w-5 h-5 text-gray-700 cursor-pointer" />
           </div>
         </div>
+
+        {/* Overlay for mobile sidebar */}
+        {showSidebar && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+            onClick={() => setShowSidebar(false)}
+          />
+        )}
         
         {/* Chat Messages Area */}
         <div 
-          className="flex-1 overflow-y-auto p-6 space-y-4"
+          className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4"
           style={{
             backgroundImage: `url("/images/bg4.png")`,
             backgroundRepeat: 'repeat',
@@ -248,7 +288,7 @@ const ChatPage = () => {
                         : 'bg-white text-gray-900 rounded-bl-none'
                     }`}
                   >
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">
                       {message.text}
                     </p>
                     <div className={`flex items-center justify-end gap-1 mt-1`}>

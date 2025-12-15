@@ -758,7 +758,7 @@ const AIChatPage = () => {
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Sidebar - Chat Sessions */}
       <div 
-        className={`${showSidebar ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:relative w-80 h-full bg-white border-r shadow-lg transition-transform duration-300 z-20 flex flex-col`}
+        className={`${showSidebar ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:relative w-80 h-full bg-white border-r shadow-lg transition-transform duration-300 z-20 flex flex-col`}
         style={{ borderColor: colors.gray + '20' }}
       >
         {/* Sidebar Header */}
@@ -874,12 +874,12 @@ const AIChatPage = () => {
             <div className="flex items-center gap-3 flex-1">
               <button 
                 onClick={() => setShowSidebar(!showSidebar)}
-                className="md:hidden p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="lg:hidden p-2 hover:bg-gray-100 rounded-full transition-colors"
               >
                 <MessageSquare size={24} style={{ color: colors.darkGray }} />
               </button>
               
-              <Link href="/" className="hidden md:block">
+              <Link href="/" className="hidden lg:block">
                 <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                   <ArrowLeft size={24} style={{ color: colors.darkGray }} />
                 </button>
@@ -1132,7 +1132,7 @@ const AIChatPage = () => {
       {/* Overlay for mobile sidebar */}
       {showSidebar && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-10 md:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-10 lg:hidden"
           onClick={() => setShowSidebar(false)}
         ></div>
       )}

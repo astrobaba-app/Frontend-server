@@ -9,7 +9,7 @@ import Select from '@/components/atoms/Select';
 import Button from '@/components/atoms/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import { getProfile, updateProfile } from '@/store/api/auth/profile';
-
+import LoginToast from '@/components/client/LoginToast';
 import Toast from '@/components/atoms/Toast';
 import { useToast } from '@/hooks/useToast';
 
@@ -329,6 +329,7 @@ export default function MyProfilePage() {
           onClose={hideToast}
         />
       )}
+      <LoginToast/>
     </div>
   );
 }

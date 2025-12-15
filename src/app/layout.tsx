@@ -27,7 +27,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
-  const isAIChatPage = pathname === '/aichat';
+  const NO_LAYOUT_ROUTES = ['/aichat', '/chat'];
+  const shouldHideLayout = NO_LAYOUT_ROUTES.includes(pathname);
 
   return (
     <html lang="en">
@@ -35,9 +36,10 @@ export default function RootLayout({
         className={`${inter.variable} ${kanit.variable} antialiased`}
       >
         <AuthProvider>
-          {!isAIChatPage && <Header />}
+          {!shouldHideLayout && <Header />}
+          
           {children}
-          {!isAIChatPage && <Footer />}
+          {!shouldHideLayout && <Footer />}
           {/* <ChatButton /> */}
         </AuthProvider>
       </body>

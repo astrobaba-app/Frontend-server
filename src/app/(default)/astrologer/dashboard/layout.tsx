@@ -41,9 +41,9 @@ export default function AstrologerDashboardLayout({
       await logoutAstrologer();
       // Clear local storage - astrologer tokens
       if (typeof window !== "undefined") {
-        localStorage.removeItem("astrologer_token");
-        localStorage.removeItem("astrologer_middleware_token");
-        localStorage.removeItem("astrologer_profile");
+        localStorage.removeItem("astrolobaba_token");
+        localStorage.removeItem("astrolobaba_middleware_token");
+        localStorage.removeItem("astrolobaba_profile");
         
         // Notify header component that astrologer logged out
         window.dispatchEvent(new Event('astrologer-auth-change'));

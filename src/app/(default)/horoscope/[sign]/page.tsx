@@ -208,12 +208,13 @@ export default function HoroscopeDetailPage() {
 
     const horoscope = horoscopeData.horoscope as any;
     const predictions = horoscope.predictions;
+    const aiEnhanced = horoscope.ai_enhanced; // AI-generated enhanced content
     if (!predictions) return [];
 
     const sections = [];
     const period = activeTab; // 'today', 'weekly', 'monthly', 'yearly'
 
-    // 1. Overview - ALL PERIODS
+    // 1. Overview - ALL PERIODS (AI Enhanced)
     const overviewData = predictions.overall || predictions.overview;
     sections.push({
       id: 'overview',
@@ -221,12 +222,15 @@ export default function HoroscopeDetailPage() {
       Icon: FaStar,
       bgColor: 'bg-gradient-to-br from-blue-50 to-indigo-50',
       borderColor: 'border-blue-200',
-      content: getValue(overviewData?.summary),
+      content: getValue(
+        aiEnhanced?.overview,
+        overviewData?.summary
+      ),
       rating: overviewData?.rating || 0,
       details: overviewData?.key_factors || (overviewData?.key_theme ? [`🎯 Theme: ${overviewData.key_theme}`] : []),
     });
 
-    // 2. Love & Relationships - ALL PERIODS
+    // 2. Love & Relationships - ALL PERIODS (AI Enhanced)
     const loveData = predictions.love || predictions.love_relationships;
     const loveDetails = [];
     if (loveData) {
@@ -250,12 +254,15 @@ export default function HoroscopeDetailPage() {
       Icon: FaHeart,
       bgColor: 'bg-gradient-to-br from-pink-50 to-rose-50',
       borderColor: 'border-pink-200',
-      content: getValue(loveData?.prediction || loveData?.summary),
+      content: getValue(
+        aiEnhanced?.love_relationships,
+        loveData?.prediction || loveData?.summary
+      ),
       rating: loveData?.rating || 0,
       details: loveDetails.length > 0 ? loveDetails : ['--'],
     });
 
-    // 3. Personal Life - Derived from overview or yearly spiritual_growth
+    // 3. Personal Life (AI Enhanced)
     const personalData = predictions.spiritual_growth;
     const personalDetails = [];
     if (personalData) {
@@ -274,16 +281,13 @@ export default function HoroscopeDetailPage() {
       bgColor: 'bg-gradient-to-br from-indigo-50 to-purple-50',
       borderColor: 'border-indigo-200',
       content: getValue(
-        personalData?.summary,
-        period === 'yearly' 
-          ? 'Focus on personal growth and self-development this year.'
-          : 'Take time for personal development and self-care during this period.'
+        aiEnhanced?.personal_life || personalData?.summary
       ),
       rating: 0,
       details: personalDetails.length > 0 ? personalDetails : ['--'],
     });
 
-    // 4. Career & Finance - ALL PERIODS
+    // 4. Career & Finance - ALL PERIODS (AI Enhanced)
     const careerData = predictions.career || predictions.career_business;
     const financeData = predictions.finance || predictions.finance_wealth;
     const careerFinanceDetails = [];
@@ -314,8 +318,6 @@ export default function HoroscopeDetailPage() {
     }
 
     if (financeData) {
-      if (careerFinanceContent) careerFinanceContent += '\n\n💰 Finance: ';
-      careerFinanceContent += getValue(financeData.prediction || financeData.summary);
       if (financeData.opportunities) {
         const opps = Array.isArray(financeData.opportunities) 
           ? financeData.opportunities.join(', ') 
@@ -340,12 +342,12 @@ export default function HoroscopeDetailPage() {
       Icon: FaBriefcase,
       bgColor: 'bg-gradient-to-br from-green-50 to-emerald-50',
       borderColor: 'border-green-200',
-      content: careerFinanceContent || '--',
+      content: getValue(aiEnhanced?.career_finance, careerFinanceContent),
       rating: careerFinanceRating,
       details: careerFinanceDetails.length > 0 ? careerFinanceDetails : ['--'],
     });
 
-    // 5. Health & Wellness - ALL PERIODS
+    // 5. Health & Wellness - ALL PERIODS (AI Enhanced)
     const healthData = predictions.health || predictions.health_wellness;
     const healthDetails = [];
     if (healthData) {
@@ -368,19 +370,22 @@ export default function HoroscopeDetailPage() {
       Icon: FaHeartbeat,
       bgColor: 'bg-gradient-to-br from-red-50 to-orange-50',
       borderColor: 'border-red-200',
-      content: getValue(healthData?.prediction || healthData?.summary),
+      content: getValue(
+        aiEnhanced?.health_wellness,
+        healthData?.prediction || healthData?.summary
+      ),
       rating: healthData?.rating || 0,
       details: healthDetails.length > 0 ? healthDetails : ['--'],
     });
 
-    // 6. Emotions & Mind
-    const emotionContent = period === 'yearly'
-      ? 'Focus on emotional balance and mental wellness throughout the year. Regular meditation and mindfulness practices recommended.'
-      : period === 'monthly'
-      ? 'Monthly lunar cycles affect your emotional state. Stay balanced through meditation and self-reflection.'
-      : period === 'weekly'
-      ? 'Weekly planetary movements influence your mood. Practice mindfulness and emotional awareness.'
-      : getValue((horoscope as any).moon_phase ? `The ${(horoscope as any).moon_phase} moon phase influences your emotional landscape. Focus on emotional balance and intuition.` : 'Current lunar energies affect your emotions. Stay centered and mindful.');
+    // 6. Emotions & Mind (AI Enhanced)
+    const emotionsData = predictions.emotions_mind;
+    const emotionsDetails = [];
+    if (emotionsData) {
+      if (emotionsData.moon_phase) emotionsDetails.push(`🌙 Moon Phase: ${emotionsData.moon_phase}`);
+      if (emotionsData.moon_nakshatra) emotionsDetails.push(`⭐ Nakshatra: ${emotionsData.moon_nakshatra}`);
+      if (emotionsData.advice) emotionsDetails.push(`💡 ${emotionsData.advice}`);
+    }
     
     sections.push({
       id: 'emotions',
@@ -388,12 +393,15 @@ export default function HoroscopeDetailPage() {
       Icon: FaBrain,
       bgColor: 'bg-gradient-to-br from-purple-50 to-violet-50',
       borderColor: 'border-purple-200',
-      content: emotionContent,
-      rating: 0,
-      details: overviewData?.key_factors || ['Practice mindfulness', 'Maintain emotional balance', 'Stay positive'],
+      content: getValue(
+        aiEnhanced?.emotions_mind,
+        emotionsData?.summary
+      ),
+      rating: emotionsData?.rating || 0,
+      details: emotionsDetails.length > 0 ? emotionsDetails : ['Practice mindfulness', 'Maintain emotional balance', 'Stay positive'],
     });
 
-    // 7. Lucky Insights - ALL PERIODS
+    // 7. Lucky Insights - ALL PERIODS (AI Enhanced)
     const luckyData = horoscope.lucky_elements;
     const luckyDetails = [];
     let hasLuckyData = false;
@@ -439,23 +447,20 @@ export default function HoroscopeDetailPage() {
       Icon: FaLeaf,
       bgColor: 'bg-gradient-to-br from-yellow-50 to-amber-50',
       borderColor: 'border-yellow-200',
-      content: hasLuckyData 
-        ? 'Align yourself with these auspicious elements to maximize your potential for this period.'
-        : '--',
+      content: getValue(aiEnhanced?.lucky_insights),
       rating: 0,
       details: luckyDetails.length > 0 ? luckyDetails : ['--'],
     });
 
-    // 8. Travel & Movement
-    const travelContent = luckyData?.direction
-      ? `Favorable direction: ${luckyData.direction}. Plan your travels and important movements accordingly.`
-      : period === 'yearly'
-      ? 'Plan major travels during favorable quarterly periods. Check planetary transits before long journeys.'
-      : period === 'monthly'
-      ? 'Best travel periods are during the first and third weeks. Check lunar phases for optimal timing.'
-      : period === 'weekly'
-      ? 'Mid-week is generally favorable for travel and movement. Check daily guidance for specific days.'
-      : 'Check the lucky direction for optimal results in travel and movement.';
+    // 8. Travel & Movement (AI Enhanced)
+    const travelData = predictions.travel_movement;
+    const travelDetails = [];
+    if (travelData) {
+      if (travelData.favorable_direction) travelDetails.push(`🧭 Direction: ${travelData.favorable_direction}`);
+      if (travelData.best_travel_days) travelDetails.push(`📅 Best Days: ${travelData.best_travel_days}`);
+      if (travelData.best_travel_period) travelDetails.push(`⏰ Best Period: ${travelData.best_travel_period}`);
+      if (travelData.advice) travelDetails.push(`💡 ${travelData.advice}`);
+    }
 
     sections.push({
       id: 'travel',
@@ -463,12 +468,15 @@ export default function HoroscopeDetailPage() {
       Icon: FaPlane,
       bgColor: 'bg-gradient-to-br from-cyan-50 to-sky-50',
       borderColor: 'border-cyan-200',
-      content: travelContent,
-      rating: 0,
-      details: luckyData?.direction ? [`🧭 Favorable Direction: ${luckyData.direction}`] : ['--'],
+      content: getValue(
+        aiEnhanced?.travel_movement,
+        travelData?.summary
+      ),
+      rating: travelData?.rating || 0,
+      details: travelDetails.length > 0 ? travelDetails : ['--'],
     });
 
-    // 9. Remedies - For all periods
+    // 9. Remedies - For all periods (AI Enhanced)
     const remedies = horoscope.remedies;
     const remedyDetails = [];
     
@@ -484,26 +492,15 @@ export default function HoroscopeDetailPage() {
       });
     }
 
-    // Generic remedies if no specific ones available
-    if (remedyDetails.length === 0) {
-      remedyDetails.push(
-        '🙏 Chant mantras dedicated to your ruling planet',
-        '💧 Offer water to the Sun every morning',
-        '🕯️ Light a lamp during evening prayers',
-        '🤲 Practice charity and help those in need',
-        '🧘 Meditate daily for inner peace'
-      );
-    }
-
     sections.push({
       id: 'remedies',
       title: 'Remedies',
       Icon: FaPrayingHands,
       bgColor: 'bg-gradient-to-br from-orange-50 to-red-50',
       borderColor: 'border-orange-200',
-      content: 'Follow these Vedic remedies to enhance positive energies and mitigate challenges during this period.',
+      content: getValue(aiEnhanced?.remedies),
       rating: 0,
-      details: remedyDetails,
+      details: remedyDetails.length > 0 ? remedyDetails : ['--'],
     });
 
     return sections;
@@ -722,7 +719,7 @@ export default function HoroscopeDetailPage() {
       )}
 
       {/* Compatibility Section */}
-      <section className="py-16 bg-white">
+      {/* <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <h2 className="text-3xl font-bold text-gray-900 text-center mb-4">
             {currentSign.name.toUpperCase()} COMPATIBILITY WITH OTHER SIGNS
@@ -751,7 +748,7 @@ export default function HoroscopeDetailPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
     </div>
   );
 }
