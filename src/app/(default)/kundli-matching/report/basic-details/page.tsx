@@ -27,56 +27,80 @@ export default function BasicDetailsPage() {
       title: "Compatibility (Varna)",
       score: matchingData.ashtakootDetails?.kutas?.varna?.points ?? 0,
       maxScore: matchingData.ashtakootDetails?.kutas?.varna?.max_points ?? 0,
-      description: matchingData.ashtakootDetails?.kutas?.varna?.description || "--",
+      description:
+        matchingData.ashtakootDetails?.kutas?.varna?.enhanced_description ||
+        matchingData.ashtakootDetails?.kutas?.varna?.description ||
+        "--",
       bgColor: "#D3D3D3",
     },
     {
       title: "Love (Bhakut)",
       score: matchingData.ashtakootDetails?.kutas?.bhakoot?.points ?? 0,
       maxScore: matchingData.ashtakootDetails?.kutas?.bhakoot?.max_points ?? 0,
-      description: matchingData.ashtakootDetails?.kutas?.bhakoot?.description || "--",
+      description:
+        matchingData.ashtakootDetails?.kutas?.bhakoot?.enhanced_description ||
+        matchingData.ashtakootDetails?.kutas?.bhakoot?.description ||
+        "--",
       bgColor: "#FCE4EC",
     },
     {
       title: "Mental Compatibility (Maitri)",
       score: matchingData.ashtakootDetails?.kutas?.graha_maitri?.points ?? 0,
       maxScore: matchingData.ashtakootDetails?.kutas?.graha_maitri?.max_points ?? 0,
-      description: matchingData.ashtakootDetails?.kutas?.graha_maitri?.description || "--",
+      description:
+        matchingData.ashtakootDetails?.kutas?.graha_maitri?.enhanced_description ||
+        matchingData.ashtakootDetails?.kutas?.graha_maitri?.description ||
+        "--",
       bgColor: "#FFF3E0",
     },
     {
       title: "Temperament (Gana)",
       score: matchingData.ashtakootDetails?.kutas?.gana?.points ?? 0,
       maxScore: matchingData.ashtakootDetails?.kutas?.gana?.max_points ?? 0,
-      description: matchingData.ashtakootDetails?.kutas?.gana?.description || "--",
+      description:
+        matchingData.ashtakootDetails?.kutas?.gana?.enhanced_description ||
+        matchingData.ashtakootDetails?.kutas?.gana?.description ||
+        "--",
       bgColor: "#F3E5F5",
     },
     {
       title: "Health (Nadi)",
       score: matchingData.ashtakootDetails?.kutas?.nadi?.points ?? 0,
       maxScore: matchingData.ashtakootDetails?.kutas?.nadi?.max_points ?? 0,
-      description: matchingData.ashtakootDetails?.kutas?.nadi?.description || "--",
+      description:
+        matchingData.ashtakootDetails?.kutas?.nadi?.enhanced_description ||
+        matchingData.ashtakootDetails?.kutas?.nadi?.description ||
+        "--",
       bgColor: "#E0F7FA",
     },
     {
       title: "Dominance (Vashya)",
       score: matchingData.ashtakootDetails?.kutas?.vashya?.points ?? 0,
       maxScore: matchingData.ashtakootDetails?.kutas?.vashya?.max_points ?? 0,
-      description: matchingData.ashtakootDetails?.kutas?.vashya?.description || "--",
+      description:
+        matchingData.ashtakootDetails?.kutas?.vashya?.enhanced_description ||
+        matchingData.ashtakootDetails?.kutas?.vashya?.description ||
+        "--",
       bgColor: "#E8EAF6",
     },
     {
       title: "Destiny (Tara)",
       score: matchingData.ashtakootDetails?.kutas?.tara?.points ?? 0,
       maxScore: matchingData.ashtakootDetails?.kutas?.tara?.max_points ?? 0,
-      description: matchingData.ashtakootDetails?.kutas?.tara?.description || "--",
+      description:
+        matchingData.ashtakootDetails?.kutas?.tara?.enhanced_description ||
+        matchingData.ashtakootDetails?.kutas?.tara?.description ||
+        "--",
       bgColor: "#FFF9C4",
     },
     {
       title: "Physical Compatibility (Yoni)",
       score: matchingData.ashtakootDetails?.kutas?.yoni?.points ?? 0,
       maxScore: matchingData.ashtakootDetails?.kutas?.yoni?.max_points ?? 0,
-      description: matchingData.ashtakootDetails?.kutas?.yoni?.description || "--",
+      description:
+        matchingData.ashtakootDetails?.kutas?.yoni?.enhanced_description ||
+        matchingData.ashtakootDetails?.kutas?.yoni?.description ||
+        "--",
       bgColor: "#E0F2F1",
     },
   ];
