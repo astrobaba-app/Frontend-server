@@ -95,6 +95,17 @@ export interface ManglikDetails {
   };
 }
 
+export interface PlanetDetail {
+  name: string;
+  sign?: string;
+  signLord?: string;
+  degree?: number;
+  nakshatra?: string;
+  nakshatraLord?: string;
+  house?: number;
+  avastha?: string;
+}
+
 export interface KundliMatchingData {
   id: string;
   userId: string;
@@ -114,6 +125,12 @@ export interface KundliMatchingData {
   ashtakootDetails: AshtakootDetails;
   dashakootDetails: DashakootDetails;
   manglikDetails: ManglikDetails;
+  boyPlanetDetails?: PlanetDetail[];
+  girlPlanetDetails?: PlanetDetail[];
+  boyLagnaChart?: any;
+  girlLagnaChart?: any;
+  boyAscendant?: { sign: string; sign_num: number; degree: number };
+  girlAscendant?: { sign: string; sign_num: number; degree: number };
   conclusion: string;
   createdAt: string;
   updatedAt: string;

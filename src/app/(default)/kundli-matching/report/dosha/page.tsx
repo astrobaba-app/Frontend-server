@@ -22,6 +22,15 @@ export default function DoshaPage() {
     return null;
   }
 
+  const nadiKuta = (matchingData as any)?.ashtakootDetails?.kutas?.nadi;
+  const bhakootKuta = (matchingData as any)?.ashtakootDetails?.kutas?.bhakoot;
+
+  const rajjooDoshaText =
+    typeof nadiKuta?.points === "number" ? (nadiKuta.points === 0 ? "Yes" : "No") : "--";
+
+  const vedhaDoshaText =
+    typeof bhakootKuta?.points === "number" ? (bhakootKuta.points === 0 ? "Yes" : "No") : "--";
+
   return (
     <>
       {/* Couple's Basic Details */}
@@ -50,7 +59,7 @@ export default function DoshaPage() {
                 Rajjoo Dosha
               </p>
               <p className="text-sm" style={{ color: colors.gray }}>
-                No
+                {rajjooDoshaText}
               </p>
             </div>
             <div className="text-center">
@@ -62,7 +71,7 @@ export default function DoshaPage() {
                 Vedha Dosha
               </p>
               <p className="text-sm" style={{ color: colors.gray }}>
-                No
+                {vedhaDoshaText}
               </p>
             </div>
             <div className="text-center">

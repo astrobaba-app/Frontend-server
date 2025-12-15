@@ -26,6 +26,8 @@ export default function LagnaChartPage() {
   // Get chart data from matchingData
   const boyChartData = (matchingData as any)?.boyLagnaChart || null;
   const girlChartData = (matchingData as any)?.girlLagnaChart || null;
+  const boyAscendant = (matchingData as any)?.boyAscendant || null;
+  const girlAscendant = (matchingData as any)?.girlAscendant || null;
 
   // Create default empty chart structure if data is missing
   const createEmptyChart = () => ({
@@ -47,6 +49,8 @@ export default function LagnaChartPage() {
                 chartData={boyChartData} 
                 chartType="Male Lagna Chart" 
                 style="north" 
+                ascSignNum={boyAscendant?.sign_num}
+                ascDegree={boyAscendant?.degree}
               />
             ) : (
               <KundliChart 
@@ -128,6 +132,8 @@ export default function LagnaChartPage() {
                 chartData={girlChartData} 
                 chartType="Female Lagna Chart" 
                 style="north" 
+                ascSignNum={girlAscendant?.sign_num}
+                ascDegree={girlAscendant?.degree}
               />
             ) : (
               <KundliChart 

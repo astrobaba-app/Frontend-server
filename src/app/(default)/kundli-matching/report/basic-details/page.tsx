@@ -230,7 +230,7 @@ export default function BasicDetailsPage() {
                 Janam Rashi
               </td>
               <td className="py-3 px-4 text-right" style={{ color: colors.black }}>
-                {(matchingData as any).boyJanamRashi || "--"}
+                {matchingData.ashtakootDetails?.male_moon_sign || "--"}
               </td>
             </tr>
             <tr style={{ backgroundColor: colors.creamyYellow || '#fffbee' }}>
@@ -292,7 +292,7 @@ export default function BasicDetailsPage() {
                 Janam Rashi
               </td>
               <td className="py-3 px-4 text-right" style={{ color: colors.black }}>
-                {(matchingData as any).girlJanamRashi || "--"}
+                {matchingData.ashtakootDetails?.female_moon_sign || "--"}
               </td>
             </tr>
             <tr style={{ backgroundColor: colors.creamyYellow || '#fffbee' }}>
