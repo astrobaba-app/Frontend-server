@@ -326,9 +326,9 @@ export default function WalletPage() {
         isOpen={rechargeModalOpen}
         onClose={() => setRechargeModalOpen(false)}
         onSuccess={handleRechargeSuccess}
-        userName={user?.fullName}
-        userEmail={user?.email}
-        userPhone={user?.phone}
+        userName={user?.fullName || undefined}
+        userEmail={user?.email || undefined}
+        userPhone={user?.mobile || undefined}
       />
 
       <PaymentModal

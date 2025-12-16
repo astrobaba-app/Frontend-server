@@ -51,8 +51,6 @@ export default function AstrologerDetailPage() {
 
       try {
         setLoading(true);
-
-      
         const astroResponse = await getAstrologerById(id);
         if (astroResponse.success && astroResponse.astrologer) {
           setAstrologer(astroResponse.astrologer);

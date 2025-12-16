@@ -13,6 +13,7 @@ import {
   PhoneOff,
   Mic,
   MicOff,
+  AlertCircle,
 } from "lucide-react";
 import { RxCross2 } from "react-icons/rx";
 import Link from "next/link";
@@ -35,6 +36,7 @@ import {
 import { useToast } from "@/hooks/useToast";
 import Toast from "@/components/atoms/Toast";
 import ConfirmDeleteChatModal from "@/components/modals/ConfirmDeleteChatModal";
+import { useAIChatWallet } from "@/hooks/useAIChatWallet";
 
 // AI Astrologer Info
 const AI_ASTROLOGER_INFO = {
@@ -79,6 +81,9 @@ const AIChatPage = () => {
   const [isAISpeaking, setIsAISpeaking] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [pendingDeleteSessionId, setPendingDeleteSessionId] = useState<string | null>(null);
+  const [showInsufficientBalanceModal, setShowInsufficientBalanceModal] = useState(false);
+  const [isChatSessionActive, setIsChatSessionActive] = useState(false);
+  const [isVoiceSessionActive, setIsVoiceSessionActive] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -89,8 +94,27 @@ const AIChatPage = () => {
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const nextPlayTimeRef = useRef<number>(0);
 
-  // Mock wallet balance - will be replaced with real data later
-  const walletBalance = 1500;
+  // Wallet integration
+  const {
+    balance,
+    isChatting,
+    isVoiceCalling,
+    chatDuration,
+    chatCost,
+    voiceDuration,
+    voiceCost,
+    startChatTimer,
+    stopChatTimer,
+    startVoiceTimer,
+    stopVoiceTimer,
+    hasSufficientBalance,
+  } = useAIChatWallet({
+    userId: user?.id,
+    onInsufficientBalance: () => {
+      setShowInsufficientBalanceModal(true);
+      showToast("Insufficient balance. Please recharge your wallet.", "error");
+    },
+  });
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -138,6 +162,16 @@ const AIChatPage = () => {
       }
     };
   }, [isCallActive]);
+
+  // Cleanup timers on unmount or navigation
+  useEffect(() => {
+    return () => {
+      // This cleanup only runs when component unmounts
+      stopChatTimer();
+      stopVoiceTimer();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -273,7 +307,7 @@ const AIChatPage = () => {
       .padStart(2, "0")}`;
   };
 
-  // Start voice call
+  // Start voice call (internal - called from handleStartVoiceSession)
   const handleStartCall = async () => {
     try {
       console.log("=== STARTING VOICE CALL ===");
@@ -281,9 +315,31 @@ const AIChatPage = () => {
       setCallStatus("Requesting microphone access...");
 
       // Request microphone permission
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaStreamRef.current = stream;
-      console.log("✅ Microphone access granted");
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaStreamRef.current = stream;
+        console.log("✅ Microphone access granted");
+      } catch (micError: any) {
+        console.error("Microphone permission error:", micError);
+        
+        let errorMessage = "Microphone access denied. ";
+        if (micError.name === "NotAllowedError") {
+          errorMessage += "Please allow microphone permission in your browser settings.";
+        } else if (micError.name === "NotFoundError") {
+          errorMessage += "No microphone found on your device.";
+        } else if (micError.name === "NotReadableError") {
+          errorMessage += "Microphone is already in use by another application.";
+        } else {
+          errorMessage += micError.message || "Unknown error";
+        }
+        
+        showToast(errorMessage, "error");
+        setIsConnecting(false);
+        setIsVoiceSessionActive(false);
+        stopVoiceTimer();
+        return;
+      }
 
       setCallStatus("Connecting to AI...");
 
@@ -339,10 +395,16 @@ const AIChatPage = () => {
         console.log("Was clean:", event.wasClean);
         setCallStatus("Disconnected");
 
+        // Stop voice session and timer (always call to ensure cleanup)
+        setIsVoiceSessionActive(false);
+        stopVoiceTimer();
+        
         // Auto cleanup if closed unexpectedly
         if (isCallActive) {
           handleEndCall();
         }
+        
+        showToast("Voice session ended", "info");
       };
 
       console.log("=== VOICE CALL INITIATED ===");
@@ -359,6 +421,12 @@ const AIChatPage = () => {
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getTracks().forEach((track) => track.stop());
         mediaStreamRef.current = null;
+      }
+      
+      // Stop voice session and timer on error
+      if (isVoiceSessionActive) {
+        setIsVoiceSessionActive(false);
+        stopVoiceTimer();
       }
 
       showToast(err.message || "Failed to start voice call", "error");
@@ -770,6 +838,13 @@ const AIChatPage = () => {
     e.preventDefault();
 
     if (messageText.trim() === "") return;
+    
+    // Require active chat session
+    if (!isChatSessionActive) {
+      showToast("Please start chat session first", "error");
+      return;
+    }
+    
     if (!currentSessionId) {
       // Create a new session if none exists
       await handleNewChat();
@@ -839,6 +914,49 @@ const AIChatPage = () => {
 
   const handlePromptClick = (prompt: string) => {
     handleSendMessage({ preventDefault: () => {} } as React.FormEvent, prompt);
+  };
+
+  // Start chat session with timer
+  const handleStartChat = () => {
+    if (!hasSufficientBalance(10)) {
+      setShowInsufficientBalanceModal(true);
+      showToast("Insufficient balance to start chat", "error");
+      return;
+    }
+    setIsChatSessionActive(true);
+    startChatTimer();
+    showToast("Chat session started. ₹10 will be deducted per minute.", "success");
+  };
+
+  // Stop chat session
+  const handleStopChat = () => {
+    setIsChatSessionActive(false);
+    stopChatTimer();
+    showToast("Chat session ended", "success");
+  };
+
+  // Start voice call session
+  const handleStartVoiceSession = async () => {
+    if (!hasSufficientBalance(15)) {
+      setShowInsufficientBalanceModal(true);
+      showToast("Insufficient balance to start voice call", "error");
+      return;
+    }
+    
+    setIsVoiceSessionActive(true);
+    startVoiceTimer();
+    showToast("Voice session started. ₹15 will be deducted per minute.", "success");
+    
+    // Now start the actual voice call
+    await handleStartCall();
+  };
+
+  // Stop voice call session
+  const handleStopVoiceSession = () => {
+    setIsVoiceSessionActive(false);
+    stopVoiceTimer();
+    handleEndCall();
+    showToast("Voice session ended", "success");
   };
 
   return (
@@ -919,24 +1037,23 @@ const AIChatPage = () => {
               <span className="font-semibold text-sm">New Chat</span>
             </button>
 
-            <button
-              onClick={handleStartCall}
-              disabled={isConnecting || isCallActive}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+            <div
+              className="w-full p-4 rounded-lg text-center"
               style={{
-                backgroundColor: colors.primeGreen,
-                color: colors.white,
+                backgroundColor: colors.offYellow,
+                border: `2px solid ${colors.primeYellow}`,
               }}
             >
-              <Phone size={20} />
-              <span className="font-semibold text-sm">
-                {isConnecting
-                  ? "Connecting..."
-                  : isCallActive
-                  ? "Call Active"
-                  : "Voice Call"}
-              </span>
-            </button>
+              <Phone size={32} className="mx-auto mb-2" style={{ color: colors.primeYellow }} />
+              <p className="text-sm font-medium mb-1" style={{ color: colors.darkGray }}>
+                Voice Call Feature
+              </p>
+              <p className="text-xs" style={{ color: colors.gray }}>
+                {isVoiceSessionActive 
+                  ? "Voice session active. Click 'Stop Voice' in header to end." 
+                  : "Click 'Start Voice' button in header to begin voice call."}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -1053,18 +1170,93 @@ const AIChatPage = () => {
               </div>
             </div>
 
-            {/* Right: Wallet */}
-            <Link href="/profile/wallet">
-              <div
-                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:opacity-80 transition-opacity cursor-pointer"
-                style={{ backgroundColor: colors.primeYellow }}
-              >
-                <WalletIcon size={18} style={{ color: colors.white }} />
-                <span className="font-semibold" style={{ color: colors.white }}>
-                  ₹{walletBalance}
-                </span>
-              </div>
-            </Link>
+            {/* Right: Start/Stop Chat, Wallet and Timer */}
+            <div className="flex items-center gap-3">
+              {/* Start/Stop Chat Button */}
+              {currentSessionId && (
+                <button
+                  onClick={isChatSessionActive ? handleStopChat : handleStartChat}
+                  disabled={!isChatSessionActive && !hasSufficientBalance(10)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: isChatSessionActive ? "#EF4444" : colors.primeGreen,
+                    color: colors.white,
+                  }}
+                >
+                  <Clock size={18} />
+                  <span className="font-medium text-sm">
+                    {isChatSessionActive ? "Stop Chat" : "Start Chat"}
+                  </span>
+                </button>
+              )}
+
+              {/* Chat Timer */}
+              {isChatting && (
+                <div
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                  style={{ backgroundColor: colors.offYellow, border: `2px solid ${colors.primeYellow}` }}
+                >
+                  <Clock size={16} style={{ color: colors.darkGray }} />
+                  <div className="flex flex-col">
+                    <span className="text-xs font-medium" style={{ color: colors.darkGray }}>
+                      {chatDuration}
+                    </span>
+                    <span className="text-xs" style={{ color: colors.gray }}>
+                      ₹{chatCost.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Voice Timer */}
+              {isVoiceCalling && (
+                <div
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                  style={{ backgroundColor: colors.offYellow, border: `2px solid ${colors.primeYellow}` }}
+                >
+                  <Phone size={16} style={{ color: colors.darkGray }} />
+                  <div className="flex flex-col">
+                    <span className="text-xs font-medium" style={{ color: colors.darkGray }}>
+                      {voiceDuration}
+                    </span>
+                    <span className="text-xs" style={{ color: colors.gray }}>
+                      ₹{voiceCost.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Start/Stop Voice Call Button */}
+              {currentSessionId && (
+                <button
+                  onClick={isVoiceSessionActive ? handleStopVoiceSession : handleStartVoiceSession}
+                  disabled={!isVoiceSessionActive && !hasSufficientBalance(15)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: isVoiceSessionActive ? "#EF4444" : "#8B5CF6",
+                    color: colors.white,
+                  }}
+                >
+                  <Phone size={18} />
+                  <span className="font-medium text-sm">
+                    {isVoiceSessionActive ? "Stop Voice" : "Start Voice"}
+                  </span>
+                </button>
+              )}
+
+              {/* Wallet Balance */}
+              <Link href="/profile/wallet">
+                <div
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg hover:opacity-80 transition-opacity cursor-pointer"
+                  style={{ backgroundColor: colors.primeYellow }}
+                >
+                  <WalletIcon size={18} style={{ color: colors.white }} />
+                  <span className="font-semibold" style={{ color: colors.white }}>
+                    ₹{balance.toFixed(2)}
+                  </span>
+                </div>
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -1283,27 +1475,75 @@ const AIChatPage = () => {
           style={{ borderColor: colors.gray + "20" }}
         >
           <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
+            {/* Chat Session Warning */}
+            {!isChatSessionActive && currentSessionId && (
+              <div
+                className="mb-3 p-3 rounded-lg border flex items-center gap-2"
+                style={{
+                  backgroundColor: "#FEF9E7",
+                  borderColor: colors.primeYellow,
+                  color: colors.darkGray,
+                }}
+              >
+                <Clock size={18} style={{ color: colors.primeYellow }} />
+                <p className="text-sm">
+                  Click <strong>"Start Chat"</strong> button above to begin your session.
+                  You'll be charged ₹10 per minute.
+                </p>
+              </div>
+            )}
+            
+            {/* Insufficient Balance Warning */}
+            {!hasSufficientBalance(10) && (
+              <div
+                className="mb-3 p-3 rounded-lg border flex items-center gap-2"
+                style={{
+                  backgroundColor: "#FEF2F2",
+                  borderColor: "#FCA5A5",
+                  color: "#991B1B",
+                }}
+              >
+                <AlertCircle size={18} />
+                <p className="text-sm">
+                  Insufficient balance. Please{" "}
+                  <Link
+                    href="/profile/wallet"
+                    className="underline font-semibold hover:opacity-80"
+                  >
+                    recharge your wallet
+                  </Link>{" "}
+                  to continue chatting.
+                </p>
+              </div>
+            )}
+            
             <form onSubmit={handleSendMessage} className="flex gap-2">
               <input
                 type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
-                placeholder="Message AI Astrologer..."
-                disabled={!currentSessionId || isTyping}
+                placeholder={
+                  !hasSufficientBalance(10)
+                    ? "Insufficient balance to send message..."
+                    : !isChatSessionActive
+                    ? "Click 'Start Chat' to begin..."
+                    : "Message AI Astrologer..."
+                }
+                disabled={!currentSessionId || isTyping || !isChatSessionActive}
                 className="flex-1 px-4 py-3 rounded-xl border focus:outline-none focus:border-2 transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                 style={{
                   borderColor: colors.gray + "40",
-                  backgroundColor: currentSessionId ? colors.white : "#F3F4F6",
+                  backgroundColor: currentSessionId && isChatSessionActive ? colors.white : "#F3F4F6",
                   color: colors.darkGray,
                 }}
               />
               <button
                 type="submit"
-                disabled={!inputMessage.trim() || !currentSessionId || isTyping}
+                disabled={!inputMessage.trim() || !currentSessionId || isTyping || !isChatSessionActive}
                 className="px-4 py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
                 style={{
                   backgroundColor:
-                    inputMessage.trim() && currentSessionId
+                    inputMessage.trim() && currentSessionId && isChatSessionActive
                       ? colors.primeYellow
                       : colors.gray,
                   color: colors.white,
@@ -1423,6 +1663,61 @@ const AIChatPage = () => {
           setPendingDeleteSessionId(null);
         }}
       />
+
+      {/* Insufficient Balance Modal */}
+      {showInsufficientBalanceModal && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col items-center text-center">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+                style={{ backgroundColor: "#FEF2F2" }}
+              >
+                <AlertCircle size={32} style={{ color: "#EF4444" }} />
+              </div>
+
+              <h3
+                className="text-xl font-bold mb-2"
+                style={{ color: colors.darkGray }}
+              >
+                Insufficient Balance
+              </h3>
+
+              <p className="text-sm mb-6" style={{ color: colors.gray }}>
+                You don't have enough balance to continue chatting with AI Astrologer.
+                Please recharge your wallet to continue.
+              </p>
+
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => setShowInsufficientBalanceModal(false)}
+                  className="flex-1 px-4 py-3 rounded-xl border hover:bg-gray-50 transition-colors"
+                  style={{
+                    borderColor: colors.gray,
+                    color: colors.darkGray,
+                  }}
+                >
+                  Cancel
+                </button>
+                <Link href="/profile/wallet" className="flex-1">
+                  <button
+                    className="w-full px-4 py-3 rounded-xl hover:opacity-90 transition-opacity"
+                    style={{
+                      backgroundColor: colors.primeYellow,
+                      color: colors.white,
+                    }}
+                  >
+                    Recharge Wallet
+                  </button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toastProps.isVisible && (
         <Toast
