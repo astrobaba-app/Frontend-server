@@ -52,13 +52,11 @@ export default function AstrologerDetailPage() {
       try {
         setLoading(true);
 
-        // Fetch astrologer details
+      
         const astroResponse = await getAstrologerById(id);
         if (astroResponse.success && astroResponse.astrologer) {
           setAstrologer(astroResponse.astrologer);
         }
-
-        // Fetch reviews
         setReviewsLoading(true);
         const reviewsResponse = await getAstrologerReviews(id);
         if (reviewsResponse.success) {
