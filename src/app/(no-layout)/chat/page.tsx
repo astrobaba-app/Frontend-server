@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Send, ArrowLeft, Phone, ChevronRight, MessageSquare, X, MoreVertical } from 'lucide-react';
+import { Send, ArrowLeft, Phone, ChevronRight, MessageSquare, X, MoreVertical, Video } from 'lucide-react';
 import { IoChatbubblesSharp } from "react-icons/io5";
 import Link from 'next/link';
 import Image from 'next/image';
@@ -11,13 +11,20 @@ import { useRouter } from 'next/navigation';
 import { FaVideo } from "react-icons/fa";
 import { useSearchParams } from "next/navigation";
 import { getChatSocket } from "@/utils/chatSocket";
+import AgoraCall from "@/components/AgoraCall";
 import type { ChatMessageDto, ChatSessionSummary } from "@/store/api/chat";
+import type { CallSession } from "@/store/api/call";
 import {
   getMyChatSessions,
   getChatMessages,
   startChatSession,
   sendChatMessageHttp,
 } from "@/store/api/chat";
+import {
+  initiateCall,
+  getCallToken,
+  endCall,
+} from "@/store/api/call";
 
 function formatDateLabel(date: Date): string {
   const today = new Date();
@@ -86,6 +93,8 @@ const ChatPage = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [activeCall, setActiveCall] = useState<CallSession | null>(null);
+  const [isInitiatingCall, setIsInitiatingCall] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -267,11 +276,33 @@ const ChatPage = () => {
       );
     };
 
+    const handleCallAccepted = (payload: { callSession: CallSession }) => {
+      console.log("[User] Received call:accepted event:", payload);
+      setActiveCall(payload.callSession);
+      console.log("[User] Set activeCall state:", payload.callSession);
+      alert("Astrologer accepted your call! Connecting...");
+    };
+
+    const handleCallRejected = (payload: { callSession: CallSession; reason: string }) => {
+      console.log("[User] Received call:rejected event:", payload);
+      setActiveCall(null);
+      alert(`Call rejected: ${payload.reason}`);
+    };
+
+    const handleCallEnded = (payload: { callSession: CallSession; endedBy: string }) => {
+      console.log("[User] Received call:ended event:", payload);
+      setActiveCall(null);
+      alert(`Call ended by ${payload.endedBy}`);
+    };
+
     socket.on("message:new", handleNewMessage);
     socket.on("typing", handleTyping);
     socket.on("chat:updated", handleChatUpdated);
     socket.on("messages:read", handleMessagesRead);
     socket.on("unread:update", handleUnreadUpdate);
+    socket.on("call:accepted", handleCallAccepted);
+    socket.on("call:rejected", handleCallRejected);
+    socket.on("call:ended", handleCallEnded);
 
     return () => {
       socket.emit("leave_chat", { sessionId: selectedSessionId });
@@ -280,6 +311,9 @@ const ChatPage = () => {
       socket.off("chat:updated", handleChatUpdated);
       socket.off("messages:read", handleMessagesRead);
       socket.off("unread:update", handleUnreadUpdate);
+      socket.off("call:accepted", handleCallAccepted);
+      socket.off("call:rejected", handleCallRejected);
+      socket.off("call:ended", handleCallEnded);
       
       // Clean up typing timeout
       if (typingTimeoutRef.current) {
@@ -555,6 +589,44 @@ const ChatPage = () => {
     }
   };
 
+  const handleInitiateCall = async (callType: "audio" | "video") => {
+    console.log("=== INITIATE CALL DEBUG ===");
+    console.log("targetAstrologerId:", targetAstrologerId);
+    console.log("selectedSession:", selectedSession);
+    console.log("selectedSession?.astrologerId:", selectedSession?.astrologerId);
+    console.log("astrologerIdFromUrl:", astrologerIdFromUrl);
+    console.log("sessions:", sessions);
+    
+    if (!targetAstrologerId) {
+      alert("Please select an astrologer to call. No astrologer ID found.");
+      return;
+    }
+
+    if (!selectedSession) {
+      alert("Please select a chat session first");
+      return;
+    }
+
+    try {
+      setIsInitiatingCall(true);
+      // Send astrologerId as string (UUID format)
+      console.log("Sending call request with astrologerId:", targetAstrologerId);
+      
+      const response = await initiateCall(targetAstrologerId, callType);
+      
+      if (response.success && response.callSession) {
+        setActiveCall(response.callSession);
+        alert(`${callType === "audio" ? "Audio" : "Video"} call initiated! Waiting for astrologer to accept...`);
+      }
+    } catch (error: any) {
+      console.error("Failed to initiate call", error);
+      const errorMessage = error?.response?.data?.message || "Failed to initiate call";
+      alert(errorMessage);
+    } finally {
+      setIsInitiatingCall(false);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* 1. Left Sidebar (Fixed) */}
@@ -682,9 +754,25 @@ const ChatPage = () => {
             </button>
           </div>
 
-          <div className="flex items-center gap-3 me-10 sm:me-0 shrink-0">
-            <span className="text-sm text-gray-600 whitespace-nowrap">2:39 min</span>
-            <FaVideo className="w-5 h-5 text-gray-700 cursor-pointer" />
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleInitiateCall("audio")}
+              disabled={isInitiatingCall || !selectedSession}
+              className="p-2 hover:bg-gray-200 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Audio Call"
+            >
+              <Phone className="w-5 h-5 text-gray-700" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleInitiateCall("video")}
+              disabled={isInitiatingCall || !selectedSession}
+              className="p-2 hover:bg-gray-200 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Video Call"
+            >
+              <Video className="w-5 h-5 text-gray-700" />
+            </button>
           </div>
         </div>
 
@@ -977,6 +1065,14 @@ const ChatPage = () => {
           )}
         </div>
       </div>
+
+      {/* Active Call Component */}
+      {activeCall && activeCall.status !== "rejected" && (
+        <AgoraCall 
+          callSession={activeCall} 
+          onCallEnd={() => setActiveCall(null)} 
+        />
+      )}
     </div>
   );
 };

@@ -16,7 +16,9 @@ import {
 import { colors } from "@/utils/colors";
 import Image from "next/image";
 import { getChatSocket } from "@/utils/chatSocket";
+import AgoraCall from "@/components/AgoraCall";
 import type { ChatMessageDto, ChatSessionSummary } from "@/store/api/chat";
+import type { CallSession } from "@/store/api/call";
 import {
   approveChatRequest,
   getAstrologerChatSessions,
@@ -24,6 +26,12 @@ import {
   rejectChatRequest,
   sendChatMessageHttp,
 } from "@/store/api/chat";
+import {
+  acceptCall,
+  rejectCall,
+  getCallToken,
+  endCall,
+} from "@/store/api/call";
 
 function formatDateLabel(date: Date): string {
   const today = new Date();
@@ -89,6 +97,8 @@ export default function LiveChatsPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [incomingCall, setIncomingCall] = useState<CallSession | null>(null);
+  const [activeCall, setActiveCall] = useState<CallSession | null>(null);
   const typingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
@@ -138,6 +148,11 @@ export default function LiveChatsPage() {
       setSelectedSessionId(chatSessions[0].id);
     }
   }, [chatSessions, selectedSessionId]);
+
+  // Debug: Log when incomingCall state changes
+  useEffect(() => {
+    console.log("[Astrologer] incomingCall state changed:", incomingCall);
+  }, [incomingCall]);
 
   // Load astrologer chat sessions and requests
   useEffect(() => {
@@ -294,11 +309,25 @@ export default function LiveChatsPage() {
       );
     };
 
+    const handleIncomingCall = (payload: { callSession: CallSession }) => {
+      console.log("[Astrologer] Received call:incoming event:", payload);
+      setIncomingCall(payload.callSession);
+      console.log("[Astrologer] Set incomingCall state:", payload.callSession);
+    };
+
+    const handleCallEnded = (payload: { callSession: CallSession; endedBy: string }) => {
+      console.log("[Astrologer] Received call:ended event:", payload);
+      setActiveCall(null);
+      alert(`Call ended by ${payload.endedBy}`);
+    };
+
     socket.on("message:new", handleNewMessage);
     socket.on("typing", handleTyping);
     socket.on("chat:updated", handleChatUpdated);
     socket.on("messages:read", handleMessagesRead);
     socket.on("unread:update", handleUnreadUpdate);
+    socket.on("call:incoming", handleIncomingCall);
+    socket.on("call:ended", handleCallEnded);
 
     return () => {
       socket.emit("leave_chat", { sessionId: selectedSessionId });
@@ -307,6 +336,8 @@ export default function LiveChatsPage() {
       socket.off("chat:updated", handleChatUpdated);
       socket.off("messages:read", handleMessagesRead);
       socket.off("unread:update", handleUnreadUpdate);
+      socket.off("call:incoming", handleIncomingCall);
+      socket.off("call:ended", handleCallEnded);
       
       // Clean up typing timeout
       if (typingTimeoutRef.current) {
@@ -501,6 +532,30 @@ export default function LiveChatsPage() {
       await navigator.clipboard.writeText(text);
     } catch (err) {
       console.error("Failed to copy message", err);
+    }
+  };
+
+  const handleAcceptCall = async (callId: number) => {
+    try {
+      const response = await acceptCall(callId);
+      if (response.success) {
+        setActiveCall(response.callSession);
+        setIncomingCall(null);
+        alert("Call accepted! Connecting...");
+      }
+    } catch (error: any) {
+      console.error("Failed to accept call", error);
+      alert(error?.response?.data?.message || "Failed to accept call");
+    }
+  };
+
+  const handleRejectCall = async (callId: number) => {
+    try {
+      await rejectCall(callId, "Busy with another client");
+      setIncomingCall(null);
+      alert("Call rejected");
+    } catch (error: any) {
+      console.error("Failed to reject call", error);
     }
   };
 
@@ -1002,6 +1057,43 @@ export default function LiveChatsPage() {
           </div>
         )}
       </div>
+
+      {/* Incoming Call Modal */}
+      {incomingCall && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
+            <div className="text-center">
+              <FiPhone className="w-16 h-16 mx-auto mb-4 text-green-500 animate-pulse" />
+              <h3 className="text-xl font-bold mb-2">Incoming {incomingCall.callType} Call</h3>
+              <p className="text-gray-600 mb-6">
+                {incomingCall.user?.fullName || "User"} is calling you
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={() => handleRejectCall(incomingCall.id)}
+                  className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                >
+                  Reject
+                </button>
+                <button
+                  onClick={() => handleAcceptCall(incomingCall.id)}
+                  className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                >
+                  Accept
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Active Call Component */}
+      {activeCall && activeCall.status !== "rejected" && (
+        <AgoraCall 
+          callSession={activeCall} 
+          onCallEnd={() => setActiveCall(null)} 
+        />
+      )}
     </div>
   );
 }
