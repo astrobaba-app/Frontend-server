@@ -4,7 +4,6 @@ import { Edit2 } from "lucide-react";
 
 interface KundliCardProps {
   name: string;
-  relation: string;
   dob: string;
   birthPlace: string;
   onEdit?: () => void;
@@ -13,7 +12,6 @@ interface KundliCardProps {
 
 export default function KundliCard({
   name,
-  relation,
   dob,
   birthPlace,
   onEdit,
@@ -44,9 +42,7 @@ export default function KundliCard({
         </div>
         <div className="flex-1">
           <h3 className="text-lg font-bold text-gray-900 mb-1">{name}</h3>
-          <div className="inline-block px-2 py-0.5 rounded bg-yellow-200 border border-yellow-300">
-            <p className="text-sm font-medium text-gray-700">{relation}</p>
-          </div>
+          
         </div>
       </div>
 

@@ -36,20 +36,15 @@ export default function AstrologerRegister() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  // Check if astrologer is already logged in
+  // Check if someone is already logged in via role flag
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const astrologerToken = localStorage.getItem('astrobaba_token');
-      if (astrologerToken) {
-        // Redirect to dashboard if astrologer is logged in
+      const role = localStorage.getItem('auth_role');
+      if (role === 'astrologer') {
         router.push('/astrologer/dashboard');
         return;
       }
-      
-      // Check if user is logged in
-      const userToken = localStorage.getItem('astrobaba_token');
-      if (userToken) {
-        // Redirect to profile if user is logged in
+      if (role === 'user') {
         router.push('/profile');
         return;
       }

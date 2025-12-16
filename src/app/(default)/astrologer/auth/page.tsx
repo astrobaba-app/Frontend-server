@@ -7,14 +7,14 @@ export default function AstrologerRootPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if astrologer is logged in
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("astrobaba_token");
-      if (token) {
-        // Redirect to dashboard if logged in
-        router.replace("/astrologer/dashboard/profile");
+      const role = localStorage.getItem("auth_role");
+
+      if (role === "astrologer") {
+        router.replace("/astrologer/dashboard");
+      } else if (role === "user") {
+        router.replace("/profile");
       } else {
-        // Redirect to login if not logged in
         router.replace("/astrologer/login");
       }
     }

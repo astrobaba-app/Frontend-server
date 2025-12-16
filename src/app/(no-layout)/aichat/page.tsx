@@ -1,14 +1,28 @@
-'use client';
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, ArrowLeft, Sparkles, Clock, Wallet as WalletIcon, Trash2, Plus, MessageSquare, Phone, PhoneOff, Mic, MicOff } from 'lucide-react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { colors } from '@/utils/colors';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import { 
-  createChatSession, 
-  sendMessage as sendMessageAPI, 
+"use client";
+import React, { useState, useRef, useEffect } from "react";
+import {
+  Send,
+  ArrowLeft,
+  Sparkles,
+  Clock,
+  Wallet as WalletIcon,
+  Trash2,
+  Plus,
+  MessageSquare,
+  Phone,
+  PhoneOff,
+  Mic,
+  MicOff,
+} from "lucide-react";
+import { RxCross2 } from "react-icons/rx";
+import Link from "next/link";
+import Image from "next/image";
+import { colors } from "@/utils/colors";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import {
+  createChatSession,
+  sendMessage as sendMessageAPI,
   getChatMessages,
   getMyChatSessions,
   deleteChatSession as deleteChatSessionAPI,
@@ -16,8 +30,11 @@ import {
   createVoiceSession,
   getVoiceConfig,
   AIChatMessage,
-  AIChatSession
-} from '@/store/api/aichat';
+  AIChatSession,
+} from "@/store/api/aichat";
+import { useToast } from "@/hooks/useToast";
+import Toast from "@/components/atoms/Toast";
+import ConfirmDeleteChatModal from "@/components/modals/ConfirmDeleteChatModal";
 
 // AI Astrologer Info
 const AI_ASTROLOGER_INFO = {
@@ -25,7 +42,7 @@ const AI_ASTROLOGER_INFO = {
   title: "Your 24/7 Vedic AI Guide",
   photo: "/images/ai_astrologer.png",
   isOnline: true,
-  status: "Always Available"
+  status: "Always Available",
 };
 
 // Quick Prompt Suggestions
@@ -41,7 +58,8 @@ const PROMPT_SUGGESTIONS = [
 const AIChatPage = () => {
   const { isLoggedIn, loading, user } = useAuth();
   const router = useRouter();
-  
+  const { showToast, toastProps, hideToast } = useToast();
+
   // Chat state
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<AIChatSession[]>([]);
@@ -51,15 +69,17 @@ const AIChatPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSidebar, setShowSidebar] = useState(false);
-  
+
   // Voice call state
   const [isCallActive, setIsCallActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [callStatus, setCallStatus] = useState<string>('Connecting...');
+  const [callStatus, setCallStatus] = useState<string>("Connecting...");
   const [isAISpeaking, setIsAISpeaking] = useState(false);
-  
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [pendingDeleteSessionId, setPendingDeleteSessionId] = useState<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -75,7 +95,7 @@ const AIChatPage = () => {
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!loading && !isLoggedIn) {
-      router.replace('/auth/login');
+      router.replace("/auth/login");
     }
   }, [isLoggedIn, loading, router]);
 
@@ -102,7 +122,7 @@ const AIChatPage = () => {
   useEffect(() => {
     if (isCallActive) {
       callTimerRef.current = setInterval(() => {
-        setCallDuration(prev => prev + 1);
+        setCallDuration((prev) => prev + 1);
       }, 1000);
     } else {
       if (callTimerRef.current) {
@@ -128,14 +148,15 @@ const AIChatPage = () => {
     try {
       const response = await getMyChatSessions(1, 20);
       setSessions(response.sessions);
-      
+
       // If there's at least one session, load it
       if (response.sessions.length > 0 && !currentSessionId) {
         setCurrentSessionId(response.sessions[0].id);
       }
     } catch (err: any) {
-      console.error('Failed to load sessions:', err);
-      setError(err.message || 'Failed to load chat sessions');
+      console.error("Failed to load sessions:", err);
+      setError(err.message || "Failed to load chat sessions");
+      showToast(err.message || "Failed to load chat sessions", "error");
     }
   };
 
@@ -147,8 +168,9 @@ const AIChatPage = () => {
       setMessages(response.messages);
       setError(null);
     } catch (err: any) {
-      console.error('Failed to load messages:', err);
-      setError(err.message || 'Failed to load messages');
+      console.error("Failed to load messages:", err);
+      setError(err.message || "Failed to load messages");
+      showToast(err.message || "Failed to load messages", "error");
     } finally {
       setIsLoading(false);
     }
@@ -159,25 +181,26 @@ const AIChatPage = () => {
     try {
       setIsLoading(true);
       const response = await createChatSession();
-      
+
       // Add to sessions list
       const newSession: AIChatSession = {
         id: response.session.id,
-        userId: String(user?.id || ''),
+        userId: String(user?.id || ""),
         title: response.session.title,
         isActive: true,
         createdAt: response.session.createdAt,
         updatedAt: response.session.createdAt,
         lastMessageAt: response.session.createdAt,
       };
-      
+
       setSessions([newSession, ...sessions]);
       setCurrentSessionId(newSession.id);
       setMessages([]);
       setError(null);
     } catch (err: any) {
-      console.error('Failed to create session:', err);
-      setError(err.message || 'Failed to create new chat');
+      console.error("Failed to create session:", err);
+      setError(err.message || "Failed to create new chat");
+      showToast(err.message || "Failed to create new chat", "error");
     } finally {
       setIsLoading(false);
     }
@@ -185,17 +208,20 @@ const AIChatPage = () => {
 
   // Delete a chat session
   const handleDeleteSession = async (sessionId: string) => {
-    if (!confirm('Are you sure you want to delete this chat?')) return;
-    
+    setPendingDeleteSessionId(sessionId);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteSession = async () => {
+    if (!pendingDeleteSessionId) return;
+
     try {
-      await deleteChatSessionAPI(sessionId);
-      
-      // Remove from sessions list
-      const updatedSessions = sessions.filter(s => s.id !== sessionId);
+      await deleteChatSessionAPI(pendingDeleteSessionId);
+
+      const updatedSessions = sessions.filter((s) => s.id !== pendingDeleteSessionId);
       setSessions(updatedSessions);
-      
-      // If deleted session was active, switch to first available or create new
-      if (currentSessionId === sessionId) {
+
+      if (currentSessionId === pendingDeleteSessionId) {
         if (updatedSessions.length > 0) {
           setCurrentSessionId(updatedSessions[0].id);
         } else {
@@ -204,15 +230,19 @@ const AIChatPage = () => {
         }
       }
     } catch (err: any) {
-      console.error('Failed to delete session:', err);
-      setError(err.message || 'Failed to delete chat');
+      console.error("Failed to delete session:", err);
+      setError(err.message || "Failed to delete chat");
+      showToast(err.message || "Failed to delete chat", "error");
+    } finally {
+      setIsDeleteModalOpen(false);
+      setPendingDeleteSessionId(null);
     }
   };
 
   // Format time
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
   // Format date
@@ -221,13 +251,16 @@ const AIChatPage = () => {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     if (date.toDateString() === today.toDateString()) {
-      return 'Today';
+      return "Today";
     } else if (date.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday';
+      return "Yesterday";
     } else {
-      return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+      return date.toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+      });
     }
   };
 
@@ -235,428 +268,479 @@ const AIChatPage = () => {
   const formatCallDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
   };
 
   // Start voice call
   const handleStartCall = async () => {
     try {
-      console.log('=== STARTING VOICE CALL ===');
+      console.log("=== STARTING VOICE CALL ===");
       setIsConnecting(true);
-      setCallStatus('Requesting microphone access...');
-      
+      setCallStatus("Requesting microphone access...");
+
       // Request microphone permission
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
-      console.log('✅ Microphone access granted');
-      
-      setCallStatus('Connecting to AI...');
-      
+      console.log("✅ Microphone access granted");
+
+      setCallStatus("Connecting to AI...");
+
       // Get session configuration from backend
-      console.log('Calling createVoiceSession API...');
+      console.log("Calling createVoiceSession API...");
       const response = await createVoiceSession();
-      console.log('Voice session response:', response);
-      
+      console.log("Voice session response:", response);
+
       if (!response.success) {
-        const errorMsg = response.message || 'Failed to create session';
+        const errorMsg = response.message || "Failed to create session";
         throw new Error(errorMsg);
       }
-      
-      console.log('Model:', response.model);
-      console.log('Voice:', response.voice);
-      
+
+      console.log("Model:", response.model);
+      console.log("Voice:", response.voice);
+
       // Connect to backend WebSocket proxy (handles OpenAI auth)
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsHost = process.env.NEXT_PUBLIC_API_URL?.replace(/^https?:\/\//, '') || 'localhost:6001';
+      const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsHost =
+        process.env.NEXT_PUBLIC_API_URL?.replace(/^https?:\/\//, "") ||
+        "localhost:6001";
       const wsUrl = `${wsProtocol}//${wsHost}/api/ai-voice-ws`;
-      console.log('Connecting to backend WebSocket:', wsUrl);
-      
+      console.log("Connecting to backend WebSocket:", wsUrl);
+
       const ws = new WebSocket(wsUrl);
-      
+
       wsRef.current = ws;
-      
+
       ws.onopen = () => {
-        console.log('✅ WebSocket connected to backend');
-        setCallStatus('Connected');
+        console.log("✅ WebSocket connected to backend");
+        setCallStatus("Connected");
         setIsCallActive(true);
         setIsConnecting(false);
-        
+
         // Backend proxy handles session configuration automatically
         // Start audio streaming
         startAudioStreaming(ws, stream);
       };
-      
+
       ws.onmessage = (event) => {
         handleWebSocketMessage(event);
       };
-      
+
       ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        setCallStatus('Connection error');
+        console.error("WebSocket error:", error);
+        setCallStatus("Connection error");
       };
-      
+
       ws.onclose = (event) => {
-        console.log('WebSocket closed');
-        console.log('Close code:', event.code);
-        console.log('Close reason:', event.reason);
-        console.log('Was clean:', event.wasClean);
-        setCallStatus('Disconnected');
-        
+        console.log("WebSocket closed");
+        console.log("Close code:", event.code);
+        console.log("Close reason:", event.reason);
+        console.log("Was clean:", event.wasClean);
+        setCallStatus("Disconnected");
+
         // Auto cleanup if closed unexpectedly
         if (isCallActive) {
           handleEndCall();
         }
       };
-      
-      console.log('=== VOICE CALL INITIATED ===');
+
+      console.log("=== VOICE CALL INITIATED ===");
     } catch (err: any) {
-      console.error('=== VOICE CALL ERROR ===');
-      console.error('Error:', err);
-      console.error('Error message:', err.message);
-      
-      setError(err.message || 'Failed to start voice call');
+      console.error("=== VOICE CALL ERROR ===");
+      console.error("Error:", err);
+      console.error("Error message:", err.message);
+
+      setError(err.message || "Failed to start voice call");
       setIsConnecting(false);
-      setCallStatus('Failed');
-      
+      setCallStatus("Failed");
+
       // Cleanup on error
       if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach(track => track.stop());
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
         mediaStreamRef.current = null;
       }
-      
+
+      showToast(err.message || "Failed to start voice call", "error");
       alert(`Failed to start call: ${err.message}`);
     }
   };
-  
+
   // Start audio streaming from microphone to WebSocket
   const startAudioStreaming = (ws: WebSocket, stream: MediaStream) => {
     try {
       const audioContext = new AudioContext({ sampleRate: 24000 });
       audioContextRef.current = audioContext;
-      
+
       const source = audioContext.createMediaStreamSource(stream);
       const processor = audioContext.createScriptProcessor(4096, 1, 1);
       processorRef.current = processor;
-      
+
       processor.onaudioprocess = (e) => {
         if (isMuted || ws.readyState !== WebSocket.OPEN) return;
-        
+
         const inputData = e.inputBuffer.getChannelData(0);
-        
+
         // Convert Float32Array to Int16Array (PCM16)
         const pcm16 = new Int16Array(inputData.length);
         for (let i = 0; i < inputData.length; i++) {
           const s = Math.max(-1, Math.min(1, inputData[i]));
-          pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
         }
-        
+
         // Convert to base64 and send to OpenAI
-        const base64Audio = btoa(String.fromCharCode(...new Uint8Array(pcm16.buffer)));
-        
-        ws.send(JSON.stringify({
-          type: 'input_audio_buffer.append',
-          audio: base64Audio
-        }));
+        const base64Audio = btoa(
+          String.fromCharCode(...new Uint8Array(pcm16.buffer))
+        );
+
+        ws.send(
+          JSON.stringify({
+            type: "input_audio_buffer.append",
+            audio: base64Audio,
+          })
+        );
       };
-      
+
       source.connect(processor);
       processor.connect(audioContext.destination);
-      
-      console.log('✅ Audio streaming started (OpenAI server-side VAD active)');
+
+      console.log("✅ Audio streaming started (OpenAI server-side VAD active)");
     } catch (err) {
-      console.error('Audio streaming error:', err);
+      console.error("Audio streaming error:", err);
     }
   };
-  
+
   // Play base64-encoded PCM16 audio from response.audio.delta
   const playBase64Audio = (base64Audio: string) => {
     try {
-      console.log('🎵 playBase64Audio called with length:', base64Audio.length);
-      
+      console.log("🎵 playBase64Audio called with length:", base64Audio.length);
+
       // Initialize audio context
-      if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+      if (
+        !audioContextRef.current ||
+        audioContextRef.current.state === "closed"
+      ) {
         audioContextRef.current = new AudioContext({ sampleRate: 24000 });
         nextPlayTimeRef.current = 0;
-        console.log('Created new AudioContext');
+        console.log("Created new AudioContext");
       }
-      
+
       const context = audioContextRef.current;
-      
+
       // Resume if suspended
-      if (context.state === 'suspended') {
-        console.log('Resuming suspended AudioContext');
+      if (context.state === "suspended") {
+        console.log("Resuming suspended AudioContext");
         context.resume();
       }
-      
+
       // Decode base64 to binary
       const binaryString = atob(base64Audio);
-      console.log('Decoded base64 to binary, length:', binaryString.length);
-      
+      console.log("Decoded base64 to binary, length:", binaryString.length);
+
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
-      
+
       // Skip tiny chunks
       if (bytes.length < 2) {
-        console.log('⚠️ Skipping tiny chunk:', bytes.length);
+        console.log("⚠️ Skipping tiny chunk:", bytes.length);
         return;
       }
-      
+
       // Ensure even byte count for Int16Array
-      const buffer = bytes.length % 2 === 0 ? bytes.buffer : (() => {
-        console.log('⚠️ Padding odd byte length:', bytes.length);
-        const padded = new Uint8Array(bytes.length + 1);
-        padded.set(bytes);
-        return padded.buffer;
-      })();
-      
+      const buffer =
+        bytes.length % 2 === 0
+          ? bytes.buffer
+          : (() => {
+              console.log("⚠️ Padding odd byte length:", bytes.length);
+              const padded = new Uint8Array(bytes.length + 1);
+              padded.set(bytes);
+              return padded.buffer;
+            })();
+
       // Convert PCM16 to Float32
       const pcm16 = new Int16Array(buffer);
       const float32 = new Float32Array(pcm16.length);
       for (let i = 0; i < pcm16.length; i++) {
-        float32[i] = pcm16[i] / (pcm16[i] < 0 ? 0x8000 : 0x7FFF);
+        float32[i] = pcm16[i] / (pcm16[i] < 0 ? 0x8000 : 0x7fff);
       }
-      
-      console.log('Converted to Float32, samples:', float32.length);
-      
+
+      console.log("Converted to Float32, samples:", float32.length);
+
       // Create and schedule audio buffer
       const audioBuffer = context.createBuffer(1, float32.length, 24000);
       audioBuffer.getChannelData(0).set(float32);
-      
-      console.log('Created AudioBuffer, duration:', audioBuffer.duration, 'seconds');
-      
+
+      console.log(
+        "Created AudioBuffer, duration:",
+        audioBuffer.duration,
+        "seconds"
+      );
+
       const source = context.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(context.destination);
-      
+
       const now = context.currentTime;
       // Always play sequentially - never overlap
       const scheduledNext = nextPlayTimeRef.current || now;
       const startTime = Math.max(now + 0.01, scheduledNext); // At least 10ms from now, or after previous chunk
-      
-      console.log('Scheduling playback - now:', now.toFixed(3), 'scheduled:', scheduledNext.toFixed(3), 'actual startTime:', startTime.toFixed(3));
-      
+
+      console.log(
+        "Scheduling playback - now:",
+        now.toFixed(3),
+        "scheduled:",
+        scheduledNext.toFixed(3),
+        "actual startTime:",
+        startTime.toFixed(3)
+      );
+
       source.start(startTime);
       source.onended = () => {
-        console.log('✅ Audio chunk finished');
+        console.log("✅ Audio chunk finished");
       };
-      
+
       nextPlayTimeRef.current = startTime + audioBuffer.duration;
       setIsAISpeaking(true);
-      setCallStatus('AI speaking...');
-      
-      console.log('✅ Audio queued, next play time:', nextPlayTimeRef.current);
+      setCallStatus("AI speaking...");
+
+      console.log("✅ Audio queued, next play time:", nextPlayTimeRef.current);
     } catch (err) {
-      console.error('❌ Audio playback error:', err);
-      console.error('Error stack:', err instanceof Error ? err.stack : err);
+      console.error("❌ Audio playback error:", err);
+      console.error("Error stack:", err instanceof Error ? err.stack : err);
     }
   };
-  
+
   // Handle WebSocket messages from OpenAI
   const handleWebSocketMessage = async (event: MessageEvent) => {
     try {
       // Ignore binary PCM16 audio frames; we rely on JSON response.audio.delta
       if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
-        console.log('Received binary audio frame from OpenAI, ignoring (using JSON response.audio.delta only)');
+        console.log(
+          "Received binary audio frame from OpenAI, ignoring (using JSON response.audio.delta only)"
+        );
         return;
       }
-      
+
       // Handle text/JSON data
       const data = JSON.parse(event.data);
-      console.log('WebSocket message:', data.type);
-      
+      console.log("WebSocket message:", data.type);
+
       switch (data.type) {
-        case 'connection.ready':
-          console.log('Backend proxy ready');
+        case "connection.ready":
+          console.log("Backend proxy ready");
           break;
-          
-        case 'session.created':
-          console.log('Session created:', data.session);
+
+        case "session.created":
+          console.log("Session created:", data.session);
           break;
-          
-        case 'session.updated':
-          console.log('Session updated');
-          setCallStatus('Ready');
+
+        case "session.updated":
+          console.log("Session updated");
+          setCallStatus("Ready");
           break;
-          
-        case 'response.created':
-          console.log('Response created - resetting audio timing');
+
+        case "response.created":
+          console.log("Response created - resetting audio timing");
           // Reset playback timing for new response
           if (audioContextRef.current) {
             nextPlayTimeRef.current = audioContextRef.current.currentTime;
           }
           break;
-          
-        case 'response.output_item.added':
-          console.log('Response output item added');
+
+        case "response.output_item.added":
+          console.log("Response output item added");
           break;
-          
-        case 'response.audio.delta':
+
+        case "response.audio.delta":
           // Debug: Log the entire event to see structure
-          console.log('🔊 Audio delta event keys:', Object.keys(data));
-          console.log('🔊 Has delta?', 'delta' in data, 'Delta value:', data.delta?.substring(0, 50));
-          console.log('🔊 Has audio?', 'audio' in data, 'Audio value:', (data as any).audio?.substring(0, 50));
-          
+          console.log("🔊 Audio delta event keys:", Object.keys(data));
+          console.log(
+            "🔊 Has delta?",
+            "delta" in data,
+            "Delta value:",
+            data.delta?.substring(0, 50)
+          );
+          console.log(
+            "🔊 Has audio?",
+            "audio" in data,
+            "Audio value:",
+            (data as any).audio?.substring(0, 50)
+          );
+
           // Audio comes in the 'delta' field as base64-encoded PCM16
           const audioData = data.delta || (data as any).audio;
           if (audioData) {
-            console.log('✅ Playing audio chunk, length:', audioData.length);
+            console.log("✅ Playing audio chunk, length:", audioData.length);
             playBase64Audio(audioData);
           } else {
-            console.error('❌ No audio data found in response.audio.delta event');
+            console.error(
+              "❌ No audio data found in response.audio.delta event"
+            );
           }
           break;
-          
-        case 'response.audio.done':
-          console.log('Audio response completed');
-          setCallStatus('Connected');
+
+        case "response.audio.done":
+          console.log("Audio response completed");
+          setCallStatus("Connected");
           setIsAISpeaking(false);
           // Clear any pending audio after a short delay
           setTimeout(() => {
             nextPlayTimeRef.current = 0;
           }, 100);
           break;
-          
-        case 'response.text.delta':
-          console.log('Text delta:', data.delta);
+
+        case "response.text.delta":
+          console.log("Text delta:", data.delta);
           break;
-          
-        case 'response.done':
-          console.log('Response completed');
-          setCallStatus('Connected');
+
+        case "response.done":
+          console.log("Response completed");
+          setCallStatus("Connected");
           break;
-          
-        case 'input_audio_buffer.speech_started':
-          console.log('User started speaking');
-          setCallStatus('Listening...');
+
+        case "input_audio_buffer.speech_started":
+          console.log("User started speaking");
+          setCallStatus("Listening...");
           break;
-          
-        case 'input_audio_buffer.speech_stopped':
-          console.log('User stopped speaking');
-          setCallStatus('Processing...');
+
+        case "input_audio_buffer.speech_stopped":
+          console.log("User stopped speaking");
+          setCallStatus("Processing...");
           break;
-          
-        case 'error':
-        case 'auth_error':
-          console.error('Error:', data.error);
-          setCallStatus(`Error: ${data.error?.message || 'Unknown error'}`);
+
+        case "error":
+        case "auth_error":
+          console.error("Error:", data.error);
+          setCallStatus(`Error: ${data.error?.message || "Unknown error"}`);
           handleEndCall();
           break;
-          
+
         default:
-          console.log('Unhandled message type:', data.type);
+          console.log("Unhandled message type:", data.type);
       }
     } catch (err) {
-      console.error('Error handling WebSocket message:', err);
+      console.error("Error handling WebSocket message:", err);
     }
   };
-  
+
   // Play audio chunk received from OpenAI
   const playAudioChunk = (base64Audio: string) => {
     try {
-      console.log('🎵 Playing audio chunk, base64 length:', base64Audio.length);
-      
+      console.log("🎵 Playing audio chunk, base64 length:", base64Audio.length);
+
       // Create or resume audio context
-      if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+      if (
+        !audioContextRef.current ||
+        audioContextRef.current.state === "closed"
+      ) {
         audioContextRef.current = new AudioContext({ sampleRate: 24000 });
-        console.log('Created new audio context for playback');
+        console.log("Created new audio context for playback");
       }
-      
+
       const context = audioContextRef.current;
-      
+
       // Resume context if suspended (required by browser autoplay policies)
-      if (context.state === 'suspended') {
-        console.log('Resuming suspended audio context...');
+      if (context.state === "suspended") {
+        console.log("Resuming suspended audio context...");
         context.resume().then(() => {
-          console.log('Audio context resumed');
+          console.log("Audio context resumed");
         });
       }
-      
+
       // Decode base64 to PCM16
       const binaryString = atob(base64Audio);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
-      
-      console.log('Decoded bytes:', bytes.length);
-      
+
+      console.log("Decoded bytes:", bytes.length);
+
       const pcm16 = new Int16Array(bytes.buffer);
-      console.log('PCM16 samples:', pcm16.length);
-      
+      console.log("PCM16 samples:", pcm16.length);
+
       // Convert PCM16 to Float32
       const float32 = new Float32Array(pcm16.length);
       for (let i = 0; i < pcm16.length; i++) {
-        float32[i] = pcm16[i] / (pcm16[i] < 0 ? 0x8000 : 0x7FFF);
+        float32[i] = pcm16[i] / (pcm16[i] < 0 ? 0x8000 : 0x7fff);
       }
-      
-      console.log('Float32 samples:', float32.length);
-      
+
+      console.log("Float32 samples:", float32.length);
+
       // Create audio buffer and play
       const audioBuffer = context.createBuffer(1, float32.length, 24000);
       audioBuffer.getChannelData(0).set(float32);
-      
-      console.log('Audio buffer duration:', audioBuffer.duration, 'seconds');
-      
+
+      console.log("Audio buffer duration:", audioBuffer.duration, "seconds");
+
       const source = context.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(context.destination);
-      
+
       // Schedule playback at current time to prevent overlaps
-      const startTime = Math.max(context.currentTime, (audioPlayerRef.current as any)?.nextStartTime || 0);
-      console.log('Scheduling playback at:', startTime, 'current time:', context.currentTime);
-      
+      const startTime = Math.max(
+        context.currentTime,
+        (audioPlayerRef.current as any)?.nextStartTime || 0
+      );
+      console.log(
+        "Scheduling playback at:",
+        startTime,
+        "current time:",
+        context.currentTime
+      );
+
       source.start(startTime);
-      
+
       source.onended = () => {
-        console.log('Audio chunk finished playing');
+        console.log("Audio chunk finished playing");
       };
-      
+
       // Track next available start time for sequential playback
       (audioPlayerRef.current as any) = {
-        nextStartTime: startTime + audioBuffer.duration
+        nextStartTime: startTime + audioBuffer.duration,
       };
-      
-      setCallStatus('AI speaking...');
-      console.log('✅ Audio chunk queued for playback');
+
+      setCallStatus("AI speaking...");
+      console.log("✅ Audio chunk queued for playback");
     } catch (err) {
-      console.error('❌ Error playing audio chunk:', err);
-      console.error('Error details:', err instanceof Error ? err.message : err);
+      console.error("❌ Error playing audio chunk:", err);
+      console.error("Error details:", err instanceof Error ? err.message : err);
     }
   };
 
   // End voice call
   const handleEndCall = () => {
-    console.log('=== ENDING VOICE CALL ===');
-    
+    console.log("=== ENDING VOICE CALL ===");
+
     // Stop audio processor
     if (processorRef.current) {
       processorRef.current.disconnect();
       processorRef.current = null;
     }
-    
+
     // Close WebSocket
     if (wsRef.current) {
       wsRef.current.close();
       wsRef.current = null;
     }
-    
+
     // Stop microphone
     if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
       mediaStreamRef.current = null;
     }
-    
+
     // Close audio context
     if (audioContextRef.current) {
       audioContextRef.current.close();
       audioContextRef.current = null;
     }
-    
+
     // Reset playback timing
     nextPlayTimeRef.current = 0;
-    
+
     setIsCallActive(false);
     setIsMuted(false);
     setCallDuration(0);
@@ -665,10 +749,10 @@ const AIChatPage = () => {
   // Toggle mute
   const handleToggleMute = () => {
     setIsMuted(!isMuted);
-    console.log('Microphone:', !isMuted ? 'Muted' : 'Unmuted');
-    
+    console.log("Microphone:", !isMuted ? "Muted" : "Unmuted");
+
     if (mediaStreamRef.current) {
-      mediaStreamRef.current.getAudioTracks().forEach(track => {
+      mediaStreamRef.current.getAudioTracks().forEach((track) => {
         track.enabled = isMuted; // Will be opposite after state update
       });
     }
@@ -679,9 +763,12 @@ const AIChatPage = () => {
     return null;
   }
 
-  const handleSendMessage = async (e: React.FormEvent, messageText: string = inputMessage) => {
+  const handleSendMessage = async (
+    e: React.FormEvent,
+    messageText: string = inputMessage
+  ) => {
     e.preventDefault();
-    
+
     if (messageText.trim() === "") return;
     if (!currentSessionId) {
       // Create a new session if none exists
@@ -692,58 +779,58 @@ const AIChatPage = () => {
     const tempUserMessage: AIChatMessage = {
       id: `temp-${Date.now()}`,
       sessionId: currentSessionId,
-      role: 'user',
+      role: "user",
       content: messageText.trim(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    
+
     setMessages((prev) => [...prev, tempUserMessage]);
     setInputMessage("");
-    
+
     // Show typing indicator immediately
     setIsTyping(true);
 
     try {
-      const response = await sendMessageAPI(currentSessionId, messageText.trim());
-      
+      const response = await sendMessageAPI(
+        currentSessionId,
+        messageText.trim()
+      );
+
       // Remove temp message and add real messages
       setMessages((prev) => {
-        const withoutTemp = prev.filter(m => m.id !== tempUserMessage.id);
-        
+        const withoutTemp = prev.filter((m) => m.id !== tempUserMessage.id);
+
         const userMsg: AIChatMessage = {
           ...response.userMessage,
           sessionId: currentSessionId,
           updatedAt: response.userMessage.createdAt,
         };
-        
+
         const aiMsg: AIChatMessage = {
           ...response.aiMessage,
           sessionId: currentSessionId,
           updatedAt: response.aiMessage.createdAt,
         };
-        
-        return [
-          ...withoutTemp,
-          userMsg,
-          aiMsg
-        ];
+
+        return [...withoutTemp, userMsg, aiMsg];
       });
-      
+
       // Update session title in list if it changed
-      const sessionIndex = sessions.findIndex(s => s.id === currentSessionId);
+      const sessionIndex = sessions.findIndex((s) => s.id === currentSessionId);
       if (sessionIndex !== -1) {
         const updatedSessions = [...sessions];
         updatedSessions[sessionIndex].lastMessageAt = new Date().toISOString();
         setSessions(updatedSessions);
       }
-      
+
       setError(null);
     } catch (err: any) {
-      console.error('Failed to send message:', err);
-      setError(err.message || 'Failed to send message');
+      console.error("Failed to send message:", err);
+      setError(err.message || "Failed to send message");
+      showToast(err.message || "Failed to send message", "error");
       // Remove temp message on error
-      setMessages((prev) => prev.filter(m => m.id !== tempUserMessage.id));
+      setMessages((prev) => prev.filter((m) => m.id !== tempUserMessage.id));
     } finally {
       // Hide typing indicator
       setIsTyping(false);
@@ -755,61 +842,102 @@ const AIChatPage = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex min-h-screen lg:h-screen bg-gradient-to-br from-gray-50 via-white to-yellow-50 overflow-hidden">
       {/* Sidebar - Chat Sessions */}
-      <div 
-        className={`${showSidebar ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:relative w-80 h-full bg-white border-r shadow-lg transition-transform duration-300 z-20 flex flex-col`}
-        style={{ borderColor: colors.gray + '20' }}
+      <div
+        className={`${
+          showSidebar ? "translate-x-0" : "-translate-x-full"
+        } lg:translate-x-0 fixed lg:relative w-72 sm:w-80 h-full bg-white/95 border-r shadow-xl transition-transform duration-300 ease-out z-20 flex flex-col backdrop-blur`}
+        style={{ borderColor: colors.gray + "20" }}
       >
         {/* Sidebar Header */}
-        <div 
+        <div
           className="p-4 border-b space-y-3"
-          style={{ borderColor: colors.gray + '20' }}
+          style={{ borderColor: colors.gray + "20" }}
         >
+          {/* Mobile close + title */}
+          <div className="flex items-center justify-between mb-2 lg:hidden">
+            <Link href="/" className="">
+              <button className="p-2 flex gap-2 hover:bg-gray-100 rounded-full transition-colors">
+                <ArrowLeft size={24} style={{ color: colors.darkGray }} />
+                <span className="text-sm"> Back</span>
+              </button>
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setShowSidebar(false)}
+              className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Close chats sidebar"
+            >
+              <RxCross2
+                className="w-4 h-4"
+                style={{ color: colors.darkGray }}
+              />
+            </button>
+          </div>
           {/* AI Astrologer summary */}
           <div className="flex flex-col items-center gap-2 text-center">
             {/* Astrobaba icon / avatar (AB) */}
-            <div className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden"
+            <div
+              className="w-14 h-14 rounded-full flex items-center justify-center overflow-hidden"
               style={{ backgroundColor: colors.primeYellow }}
             >
-              <span className="text-xs font-bold text-white">AB</span>
+              <span className="text-lg font-bold text-white">AB</span>
             </div>
 
             {/* Text lines under the icon */}
             <div className="flex flex-col gap-0.5 items-center">
-              <p className="text-xs font-semibold tracking-wide" style={{ color: colors.darkGray }}>
+              <p
+                className="text-lg font-semibold tracking-wide"
+                style={{ color: colors.darkGray }}
+              >
                 AI Astrologer
               </p>
-              <p className="text-[11px]" style={{ color: colors.gray }}>
-                Live Vedic guidance powered by Astrobaba
+              <p className="text-md" style={{ color: colors.gray }}>
+                Live Vedic guidance powered by Graho
               </p>
-              <p className="text-[11px] font-semibold" style={{ color: colors.primeGreen }}>
+              <p
+                className="text-md font-semibold"
+                style={{ color: colors.primeGreen }}
+              >
                 ₹50/min
               </p>
             </div>
           </div>
+          <div className="md:flex gap-2">
+            <button
+              onClick={handleNewChat}
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+              style={{
+                backgroundColor: colors.primeYellow,
+                color: colors.white,
+              }}
+            >
+              <Plus size={20} />
+              <span className="font-semibold text-sm">New Chat</span>
+            </button>
 
-          <button
-            onClick={handleNewChat}
-            disabled={isLoading}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-            style={{ backgroundColor: colors.primeYellow, color: colors.white }}
-          >
-            <Plus size={20} />
-            <span className="font-semibold text-sm">New Chat</span>
-          </button>
-          
-          <button
-            onClick={handleStartCall}
-            disabled={isConnecting || isCallActive}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-            style={{ backgroundColor: colors.primeGreen, color: colors.white }}
-          >
-            <Phone size={20} />
-            <span className="font-semibold text-sm">
-              {isConnecting ? 'Connecting...' : isCallActive ? 'Call Active' : 'Voice Call'}
-            </span>
-          </button>
+            <button
+              onClick={handleStartCall}
+              disabled={isConnecting || isCallActive}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+              style={{
+                backgroundColor: colors.primeGreen,
+                color: colors.white,
+              }}
+            >
+              <Phone size={20} />
+              <span className="font-semibold text-sm">
+                {isConnecting
+                  ? "Connecting..."
+                  : isCallActive
+                  ? "Call Active"
+                  : "Voice Call"}
+              </span>
+            </button>
+          </div>
         </div>
 
         {/* Sessions List */}
@@ -828,19 +956,28 @@ const AIChatPage = () => {
                   onClick={() => setCurrentSessionId(session.id)}
                   className={`p-3 mb-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors relative group`}
                   style={{
-                    backgroundColor: currentSessionId === session.id ? colors.offYellow : colors.white,
-                    border: currentSessionId === session.id ? `2px solid ${colors.primeYellow}` : '2px solid transparent'
+                    backgroundColor:
+                      currentSessionId === session.id
+                        ? colors.offYellow
+                        : colors.white,
+                    border:
+                      currentSessionId === session.id
+                        ? `2px solid ${colors.primeYellow}`
+                        : "2px solid transparent",
                   }}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <h3 
+                      <h3
                         className="font-medium text-sm truncate"
                         style={{ color: colors.darkGray }}
                       >
                         {session.title}
                       </h3>
-                      <p className="text-xs mt-1" style={{ color: colors.gray }}>
+                      <p
+                        className="text-xs mt-1"
+                        style={{ color: colors.gray }}
+                      >
                         {formatDate(session.lastMessageAt)}
                       </p>
                     </div>
@@ -863,44 +1000,50 @@ const AIChatPage = () => {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex flex-col flex-1 h-screen">
+      <div className="flex flex-col flex-1 min-h-screen lg:h-screen bg-white/90 backdrop-blur-sm">
         {/* Header */}
-        <div 
-          className="shadow-md"
-          style={{ backgroundColor: colors.white }}
+        <div
+          className="shadow-sm border-b bg-white/90 backdrop-blur"
+          style={{ borderColor: colors.gray + "20" }}
         >
           <div className="px-4 py-3 flex items-center justify-between">
             {/* Left: Menu toggle and AI info */}
             <div className="flex items-center gap-3 flex-1">
-              <button 
+              <button
                 onClick={() => setShowSidebar(!showSidebar)}
                 className="lg:hidden p-2 hover:bg-gray-100 rounded-full transition-colors"
               >
                 <MessageSquare size={24} style={{ color: colors.darkGray }} />
               </button>
-              
+
               <Link href="/" className="hidden lg:block">
                 <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                   <ArrowLeft size={24} style={{ color: colors.darkGray }} />
                 </button>
               </Link>
-              
-              <div className="flex items-center gap-3">
+
+              <div className="hidden md:flex items-center gap-3">
                 <div className="relative">
-                  <div 
+                  <div
                     className="w-12 h-12 rounded-full flex items-center justify-center"
                     style={{ backgroundColor: colors.primeYellow }}
                   >
                     <Sparkles size={24} style={{ color: colors.white }} />
                   </div>
-                  <span 
+                  <span
                     className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2"
-                    style={{ backgroundColor: colors.primeGreen, borderColor: colors.white }}
+                    style={{
+                      backgroundColor: colors.primeGreen,
+                      borderColor: colors.white,
+                    }}
                   ></span>
                 </div>
-                
+
                 <div>
-                  <h2 className="font-bold text-lg" style={{ color: colors.darkGray }}>
+                  <h2
+                    className="font-bold text-lg"
+                    style={{ color: colors.darkGray }}
+                  >
                     {AI_ASTROLOGER_INFO.name}
                   </h2>
                   <p className="text-sm" style={{ color: colors.gray }}>
@@ -912,7 +1055,7 @@ const AIChatPage = () => {
 
             {/* Right: Wallet */}
             <Link href="/profile/wallet">
-              <div 
+              <div
                 className="flex items-center gap-2 px-4 py-2 rounded-lg hover:opacity-80 transition-opacity cursor-pointer"
                 style={{ backgroundColor: colors.primeYellow }}
               >
@@ -927,12 +1070,16 @@ const AIChatPage = () => {
 
         {/* Chat Messages Area */}
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-4xl mx-auto px-4 py-6">
+          <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
             {/* Error Message */}
             {error && (
-              <div 
+              <div
                 className="mb-4 p-4 rounded-lg border"
-                style={{ backgroundColor: '#FEE2E2', borderColor: '#FCA5A5', color: '#991B1B' }}
+                style={{
+                  backgroundColor: "#FEE2E2",
+                  borderColor: "#FCA5A5",
+                  color: "#991B1B",
+                }}
               >
                 <p className="text-sm">{error}</p>
               </div>
@@ -941,15 +1088,25 @@ const AIChatPage = () => {
             {/* Loading State */}
             {isLoading && messages.length === 0 && (
               <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200" style={{ borderTopColor: colors.primeYellow }}></div>
+                <div
+                  className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200"
+                  style={{ borderTopColor: colors.primeYellow }}
+                ></div>
               </div>
             )}
 
             {/* No Session Selected */}
             {!currentSessionId && !isLoading && (
-              <div className="flex flex-col items-center justify-center h-64">
-                <Sparkles size={64} style={{ color: colors.primeYellow }} className="mb-4" />
-                <h3 className="text-xl font-bold mb-2" style={{ color: colors.darkGray }}>
+              <div className="flex flex-col items-center justify-center h-64 text-center px-4">
+                <Sparkles
+                  size={64}
+                  style={{ color: colors.primeYellow }}
+                  className="mb-4"
+                />
+                <h3
+                  className="text-xl font-bold mb-2"
+                  style={{ color: colors.darkGray }}
+                >
                   Welcome to AI Astrologer
                 </h3>
                 <p className="text-center mb-6" style={{ color: colors.gray }}>
@@ -958,7 +1115,10 @@ const AIChatPage = () => {
                 <button
                   onClick={handleNewChat}
                   className="px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity"
-                  style={{ backgroundColor: colors.primeYellow, color: colors.white }}
+                  style={{
+                    backgroundColor: colors.primeYellow,
+                    color: colors.white,
+                  }}
                 >
                   Start New Chat
                 </button>
@@ -971,25 +1131,36 @@ const AIChatPage = () => {
                 {messages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${
+                      message.role === "user" ? "justify-end" : "justify-start"
+                    }`}
                   >
-                    <div className={`flex gap-2 max-w-[85%] md:max-w-[70%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <div
+                      className={`flex gap-2 max-w-[85%] md:max-w-[70%] ${
+                        message.role === "user"
+                          ? "flex-row-reverse"
+                          : "flex-row"
+                      }`}
+                    >
                       {/* Avatar */}
                       <div className="shrink-0">
-                        {message.role === 'assistant' ? (
-                          <div 
+                        {message.role === "assistant" ? (
+                          <div
                             className="w-10 h-10 rounded-full flex items-center justify-center"
                             style={{ backgroundColor: colors.primeYellow }}
                           >
-                            <Sparkles size={20} style={{ color: colors.white }} />
+                            <Sparkles
+                              size={20}
+                              style={{ color: colors.white }}
+                            />
                           </div>
                         ) : (
-                          <div 
+                          <div
                             className="w-10 h-10 rounded-full flex items-center justify-center"
                             style={{ backgroundColor: colors.gray }}
                           >
                             <span className="text-white font-semibold text-sm">
-                              {user?.fullName?.[0]?.toUpperCase() || 'U'}
+                              {user?.fullName?.[0]?.toUpperCase() || "U"}
                             </span>
                           </div>
                         )}
@@ -1000,14 +1171,24 @@ const AIChatPage = () => {
                         <div
                           className="px-4 py-3 rounded-2xl shadow-sm"
                           style={{
-                            backgroundColor: message.role === 'user' ? colors.primeYellow : colors.white,
-                            color: message.role === 'user' ? colors.white : colors.darkGray,
+                            backgroundColor:
+                              message.role === "user"
+                                ? colors.primeYellow
+                                : colors.white,
+                            color:
+                              message.role === "user"
+                                ? colors.white
+                                : colors.darkGray,
                           }}
                         >
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                            {message.content}
+                          </p>
                         </div>
-                        <p 
-                          className={`text-xs mt-1 ${message.role === 'user' ? 'text-right' : 'text-left'}`}
+                        <p
+                          className={`text-xs mt-1 ${
+                            message.role === "user" ? "text-right" : "text-left"
+                          }`}
                           style={{ color: colors.gray }}
                         >
                           {formatTime(message.createdAt)}
@@ -1021,39 +1202,39 @@ const AIChatPage = () => {
                 {isTyping && (
                   <div className="flex justify-start animate-fade-in">
                     <div className="flex gap-3 items-end">
-                      <div 
+                      <div
                         className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
                         style={{ backgroundColor: colors.primeYellow }}
                       >
                         <Sparkles size={16} style={{ color: colors.white }} />
                       </div>
-                      <div 
+                      <div
                         className="px-4 py-3 rounded-2xl"
                         style={{ backgroundColor: colors.white }}
                       >
                         <div className="flex gap-1 items-center">
-                          <span 
-                            className="w-2 h-2 rounded-full animate-bounce" 
-                            style={{ 
+                          <span
+                            className="w-2 h-2 rounded-full animate-bounce"
+                            style={{
                               backgroundColor: colors.darkGray,
-                              animationDelay: '0ms',
-                              animationDuration: '1s'
+                              animationDelay: "0ms",
+                              animationDuration: "1s",
                             }}
                           ></span>
-                          <span 
-                            className="w-2 h-2 rounded-full animate-bounce" 
-                            style={{ 
+                          <span
+                            className="w-2 h-2 rounded-full animate-bounce"
+                            style={{
                               backgroundColor: colors.darkGray,
-                              animationDelay: '200ms',
-                              animationDuration: '1s'
+                              animationDelay: "200ms",
+                              animationDuration: "1s",
                             }}
                           ></span>
-                          <span 
-                            className="w-2 h-2 rounded-full animate-bounce" 
-                            style={{ 
+                          <span
+                            className="w-2 h-2 rounded-full animate-bounce"
+                            style={{
                               backgroundColor: colors.darkGray,
-                              animationDelay: '400ms',
-                              animationDuration: '1s'
+                              animationDelay: "400ms",
+                              animationDuration: "1s",
                             }}
                           ></span>
                         </div>
@@ -1069,7 +1250,10 @@ const AIChatPage = () => {
             {/* Quick Prompts (show only at start of new session) */}
             {currentSessionId && messages.length === 0 && !isLoading && (
               <div className="mt-8">
-                <p className="text-sm font-medium mb-3" style={{ color: colors.gray }}>
+                <p
+                  className="text-sm font-medium mb-3"
+                  style={{ color: colors.gray }}
+                >
                   Quick Questions:
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1078,10 +1262,10 @@ const AIChatPage = () => {
                       key={index}
                       onClick={() => handlePromptClick(prompt)}
                       className="px-4 py-3 rounded-lg text-left text-sm hover:shadow-md transition-all border"
-                      style={{ 
+                      style={{
                         backgroundColor: colors.white,
                         borderColor: colors.primeYellow,
-                        color: colors.darkGray
+                        color: colors.darkGray,
                       }}
                     >
                       {prompt}
@@ -1094,11 +1278,11 @@ const AIChatPage = () => {
         </div>
 
         {/* Input Area - Fixed at bottom like ChatGPT */}
-        <div 
-          className="border-t"
-          style={{ backgroundColor: colors.white, borderColor: colors.gray + '20' }}
+        <div
+          className="border-t bg-white/95 backdrop-blur-sm"
+          style={{ borderColor: colors.gray + "20" }}
         >
-          <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
             <form onSubmit={handleSendMessage} className="flex gap-2">
               <input
                 type="text"
@@ -1107,19 +1291,22 @@ const AIChatPage = () => {
                 placeholder="Message AI Astrologer..."
                 disabled={!currentSessionId || isTyping}
                 className="flex-1 px-4 py-3 rounded-xl border focus:outline-none focus:border-2 transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
-                style={{ 
-                  borderColor: colors.gray + '40',
-                  backgroundColor: currentSessionId ? colors.white : '#F3F4F6',
-                  color: colors.darkGray
+                style={{
+                  borderColor: colors.gray + "40",
+                  backgroundColor: currentSessionId ? colors.white : "#F3F4F6",
+                  color: colors.darkGray,
                 }}
               />
               <button
                 type="submit"
                 disabled={!inputMessage.trim() || !currentSessionId || isTyping}
                 className="px-4 py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
-                style={{ 
-                  backgroundColor: inputMessage.trim() && currentSessionId ? colors.primeYellow : colors.gray,
-                  color: colors.white
+                style={{
+                  backgroundColor:
+                    inputMessage.trim() && currentSessionId
+                      ? colors.primeYellow
+                      : colors.gray,
+                  color: colors.white,
                 }}
               >
                 <Send size={20} />
@@ -1131,7 +1318,7 @@ const AIChatPage = () => {
 
       {/* Overlay for mobile sidebar */}
       {showSidebar && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-10 lg:hidden"
           onClick={() => setShowSidebar(false)}
         ></div>
@@ -1139,41 +1326,53 @@ const AIChatPage = () => {
 
       {/* Voice Call Modal */}
       {isCallActive && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.85)' }}>
-          <div 
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.85)" }}
+        >
+          <div
             className="rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl"
             style={{ backgroundColor: colors.white }}
           >
             {/* AI Avatar */}
             <div className="flex flex-col items-center mb-6">
-              <div 
+              <div
                 className="w-24 h-24 rounded-full flex items-center justify-center mb-4 relative"
                 style={{ backgroundColor: colors.primeYellow }}
               >
                 <Sparkles size={48} style={{ color: colors.white }} />
-                <div 
+                <div
                   className="absolute inset-0 rounded-full opacity-75"
-                  style={{ 
+                  style={{
                     backgroundColor: colors.primeYellow,
-                    animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite'
+                    animation: "ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite",
                   }}
                 ></div>
               </div>
-              <h3 className="text-xl font-bold mb-1" style={{ color: colors.darkGray }}>
+              <h3
+                className="text-xl font-bold mb-1"
+                style={{ color: colors.darkGray }}
+              >
                 AI Astrologer
               </h3>
               <p className="text-sm mb-2" style={{ color: colors.gray }}>
                 {callStatus}
               </p>
-              <p className="text-2xl font-mono font-semibold" style={{ color: colors.primeYellow }}>
+              <p
+                className="text-2xl font-mono font-semibold"
+                style={{ color: colors.primeYellow }}
+              >
                 {formatCallDuration(callDuration)}
               </p>
             </div>
 
             {/* Call Status */}
             <div className="text-center mb-6">
-              <p className="text-sm font-medium" style={{ color: isMuted ? '#EF4444' : colors.primeGreen }}>
-                {isMuted ? '🔇 Microphone Muted' : '🎤 Microphone Active'}
+              <p
+                className="text-sm font-medium"
+                style={{ color: isMuted ? "#EF4444" : colors.primeGreen }}
+              >
+                {isMuted ? "🔇 Microphone Muted" : "🎤 Microphone Active"}
               </p>
             </div>
 
@@ -1183,11 +1382,11 @@ const AIChatPage = () => {
               <button
                 onClick={handleToggleMute}
                 className="p-4 rounded-full transition-all hover:scale-110"
-                style={{ 
-                  backgroundColor: isMuted ? '#EF4444' : colors.gray,
-                  color: colors.white 
+                style={{
+                  backgroundColor: isMuted ? "#EF4444" : colors.gray,
+                  color: colors.white,
                 }}
-                title={isMuted ? 'Unmute' : 'Mute'}
+                title={isMuted ? "Unmute" : "Mute"}
               >
                 {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
               </button>
@@ -1196,7 +1395,7 @@ const AIChatPage = () => {
               <button
                 onClick={handleEndCall}
                 className="p-4 rounded-full transition-all hover:scale-110"
-                style={{ backgroundColor: '#EF4444', color: colors.white }}
+                style={{ backgroundColor: "#EF4444", color: colors.white }}
                 title="End Call"
               >
                 <PhoneOff size={24} />
@@ -1204,13 +1403,33 @@ const AIChatPage = () => {
             </div>
 
             {/* Info */}
-            <div className="mt-6 p-3 rounded-lg" style={{ backgroundColor: colors.bg }}>
+            <div
+              className="mt-6 p-3 rounded-lg"
+              style={{ backgroundColor: colors.bg }}
+            >
               <p className="text-xs text-center" style={{ color: colors.gray }}>
                 🎙️ Real-time voice conversation powered by OpenAI
               </p>
             </div>
           </div>
         </div>
+      )}
+
+      <ConfirmDeleteChatModal
+        isOpen={isDeleteModalOpen}
+        onConfirm={confirmDeleteSession}
+        onCancel={() => {
+          setIsDeleteModalOpen(false);
+          setPendingDeleteSessionId(null);
+        }}
+      />
+
+      {toastProps.isVisible && (
+        <Toast
+          message={toastProps.message}
+          type={toastProps.type}
+          onClose={hideToast}
+        />
       )}
     </div>
   );

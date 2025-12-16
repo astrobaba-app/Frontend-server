@@ -19,20 +19,15 @@ export default function AstrologerLogin() {
   });
   const [loading, setLoading] = useState(false);
 
-  // Check if astrologer is already logged in
+  // Check if someone is already logged in via role flag
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const astrologerToken = localStorage.getItem('astrobaba_token');
-      if (astrologerToken) {
-        // Redirect to dashboard if astrologer is logged in
+      const role = localStorage.getItem('auth_role');
+      if (role === 'astrologer') {
         router.push('/astrologer/dashboard');
         return;
       }
-      
-      // Check if user is logged in
-      const userToken = localStorage.getItem('astrobaba_token');
-      if (userToken) {
-        // Redirect to profile if user is logged in
+      if (role === 'user') {
         router.push('/profile');
       }
     }
@@ -65,22 +60,18 @@ export default function AstrologerLogin() {
       });
 
       if (response.success) {
-        // Store tokens with correct astrologer keys
-        if (typeof window !== "undefined") {
-          localStorage.setItem("astrolobaba_token", response.token);
-          localStorage.setItem("astrolobaba_middleware_token", response.middlewareToken);
-          localStorage.setItem("astrolobaba_profile", JSON.stringify(response.astrologer));
-          
-          // Notify header component that astrologer auth changed
-          window.dispatchEvent(new Event('astrologer-auth-change'));
-        }
+      if (typeof window !== "undefined") {
+        // Persist only the role; authentication itself is cookie-based
+        localStorage.setItem("auth_role", "astrologer");
+        window.dispatchEvent(new Event("auth_role_change"));
+      }
 
         showToast("Login successful! Redirecting to dashboard...", "success");
 
         // Redirect to dashboard
-        setTimeout(() => {
-          router.push("/astrologer/dashboard/profile");
-        }, 1500);
+      setTimeout(() => {
+        router.push("/astrologer/dashboard");
+      }, 1500);
       }
     } catch (err: any) {
       showToast(err.message || "Failed to login", "error");

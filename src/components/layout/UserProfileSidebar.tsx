@@ -17,6 +17,7 @@ const MENU_ITEMS = [
   { icon: User, label: 'My Profile', href: '/profile' },
   { icon: Wallet, label: 'My Wallet', href: '/profile/wallet' },
   { icon: Heart, label: 'My following', href: '/profile/following' },
+  { icon: ShoppingBag, label: 'My Cart', href: '/cart' },
   { icon: ShoppingBag, label: 'My orders', href: '/profile/orders' },
   { icon: Star, label: 'My Reviews', href: '/profile/reviews' },
   { icon: FileText, label: 'Free Kundli', href: '/profile/kundli' },

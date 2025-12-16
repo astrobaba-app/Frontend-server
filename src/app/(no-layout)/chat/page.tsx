@@ -1,14 +1,14 @@
 "use client";
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Send, ArrowLeft, Phone, ChevronRight, MessageSquare, X, MoreVertical, Video } from 'lucide-react';
+import { Send, ArrowLeft, Phone, ChevronRight, X, MoreVertical, Video } from 'lucide-react';
 import { IoChatbubblesSharp } from "react-icons/io5";
-import Link from 'next/link';
 import Image from 'next/image';
-import { FiCheckCircle, FiPaperclip, FiCheck } from 'react-icons/fi';
+import {  FiPaperclip, FiCheck } from 'react-icons/fi';
+import { TfiWallet } from "react-icons/tfi";
+import { GiHamburgerMenu } from "react-icons/gi";
 import { colors } from '@/utils/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { FaVideo } from "react-icons/fa";
 import { useSearchParams } from "next/navigation";
 import { getChatSocket } from "@/utils/chatSocket";
 import AgoraCall from "@/components/AgoraCall";
@@ -22,9 +22,9 @@ import {
 } from "@/store/api/chat";
 import {
   initiateCall,
-  getCallToken,
-  endCall,
 } from "@/store/api/call";
+import { useToast } from "@/hooks/useToast";
+import Toast from "@/components/atoms/Toast";
 
 function formatDateLabel(date: Date): string {
   const today = new Date();
@@ -76,6 +76,7 @@ function groupMessagesByDate(messages: ChatMessageDto[]): MessageGroup[] {
 const ChatPage = () => {
   const { isLoggedIn, loading, user } = useAuth();
   const router = useRouter();
+  const { showToast, toastProps, hideToast } = useToast();
   const searchParams = useSearchParams();
   const astrologerIdFromUrl = useMemo(
     () => searchParams.get("astrologerId"),
@@ -241,7 +242,19 @@ const ChatPage = () => {
 
     const handleChatUpdated = (payload: { sessionId: string; session: ChatSessionSummary }) => {
       setSessions((prev) =>
-        prev.map((s) => (s.id === payload.sessionId ? payload.session : s))
+        prev.map((s) => {
+          if (s.id !== payload.sessionId) return s;
+
+          const incoming = payload.session;
+
+          // Some chat:updated payloads may not include the astrologer object.
+          // Preserve existing astrologer info in that case so header/profile stays visible.
+          if (!incoming.astrologer && s.astrologer) {
+            return { ...incoming, astrologer: s.astrologer } as ChatSessionSummary;
+          }
+
+          return incoming;
+        })
       );
     };
 
@@ -280,19 +293,19 @@ const ChatPage = () => {
       console.log("[User] Received call:accepted event:", payload);
       setActiveCall(payload.callSession);
       console.log("[User] Set activeCall state:", payload.callSession);
-      alert("Astrologer accepted your call! Connecting...");
+      showToast("Astrologer accepted your call! Connecting...", "success");
     };
 
     const handleCallRejected = (payload: { callSession: CallSession; reason: string }) => {
       console.log("[User] Received call:rejected event:", payload);
       setActiveCall(null);
-      alert(`Call rejected: ${payload.reason}`);
+      showToast(`Call rejected: ${payload.reason}`, "error");
     };
 
     const handleCallEnded = (payload: { callSession: CallSession; endedBy: string }) => {
       console.log("[User] Received call:ended event:", payload);
       setActiveCall(null);
-      alert(`Call ended by ${payload.endedBy}`);
+      showToast(`Call ended by ${payload.endedBy}`, "info");
     };
 
     socket.on("message:new", handleNewMessage);
@@ -402,7 +415,10 @@ const ChatPage = () => {
     if (!sessionId) {
       if (!targetAstrologerId) {
         if (typeof window !== "undefined") {
-          alert("Unable to determine astrologer for this chat. Please start chat from an astrologer profile or select a conversation.");
+          showToast(
+            "Unable to determine astrologer for this chat. Please start chat from an astrologer profile or select a conversation.",
+            "error"
+          );
         }
         return;
       }
@@ -423,9 +439,10 @@ const ChatPage = () => {
           const anyErr: any = err;
           const backendMessage =
             anyErr?.response?.data?.message || anyErr?.response?.data?.error;
-          alert(
+          showToast(
             backendMessage ||
-              "Unable to start chat session. Please refresh the page and try again."
+              "Unable to start chat session. Please refresh the page and try again.",
+            "error"
           );
         }
         return;
@@ -481,7 +498,7 @@ const ChatPage = () => {
     } catch (error) {
       console.error("Send message error", error);
       if (typeof window !== "undefined") {
-        alert("Failed to send message. Please try again.");
+        showToast("Failed to send message. Please try again.", "error");
       }
     } finally {
       setIsSending(false);
@@ -516,13 +533,13 @@ const ChatPage = () => {
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
-      alert("Please select an image file");
+      showToast("Please select an image file", "error");
       return;
     }
 
     // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
-      alert("Image size should be less than 5MB");
+      showToast("Image size should be less than 5MB", "error");
       return;
     }
 
@@ -558,7 +575,7 @@ const ChatPage = () => {
       setReplyTo(null);
     } catch (error) {
       console.error("Failed to send image", error);
-      alert("Failed to send image. Please try again.");
+      showToast("Failed to send image. Please try again.", "error");
     } finally {
       setIsUploading(false);
     }
@@ -598,12 +615,12 @@ const ChatPage = () => {
     console.log("sessions:", sessions);
     
     if (!targetAstrologerId) {
-      alert("Please select an astrologer to call. No astrologer ID found.");
+      showToast("Please select an astrologer to call. No astrologer ID found.", "error");
       return;
     }
 
     if (!selectedSession) {
-      alert("Please select a chat session first");
+      showToast("Please select a chat session first", "error");
       return;
     }
 
@@ -616,30 +633,49 @@ const ChatPage = () => {
       
       if (response.success && response.callSession) {
         setActiveCall(response.callSession);
-        alert(`${callType === "audio" ? "Audio" : "Video"} call initiated! Waiting for astrologer to accept...`);
+        showToast(
+          `${callType === "audio" ? "Audio" : "Video"} call initiated! Waiting for astrologer to accept...`,
+          "info"
+        );
       }
     } catch (error: any) {
       console.error("Failed to initiate call", error);
       const errorMessage = error?.response?.data?.message || "Failed to initiate call";
-      alert(errorMessage);
+      showToast(errorMessage, "error");
     } finally {
       setIsInitiatingCall(false);
     }
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex md:py-5 h-screen bg-gray-50 overflow-hidden">
       {/* 1. Left Sidebar (Fixed) */}
       <div
-        className={`${showSidebar ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:relative left-0 top-0 w-80 h-full bg-gray-50 border-r border-gray-200 transition-transform duration-300 z-30 flex flex-col`}
+        className={`${showSidebar ? 'translate-x-0' : '-translate-x-full'} lg:hidden fixed left-0 top-0 w-80 h-full bg-gray-50 border-r border-gray-200 transition-transform duration-300 z-30 flex flex-col`}
       >
-        {/* Mobile Sidebar Header */}
-        <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
-          <p className="text-sm font-semibold text-gray-900">Chats</p>
+        {/* Sidebar Header with Back (desktop + mobile) */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                try {
+                  router.back();
+                } catch {
+                  router.push('/');
+                }
+              }}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-900" />
+            </button>
+            <p className="text-sm font-semibold text-gray-900">Chats</p>
+          </div>
           <button
             type="button"
             onClick={() => setShowSidebar(false)}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            className="lg:hidden p-2 rounded-full hover:bg-gray-100 transition-colors"
             aria-label="Close sidebar"
           >
             <X className="w-5 h-5 text-gray-900" />
@@ -684,108 +720,104 @@ const ChatPage = () => {
           </button>
         </div>
 
-        {/* Conversations list */}
-        <div className="p-4 flex-1 overflow-y-auto">
-          <p className="text-md font-bold text-gray-800 mb-3 uppercase">Conversations</p>
-
-          {uniqueSessionsByAstrologer.length === 0 ? (
-            <p className="text-sm text-gray-500">No conversations yet.</p>
-          ) : (
-            <ul className="space-y-1">
-              {uniqueSessionsByAstrologer.map((session) => (
-                <li key={session.id}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedSessionId(session.id)}
-                    className={`w-full flex justify-between items-center p-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left ${
-                      selectedSessionId === session.id ? "bg-yellow-50" : ""
-                    }`}
-                  >
-                    <span className="flex-1 truncate">
-                      {session.astrologer?.fullName || "Astrologer"}
-                    </span>
-                    <div className="flex flex-col items-end ml-2">
-                      {session.lastMessagePreview && (
-                        <span className="text-xs text-gray-500 max-w-[140px] truncate">
-                          {session.lastMessagePreview}
-                        </span>
-                      )}
-                      {session.unreadCount > 0 && (
-                        <span className="mt-1 inline-flex items-center justify-center rounded-full bg-[#F0DF20] text-[10px] font-semibold px-2 py-0.5 text-gray-900">
-                          {session.unreadCount}
-                        </span>
-                      )}
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-400 ml-1" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+        {/* Available Balance Section */}
+        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-white">
+          <div className="flex items-center gap-2">
+            <TfiWallet className="w-5 h-5 text-gray-800" />
+            <span className="text-sm font-semibold text-gray-900">Available Balance</span>
+          </div>
+          <span className="text-sm font-bold text-gray-900">₹0.00</span>
         </div>
       </div>
       
       {/* 2. Right Chat Area (Main Content) */}
-      <div className="flex-1 flex flex-col">
-        {/* Header - Back, Timer, Profile */}
-        <div className="border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between sticky top-0 z-10 bg-gray-50">
-          <div className="flex items-center gap-2 sm:gap-3  min-w-0">
-            <button
-              type="button"
-              onClick={() => setShowSidebar(true)}
-              className="lg:hidden hover:bg-gray-100 p-2 rounded-full transition-colors"
-              aria-label="Open sidebar"
-            >
-              <MessageSquare className="w-5 h-5 text-gray-900" />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                try {
-                  router.back();
-                } catch {
-                  router.push('/');
-                }
-              }}
-              className="hover:bg-gray-100 p-2 rounded-full transition-colors"
-              aria-label="Go back"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-900" />
-            </button>
+      <div className="flex-1 flex justify-center items-stretch px-0 lg:px-0">
+        <div className="w-full max-w-5xl h-full lg:my-4 lg:border-2 lg:border-[#F0DF20] lg:rounded-xl bg-transparent flex flex-col overflow-hidden">
+          {/* Header - Back, Astrologer, Time, Balance, Call */}
+          <div className="px-3 sm:px-6 py-2.5 sm:py-4 flex items-center justify-between sticky top-0 z-10" style={{ backgroundColor: colors.primeYellow }}>
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    router.back();
+                  } catch {
+                    router.push('/');
+                  }
+                }}
+                className="p-1.5 sm:p-2 hidden md:block   rounded-full hover:bg-yellow-200/80 transition-colors"
+                aria-label="Go back"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-900" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowSidebar(true)}
+                className="lg:hidden p-1.5 sm:p-2 rounded-full hover:bg-yellow-200/80 transition-colors"
+                aria-label="Open sidebar"
+              >
+                <GiHamburgerMenu className="w-5 h-5 text-gray-900" />
+              </button>
+              {astrologerInfo && (
+                <div className="hidden md:flex flex-row items-center gap-2 min-w-0">
+                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-white">
+                    <Image
+                      src={astrologerInfo.photo}
+                      alt={astrologerInfo.name}
+                      width={32}
+                      height={32}
+                      className="object-cover w-full h-full"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{astrologerInfo.name}</p>
+                    <p className="text-[11px] text-green-700 truncate">Online</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="text-md sm:text-base font-bold text-green-600 mx-2">
+              08:39
+            </div>
+
+            <div className="flex items-center gap-1 sm:gap-3 shrink-0">
+              <div className="flex items-center gap-1 text-[16px] sm:text-md font-semibold text-green-700 mr-1 sm:mr-2">
+                <TfiWallet className="w-4 h-4" />
+                <span className="hidden sm:inline">Balance:</span>
+                <span>Rs100</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleInitiateCall("audio")}
+                disabled={isInitiatingCall || !selectedSession}
+                className="p-1.5 sm:p-2 hover:bg-yellow-200/80 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Audio Call"
+              >
+                <Phone className="sm:w-6 sm:h-6 h-4 w-4  text-gray-900" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleInitiateCall("video")}
+                disabled={isInitiatingCall || !selectedSession}
+                className="p-1.5 sm:p-2 hover:bg-yellow-200/80 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Video Call"
+              >
+                <Video className="sm:w-6 sm:h-6 h-4 w-4  text-gray-900" />
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={() => handleInitiateCall("audio")}
-              disabled={isInitiatingCall || !selectedSession}
-              className="p-2 hover:bg-gray-200 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Audio Call"
-            >
-              <Phone className="w-5 h-5 text-gray-700" />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleInitiateCall("video")}
-              disabled={isInitiatingCall || !selectedSession}
-              className="p-2 hover:bg-gray-200 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Video Call"
-            >
-              <Video className="w-5 h-5 text-gray-700" />
-            </button>
-          </div>
-        </div>
-
-        {/* Overlay for mobile sidebar */}
-        {showSidebar && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
-            onClick={() => setShowSidebar(false)}
-          />
-        )}
-        
-        {/* Chat Messages Area */}
-        <div 
+          {/* Overlay for mobile sidebar */}
+          {showSidebar && (
+            <div
+              className="fixed inset-0 bg-white/20 backdrop-blur-sm z-20 lg:hidden"
+              onClick={() => setShowSidebar(false)}
+            />
+          )}
+          
+          {/* Chat Messages Area */}
+          <div 
           className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4"
           style={{
             backgroundImage: `url("/images/bg4.png")`,
@@ -948,8 +980,8 @@ const ChatPage = () => {
           )}
         </div>
 
-        {/* Fixed Input Bar */}
-        <div className=" border-t border-gray-200 px-4 py-3 sticky bottom-0">
+          {/* Fixed Input Bar */}
+          <div className="border-t border-gray-200 px-4 py-3 sticky bottom-0 bg-white/70">
           <form 
             onSubmit={(e) => handleSendMessage(e, inputMessage)}
             className="max-w-4xl mx-auto flex items-center gap-3"
@@ -1058,11 +1090,12 @@ const ChatPage = () => {
               </button>
             </div>
           </form>
-          {isTypingAstrologer && (
-            <div className="max-w-4xl mx-auto mt-2 text-xs text-gray-500">
-              Astrologer is typing...
-            </div>
-          )}
+            {isTypingAstrologer && (
+              <div className="max-w-4xl mx-auto mt-2 text-xs text-gray-500">
+                Astrologer is typing...
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1071,6 +1104,15 @@ const ChatPage = () => {
         <AgoraCall 
           callSession={activeCall} 
           onCallEnd={() => setActiveCall(null)} 
+        />
+      )}
+
+      {/* Toast Notification */}
+      {toastProps.isVisible && (
+        <Toast
+          message={toastProps.message}
+          type={toastProps.type}
+          onClose={hideToast}
         />
       )}
     </div>

@@ -19,13 +19,6 @@ function getApiBaseUrl() {
   }
 }
 
-function getAuthToken(): string | null {
-  if (typeof window === "undefined") return null;
-  const userToken = window.localStorage.getItem("astrobaba_token");
-  const astrologerToken = window.localStorage.getItem("astrologer_token");
-  return userToken || astrologerToken;
-}
-
 export function getChatSocket(): Socket | null {
   if (typeof window === "undefined") return null;
 
@@ -34,15 +27,9 @@ export function getChatSocket(): Socket | null {
   }
 
   const baseUrl = getApiBaseUrl();
-  const token = getAuthToken();
 
   socket = io(baseUrl, {
     withCredentials: true,
-    auth: token
-      ? {
-          token,
-        }
-      : undefined,
   });
 
   socket.on("connect_error", (err) => {

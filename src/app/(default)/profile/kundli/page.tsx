@@ -536,7 +536,6 @@ export default function FreeKundliPage() {
                       <KundliCard
                         key={kundli.id}
                         name={kundli.fullName}
-                        relation="Self"
                         dob={formatDate(kundli.dateOfbirth)}
                         birthPlace={kundli.placeOfBirth}
                         onClick={() => handleViewKundli(kundli.id)}

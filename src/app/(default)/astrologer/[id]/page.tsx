@@ -16,7 +16,7 @@ import {
 } from "@/store/api/general/astrologer";
 import { createReview } from "@/store/api/user/review";
 import { AstrologerDetailPageSkeleton } from "@/components/skeletons";
-import ReviewsSkeleton from "@/components/skeleton/ReviewsSkeleton";
+import ReviewsSkeleton from "@/components/skeletons/ReviewsSkeleton";
 import { colors } from "@/utils/colors";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";

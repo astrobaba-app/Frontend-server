@@ -1,6 +1,6 @@
-'use client';
-import { useState, useCallback } from 'react';
-import { ToastType } from '@/components/atoms/Toast';
+"use client";
+import { useState, useCallback } from "react";
+import { ToastType } from "@/components/atoms/Toast";
 
 interface ToastState {
   message: string;
@@ -10,12 +10,12 @@ interface ToastState {
 
 export const useToast = () => {
   const [toast, setToast] = useState<ToastState>({
-    message: '',
-    type: 'info',
+    message: "",
+    type: "info",
     show: false,
   });
 
-  const showToast = useCallback((message: string, type: ToastType = 'info') => {
+  const showToast = useCallback((message: string, type: ToastType = "info") => {
     setToast({ message, type, show: true });
   }, []);
 

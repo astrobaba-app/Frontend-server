@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/useToast";
 import Toast from "@/components/atoms/Toast";
 import ReviewModal from "@/components/modals/ReviewModal";
 import DeleteReviewModal from "@/components/modals/DeleteReviewModal";
-import UserReviewSkeleton from "@/components/skeleton/UserReviewSkeleton";
+import UserReviewSkeleton from "@/components/skeletons/UserReviewSkeleton";
 import Image from "next/image";
 
 export default function MyReviewsPage() {

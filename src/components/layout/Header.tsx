@@ -6,14 +6,14 @@ import { FiPhone } from "react-icons/fi";
 import { useAuth } from "@/contexts/AuthContext";
 import { colors } from "@/utils/colors";
 import Link from "next/link";
-import type { AstrologerProfile } from "@/store/api/astrologer/auth";
+import type { AstrologerProfile } from "@/store/api/astrologer/profile";
+import { getAstrologerProfile } from "@/store/api/astrologer/profile";
 const NAV_LINKS = [
   { name: "Home", href: "/" },
-  { name: "About Us", href: "/about" },
   { name: "Free Kundli", href: "/profile/kundli" },
   { name: "Live Chat", href: "/astrologer?mode=chat" },
   { name: "Horoscope", href: "/horoscope" },
-  { name: "Contact us", href: "/contact" },
+  { name: "Graho Store", href: "/store" },
 ];
 
 const Header = () => {
@@ -21,49 +21,49 @@ const Header = () => {
   const { isLoggedIn, user } = useAuth();
   const [astrologerProfile, setAstrologerProfile] = useState<AstrologerProfile | null>(null);
   const [isAstrologer, setIsAstrologer] = useState(false);
+  const [role, setRole] = useState<"user" | "astrologer" | null>(null);
 
-  // Check if astrologer is logged in - runs on mount and when dependencies change
+  // Determine current role and, if astrologer, load profile via cookie-based auth
   useEffect(() => {
-    const checkAstrologerAuth = () => {
-      if (typeof window !== "undefined") {
-        const astrologerToken = localStorage.getItem("astrologer_token");
-        const astrologerProfileData = localStorage.getItem("astrologer_profile");
-        
-        if (astrologerToken && astrologerProfileData) {
-          try {
-            const parsedProfile = JSON.parse(astrologerProfileData);
-            setAstrologerProfile(parsedProfile);
+    const checkRoleAndLoadProfile = async () => {
+      if (typeof window === "undefined") return;
+      const storedRole = localStorage.getItem("auth_role");
+      setRole((storedRole as "user" | "astrologer") || null);
+
+      if (storedRole === "astrologer") {
+        try {
+          const response = await getAstrologerProfile();
+          if (response.success) {
+            setAstrologerProfile(response.astrologer);
             setIsAstrologer(true);
-          } catch (error) {
-            console.error("Error parsing astrologer profile:", error);
-            setAstrologerProfile(null);
-            setIsAstrologer(false);
+            return;
           }
-        } else {
-          setAstrologerProfile(null);
-          setIsAstrologer(false);
+        } catch (error) {
+          console.error("Failed to load astrologer profile:", error);
         }
       }
+
+      setAstrologerProfile(null);
+      setIsAstrologer(false);
     };
 
-    // Check on mount
-    checkAstrologerAuth();
+    checkRoleAndLoadProfile();
 
-    // Also check whenever storage changes (when user logs in/out)
-    const handleStorageChange = () => {
-      checkAstrologerAuth();
+    const handleRoleChange = () => {
+      checkRoleAndLoadProfile();
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Also add a custom event for same-tab login/logout
-    window.addEventListener('astrologer-auth-change', handleStorageChange);
+    window.addEventListener("storage", handleRoleChange);
+    window.addEventListener("auth_role_change", handleRoleChange);
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('astrologer-auth-change', handleStorageChange);
+      window.removeEventListener("storage", handleRoleChange);
+      window.removeEventListener("auth_role_change", handleRoleChange);
     };
   }, []);
+
+  const isSomeoneLoggedIn = isAstrologer || isLoggedIn;
+  const profileHref = role === "astrologer" ? "/astrologer/dashboard" : "/profile";
 
   return (
     <header className="w-full bg-white shadow-md font-inter">
@@ -119,26 +119,14 @@ const Header = () => {
 
           <div className="flex items-center space-x-2 sm:space-x-4 text-sm">
             <div className="flex items-center space-x-2 sm:space-x-3">
-              {isAstrologer ? (
+              {isSomeoneLoggedIn ? (
                 <div className="flex items-center gap-2 sm:gap-3">
                   <Link
-                    href="/astrologer/dashboard/profile"
+                    href={profileHref}
                     style={{ background: colors.primeYellow, color: colors.black }}
                     className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-full shadow-md hover:opacity-80 transition duration-150 ease-in-out whitespace-nowrap"
                   >
-                    <User className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="hidden xs:inline">Hi, </span>{astrologerProfile?.fullName?.split(' ')[0] || "Astrologer"}
-                  </Link>
-                </div>
-              ) : isLoggedIn ? (
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <Link
-                    href="/profile"
-                    style={{ background: colors.primeYellow, color: colors.black }}
-                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-full shadow-md hover:opacity-80 transition duration-150 ease-in-out whitespace-nowrap"
-                  >
-                    <User className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="hidden xs:inline">Hi, </span>{user?.fullName?.split(' ')[0] || "User"}
+                    <User className="w-3 h-3 sm:w-4 sm:h-4" />Profile
                   </Link>
                 </div>
               ) : (
@@ -151,7 +139,7 @@ const Header = () => {
                     }}
                     className="px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-full shadow-md hover:opacity-80 transition duration-150 ease-in-out whitespace-nowrap"
                   >
-                   Register/Login
+                    Register/Login
                   </Link>
                 </>
               )}

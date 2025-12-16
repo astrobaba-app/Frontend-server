@@ -4,28 +4,17 @@ const BASE_URL: string = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localho
 
 const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,
-  withCredentials: true, 
+  withCredentials: true,
 });
 
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Add token to Authorization header if available
-    // Check for both user and astrologer tokens
-    if (typeof window !== 'undefined') {
-      const userToken = localStorage.getItem('astrobaba_token');
-      const astrologerToken = localStorage.getItem('astrologer_token');
-      
-      // Use whichever token is available (user or astrologer)
-      const token = userToken || astrologerToken;
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    }
-
+    // Backend now relies on HTTP-only cookies for auth.
+    // We no longer attach any tokens from localStorage.
     if (config.data instanceof FormData) {
-      delete config.headers['Content-Type'];
+      delete config.headers["Content-Type"];
     } else {
-      config.headers['Content-Type'] = 'application/json';
+      config.headers["Content-Type"] = "application/json";
     }
     return config;
   },
@@ -39,33 +28,20 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid
-      if (typeof window !== 'undefined') {
-        const hasUserToken = localStorage.getItem('astrobaba_token');
-        const hasAstrologerToken = localStorage.getItem('astrologer_token');
+      if (typeof window !== "undefined") {
+        const role = localStorage.getItem("auth_role");
         const currentPath = window.location.pathname;
-        
-        // Determine which type of user is logged in and clear appropriate tokens
-        if (hasAstrologerToken) {
-          // Astrologer session expired
-          localStorage.removeItem('astrologer_token');
-          localStorage.removeItem('astrologer_middleware_token');
-          localStorage.removeItem('astrologer_profile');
-          
-          // Redirect to astrologer login if not already there
-          if (!currentPath.includes('/astrologer/login') && !currentPath.includes('/astrologer/signup')) {
-            window.location.href = '/astrologer/login';
+
+        // Clear role on unauthorized
+        localStorage.removeItem("auth_role");
+
+        if (role === "astrologer") {
+          if (!currentPath.startsWith("/astrologer")) {
+            window.location.href = "/astrologer/login";
           }
-        } else if (hasUserToken) {
-          // User session expired
-          localStorage.removeItem('astrobaba_user');
-          localStorage.removeItem('astrobaba_token');
-          localStorage.removeItem('astrobaba_middleware_token');
-          localStorage.removeItem('astrobaba_auth_method');
-          
-          // Redirect to user login if not already there
-          if (!currentPath.includes('/auth/login')) {
-            window.location.href = '/auth/login';
+        } else {
+          if (!currentPath.startsWith("/auth")) {
+            window.location.href = "/auth/login";
           }
         }
       }

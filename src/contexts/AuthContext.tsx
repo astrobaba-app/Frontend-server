@@ -19,41 +19,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Load user from localStorage and verify with backend on mount
+  // On mount, rely on cookies to determine if a user session exists.
   useEffect(() => {
     const initAuth = async () => {
-      const storedUser = localStorage.getItem('astrobaba_user');
-      const token = localStorage.getItem('astrobaba_token');
-      const authMethod = localStorage.getItem('astrobaba_middleware_token');
-      
-      // Check if user has either token-based auth (OTP) or cookie-based auth (Google)
-      if (storedUser && (token || authMethod === 'cookie')) {
-        try {
-          // Verify authentication is still valid by fetching profile
-          const profileData = await getProfile();
-          setUser(profileData.user);
-          localStorage.setItem('astrobaba_user', JSON.stringify(profileData.user));
-        } catch (error) {
-          // Auth expired or invalid, clear local storage
-          console.error('Auth verification failed:', error);
-          localStorage.removeItem('astrobaba_user');
-          localStorage.removeItem('astrobaba_token');
-          localStorage.removeItem('astrobaba_middleware_token');
-          localStorage.removeItem('astrobaba_auth_method');
-          setUser(null);
+      try {
+        const profileData = await getProfile();
+        setUser(profileData.user);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('auth_role', 'user');
         }
+      } catch (error) {
+        console.error('Auth verification failed:', error);
+        setUser(null);
+        if (typeof window !== 'undefined') {
+          const role = localStorage.getItem('auth_role');
+          if (role === 'user') {
+            localStorage.removeItem('auth_role');
+          }
+        }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     initAuth();
   }, []);
 
-  const login = (userData: UserProfile, token: string, middlewareToken: string) => {
+  const login = (userData: UserProfile, _token: string, _middlewareToken: string) => {
     setUser(userData);
-    localStorage.setItem('astrobaba_user', JSON.stringify(userData));
-    localStorage.setItem('astrobaba_token', token);
-    localStorage.setItem('astrobaba_middleware_token', middlewareToken);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('auth_role', 'user');
+      window.dispatchEvent(new Event('auth_role_change'));
+    }
   };
 
   const logout = async () => {
@@ -63,10 +60,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Logout API error:', error);
     } finally {
       setUser(null);
-      localStorage.removeItem('astrobaba_user');
-      localStorage.removeItem('astrobaba_token');
-      localStorage.removeItem('astrobaba_middleware_token');
-      localStorage.removeItem('astrobaba_auth_method');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_role');
+        window.dispatchEvent(new Event('auth_role_change'));
+      }
     }
   };
 
@@ -74,14 +71,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const profileData = await getProfile();
       setUser(profileData.user);
-      localStorage.setItem('astrobaba_user', JSON.stringify(profileData.user));
-      
-      // For Google login, tokens are stored in HTTP-only cookies by backend
-      // We set a flag in localStorage to indicate cookies exist
-      localStorage.setItem('astrobaba_auth_method', 'cookie');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('auth_role', 'user');
+        window.dispatchEvent(new Event('auth_role_change'));
+      }
     } catch (error) {
       console.error('Failed to refresh user:', error);
-      // If refresh fails, logout
       await logout();
       throw error;
     }

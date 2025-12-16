@@ -13,8 +13,12 @@ import {
   FiCheck,
   FiCheckCircle,
 } from "react-icons/fi";
+import { GiHamburgerMenu } from "react-icons/gi";
+import { RxCross2 } from "react-icons/rx";
+import { IoMdArrowBack } from "react-icons/io";
 import { colors } from "@/utils/colors";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { getChatSocket } from "@/utils/chatSocket";
 import AgoraCall from "@/components/AgoraCall";
 import type { ChatMessageDto, ChatSessionSummary } from "@/store/api/chat";
@@ -32,6 +36,8 @@ import {
   getCallToken,
   endCall,
 } from "@/store/api/call";
+import { useToast } from "@/hooks/useToast";
+import Toast from "@/components/atoms/Toast";
 
 function formatDateLabel(date: Date): string {
   const today = new Date();
@@ -83,6 +89,8 @@ function groupMessagesByDate(messages: ChatMessageDto[]): MessageGroup[] {
 type TabType = "chats" | "requests";
 
 export default function LiveChatsPage() {
+  const router = useRouter();
+  const { showToast, toastProps, hideToast } = useToast();
   const [chatSessions, setChatSessions] = useState<ChatSessionSummary[]>([]);
   const [requestSessions, setRequestSessions] = useState<ChatSessionSummary[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
@@ -99,6 +107,7 @@ export default function LiveChatsPage() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [incomingCall, setIncomingCall] = useState<CallSession | null>(null);
   const [activeCall, setActiveCall] = useState<CallSession | null>(null);
+  const [showSidebar, setShowSidebar] = useState(false);
   const typingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
@@ -318,7 +327,7 @@ export default function LiveChatsPage() {
     const handleCallEnded = (payload: { callSession: CallSession; endedBy: string }) => {
       console.log("[Astrologer] Received call:ended event:", payload);
       setActiveCall(null);
-      alert(`Call ended by ${payload.endedBy}`);
+      showToast(`Call ended by ${payload.endedBy}`, "info");
     };
 
     socket.on("message:new", handleNewMessage);
@@ -351,12 +360,12 @@ export default function LiveChatsPage() {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      alert("Please select an image file");
+      showToast("Please select an image file", "error");
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert("Image size should be less than 5MB");
+      showToast("Image size should be less than 5MB", "error");
       return;
     }
 
@@ -391,7 +400,7 @@ export default function LiveChatsPage() {
       setReplyTo(null);
     } catch (error) {
       console.error("Failed to send image", error);
-      alert("Failed to send image. Please try again.");
+      showToast("Failed to send image. Please try again.", "error");
     } finally {
       setIsUploading(false);
     }
@@ -486,7 +495,7 @@ export default function LiveChatsPage() {
     } catch (error) {
       console.error("Error sending message", error);
       if (typeof window !== "undefined") {
-        alert("Failed to send message. Please try again.");
+        showToast("Failed to send message. Please try again.", "error");
       }
     } finally {
       setIsSending(false);
@@ -541,11 +550,11 @@ export default function LiveChatsPage() {
       if (response.success) {
         setActiveCall(response.callSession);
         setIncomingCall(null);
-        alert("Call accepted! Connecting...");
+        showToast("Call accepted! Connecting...", "success");
       }
     } catch (error: any) {
       console.error("Failed to accept call", error);
-      alert(error?.response?.data?.message || "Failed to accept call");
+      showToast(error?.response?.data?.message || "Failed to accept call", "error");
     }
   };
 
@@ -553,22 +562,50 @@ export default function LiveChatsPage() {
     try {
       await rejectCall(callId, "Busy with another client");
       setIncomingCall(null);
-      alert("Call rejected");
+      showToast("Call rejected", "info");
     } catch (error: any) {
       console.error("Failed to reject call", error);
+      showToast(
+        error?.response?.data?.message || "Failed to reject call",
+        "error"
+      );
     }
   };
 
   return (
-    <div className="h-[calc(100vh-2rem)] flex">
+    <div className="flex  h-screen overflow-hidden">
       {/* Left Panel - Chat List */}
-      <div className="w-96  border-r border-gray-200 flex flex-col">
+      <div
+        className={`fixed inset-y-0 left-0 z-30 w-80 sm:w-96 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-300 lg:static lg:translate-x-0 lg:z-auto ${
+          showSidebar ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
         {/* Header */}
         <div className="p-4 border-b border-gray-200">
-          <h2 className="text-2xl font-bold mb-4" style={{ color: colors.black }}>
-            Live Chats
-          </h2>
-          
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Go back"
+              >
+                <IoMdArrowBack className="w-5 h-5  text-gray-700" />
+              </button>
+              <h2 className="text-2xl font-bold" style={{ color: colors.black }}>
+                Live Chats
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowSidebar(false)}
+              className="lg:hidden p-2 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Close sidebar"
+            >
+              <RxCross2  className="w-5 h-5 rotate-90 text-gray-700" />
+            </button>
+          </div>
+
           {/* Search Bar */}
           <div className="relative">
             <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -737,14 +774,31 @@ export default function LiveChatsPage() {
         </div>
       </div>
 
+      {/* Overlay for mobile sidebar */}
+      {showSidebar && (
+        <div
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-20 lg:hidden"
+          onClick={() => setShowSidebar(false)}
+        />
+      )}
+
       {/* Right Panel - Chat Window */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col lg:ml-0">
         {selectedUser && selectedSession ? (
           <>
             {/* Chat Header */}
-            <div className=" border-b border-gray-200 p-4">
+            <div className="border-b border-gray-200 p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
+                  {/* Mobile: open sidebar */}
+                  <button
+                    type="button"
+                    onClick={() => setShowSidebar(true)}
+                    className="lg:hidden p-2 rounded-full hover:bg-gray-100 transition-colors"
+                    aria-label="Open chat list"
+                  >
+                    <GiHamburgerMenu className="w-5 h-5 text-gray-800" />
+                  </button>
                   {/* Avatar */}
                   <div className="relative">
                     <div className="w-12 h-12 rounded-full bg-linear-to-br from-yellow-200 to-yellow-300 flex items-center justify-center">
@@ -770,33 +824,23 @@ export default function LiveChatsPage() {
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-4">
-                  <button className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Voice Call">
+                  <button className="p-2 cursor-pointer hover:bg-yellow-200 rounded-full transition-colors" title="Voice Call">
                     <FiPhone className="w-5 h-5 text-gray-700" />
                   </button>
-                  <button className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Video Call">
+                  <button className="p-2 cursor-pointer hover:bg-yellow-200 rounded-full transition-colors" title="Video Call">
                     <FiVideo className="w-5 h-5 text-gray-700" />
                   </button>
-                  <button className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="More Options">
-                    <FiMoreVertical className="w-5 h-5 text-gray-700" />
-                  </button>
+                  
                 </div>
               </div>
             </div>
 
             {/* Chat Messages Area */}
             <div 
-              className="flex-1 overflow-y-auto p-6"
-            >
-              {/* Decorative Elements */}
-              <div className="absolute top-20 right-10 opacity-5">
-                <div className="text-9xl">☀️</div>
-              </div>
-              <div className="absolute bottom-20 left-10 opacity-5">
-                <div className="text-9xl">🌙</div>
-              </div>
-              <div className="absolute top-1/3 right-1/4 opacity-5">
-                <div className="text-7xl">⭐</div>
-              </div>
+              className="flex-1 overflow-y-auto p-6">
+
+             
+             
               <div className="max-w-4xl mx-auto space-y-4 relative z-10">
                 {groupMessagesByDate(messages).map((group) => (
                   <div key={group.dateKey}>
@@ -1092,6 +1136,13 @@ export default function LiveChatsPage() {
         <AgoraCall 
           callSession={activeCall} 
           onCallEnd={() => setActiveCall(null)} 
+        />
+      )}
+      {toastProps.isVisible && (
+        <Toast
+          message={toastProps.message}
+          type={toastProps.type}
+          onClose={hideToast}
         />
       )}
     </div>

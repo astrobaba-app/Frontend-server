@@ -13,18 +13,23 @@ import {
 import { useToast } from "@/hooks/useToast";
 import Toast from "@/components/atoms/Toast";
 import DeleteReplyModal from "@/components/modals/DeleteReplyModal";
-import ReviewsSkeleton from "@/components/skeleton/ReviewsSkeleton";
+import ReviewsSkeleton from "@/components/skeletons/ReviewsSkeleton";
+import { Button } from "@/components/atoms";
 
 export default function AstrologerReviewsPage() {
   const [reviews, setReviews] = useState<AstrologerReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [replyText, setReplyText] = useState<{ [key: string]: string }>({});
-  const [editingReply, setEditingReply] = useState<{ [key: string]: boolean }>({});
-  const [submittingReply, setSubmittingReply] = useState<{ [key: string]: boolean }>({});
+  const [editingReply, setEditingReply] = useState<{ [key: string]: boolean }>(
+    {}
+  );
+  const [submittingReply, setSubmittingReply] = useState<{
+    [key: string]: boolean;
+  }>({});
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [reviewToDelete, setReviewToDelete] = useState<string | null>(null);
   const [deletingReply, setDeletingReply] = useState(false);
-  const { toast, showToast, hideToast } = useToast();
+  const { toastProps, showToast, hideToast } = useToast();
 
   useEffect(() => {
     fetchReviews();
@@ -139,7 +144,10 @@ export default function AstrologerReviewsPage() {
     return (
       <div className="p-8">
         <div className="max-w-6xl">
-          <h1 className="text-3xl font-bold mb-8" style={{ color: colors.black }}>
+          <h1
+            className="text-3xl font-bold mb-8"
+            style={{ color: colors.black }}
+          >
             My Reviews
           </h1>
           <ReviewsSkeleton />
@@ -163,7 +171,7 @@ export default function AstrologerReviewsPage() {
                 color: colors.black,
               }}
             >
-              {reviews.length}k Reviews
+              {reviews.length} Reviews
             </button>
           </div>
 
@@ -229,33 +237,43 @@ export default function AstrologerReviewsPage() {
                       className="rounded-lg p-4 mb-4"
                       style={{ backgroundColor: colors.offYellow }}
                     >
-                      <p className="text-sm font-semibold mb-1" style={{ color: colors.black }}>
+                      <p
+                        className="text-sm font-semibold mb-1"
+                        style={{ color: colors.black }}
+                      >
                         Your Reply:
                       </p>
                       <p className="text-sm" style={{ color: colors.darkGray }}>
                         {review.reply}
                       </p>
                       <div className="flex gap-2 mt-3">
-                        <button
-                          onClick={() => handleEditClick(review.id, review.reply!)}
-                          className="text-xs px-3 py-1 rounded"
-                          style={{
+                        <Button
+                          variant="custom"
+                          size="sm"
+                          onClick={() =>
+                            handleEditClick(review.id, review.reply!)
+                          }
+                          customColors={{
                             backgroundColor: colors.primeYellow,
-                            color: colors.black,
+
+                            textColor: colors.black,
                           }}
                         >
                           Edit
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="custom"
+                          size="sm"
                           onClick={() => handleDeleteClick(review.id)}
                           className="text-xs px-3 py-1 rounded"
-                          style={{
+                          customColors={{
                             backgroundColor: colors.primeRed,
-                            color: colors.white,
+
+                            textColor: colors.black,
                           }}
                         >
                           Delete
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ) : (
@@ -263,7 +281,10 @@ export default function AstrologerReviewsPage() {
                       <textarea
                         value={replyText[review.id] || ""}
                         onChange={(e) =>
-                          setReplyText({ ...replyText, [review.id]: e.target.value })
+                          setReplyText({
+                            ...replyText,
+                            [review.id]: e.target.value,
+                          })
                         }
                         placeholder="Write your reply..."
                         className="w-full border border-gray-300 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 mb-3"
@@ -274,32 +295,31 @@ export default function AstrologerReviewsPage() {
                         rows={3}
                       />
                       <div className="flex gap-2">
-                        <button
+                        <Button
+                          variant="primary"
+                          size="md"
                           onClick={() => handleReplySubmit(review.id)}
-                          disabled={submittingReply[review.id]}
-                          className="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
-                          style={{
-                            backgroundColor: colors.primeYellow,
-                            color: colors.black,
-                          }}
+                          loading={submittingReply[review.id]}
                         >
-                          {submittingReply[review.id]
-                            ? "Submitting..."
-                            : editingReply[review.id]
+                          {editingReply[review.id]
                             ? "Update Reply"
                             : "Submit Reply"}
-                        </button>
+                        </Button>
                         {editingReply[review.id] && (
-                          <button
-                            onClick={() => handleCancelEdit(review.id, review.reply!)}
-                            className="px-4 py-2 rounded-lg text-sm font-semibold"
-                            style={{
+                          <Button
+                            variant="custom"
+                            size="sm" 
+                            onClick={() =>
+                              handleCancelEdit(review.id, review.reply!)
+                            }
+                            customColors={{
                               backgroundColor: colors.gray,
-                              color: colors.white,
+
+                              textColor: colors.white,
                             }}
                           >
                             Cancel
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -321,12 +341,10 @@ export default function AstrologerReviewsPage() {
         onConfirm={handleDeleteConfirm}
         isLoading={deletingReply}
       />
-
-      {/* Toast Notification */}
-      {toast && (
+      {toastProps.isVisible && (
         <Toast
-          message={toast.message}
-          type={toast.type}
+          message={toastProps.message}
+          type={toastProps.type}
           onClose={hideToast}
         />
       )}

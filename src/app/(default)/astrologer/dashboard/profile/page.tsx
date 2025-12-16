@@ -139,18 +139,23 @@ export default function AstrologerProfilePage() {
   };
 
   return (
-    <div className="p-8">
-      <div className="max-w-4xl">
-        <h1 className="text-3xl font-bold mb-8" style={{ color: colors.black }}>
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+      <div className="max-w-4xl mx-auto">
+        <h1
+          className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8"
+          style={{ color: colors.black }}
+        >
           Personal Details
         </h1>
 
         {loading ? (
           <AstrologerProfileSkeleton />
         ) : (
-
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <form
+            onSubmit={handleSubmit}
+            className="bg-white rounded-lg shadow-md p-4 sm:p-6 lg:p-8"
+          >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
             {/* Full Name */}
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
@@ -305,7 +310,7 @@ export default function AstrologerProfilePage() {
               <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
                 Profile Image
               </label>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
                 <div className="relative w-24 h-24">
                   <Image
                     src={imagePreview}
@@ -345,7 +350,7 @@ export default function AstrologerProfilePage() {
           >
             Update Profile
           </Button>
-        </form>
+          </form>
         )}
       </div>
 

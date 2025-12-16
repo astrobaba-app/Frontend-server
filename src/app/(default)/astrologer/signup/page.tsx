@@ -8,7 +8,10 @@ import Button from "@/components/atoms/Button";
 import Toast from "@/components/atoms/Toast";
 import { useToast } from "@/hooks/useToast";
 import { colors } from "@/utils/colors";
-import { sendRegistrationOTP, verifyRegistrationOTP } from "@/store/api/astrologer/auth";
+import {
+  sendRegistrationOTP,
+  verifyRegistrationOTP,
+} from "@/store/api/astrologer/auth";
 
 export default function AstrologerSignup() {
   const router = useRouter();
@@ -18,21 +21,16 @@ export default function AstrologerSignup() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
 
-  // Check if astrologer is already logged in
+  // Check if someone is already logged in via role flag
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const astrologerToken = localStorage.getItem('astrobaba_token');
-      if (astrologerToken) {
-        // Redirect to dashboard if astrologer is logged in
-        router.push('/astrologer/dashboard');
+    if (typeof window !== "undefined") {
+      const role = localStorage.getItem("auth_role");
+      if (role === "astrologer") {
+        router.push("/astrologer/dashboard");
         return;
       }
-      
-      // Check if user is logged in
-      const userToken = localStorage.getItem('astrobaba_token');
-      if (userToken) {
-        // Redirect to profile if user is logged in
-        router.push('/profile');
+      if (role === "user") {
+        router.push("/profile");
       }
     }
   }, [router]);
@@ -60,11 +58,11 @@ export default function AstrologerSignup() {
 
   const handleOtpChange = (index: number, value: string) => {
     if (isNaN(Number(value))) return;
-    
+
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
-    
+
     // Automatically focus the next input
     if (value && index < 5) {
       document.getElementById(`otp-${index + 1}`)?.focus();
@@ -80,7 +78,10 @@ export default function AstrologerSignup() {
 
     setLoading(true);
     try {
-      const response = await verifyRegistrationOTP({ phoneNumber, otp: otpString });
+      const response = await verifyRegistrationOTP({
+        phoneNumber,
+        otp: otpString,
+      });
       if (response.success) {
         showToast("OTP verified successfully!", "success");
         setTimeout(() => {
@@ -146,29 +147,48 @@ export default function AstrologerSignup() {
             </div>
 
             {/* Button always present but hidden when mobile incomplete - maintains fixed layout */}
-            <button
+            <Button
+              variant="custom"
+              size="md"
+              fullWidth={true}
               onClick={handleSendOTP}
-              disabled={loading || phoneNumber.length !== 10}
-              className={`w-full py-3 rounded-lg font-semibold transition-all disabled:cursor-not-allowed ${
-                phoneNumber.length === 10 ? 'opacity-100 visible' : 'opacity-0 invisible'
-              }`}
-              style={{ 
-                backgroundColor: colors.primeYellow, 
-                color: colors.black 
-              }}
-            >
-              {loading ? 'Sending...' : 'Send OTP'}
-            </button>
+              loading={loading}
+              disabled={phoneNumber.length !== 10}
+              customColors={{
+                backgroundColor: colors.primeYellow,
 
-            <p className="text-xs text-center mt-6" style={{ color: colors.gray }}>
+                textColor: colors.black,
+              }}
+              className={`${
+                phoneNumber.length === 10
+                  ? "opacity-100 visible"
+                  : "opacity-0 invisible"
+              }`}
+            >
+              Send OTP
+            </Button>
+
+            <p
+              className="text-xs text-center mt-6"
+              style={{ color: colors.gray }}
+            >
               By proceeding, you agree to our{" "}
-              <span className="text-blue-600 cursor-pointer">Terms & Conditions</span> and{" "}
-              <span className="text-blue-600 cursor-pointer">Privacy Policy</span>.
+              <span className="text-blue-600 cursor-pointer">
+                Terms & Conditions
+              </span>{" "}
+              and{" "}
+              <span className="text-blue-600 cursor-pointer">
+                Privacy Policy
+              </span>
+              .
             </p>
 
-            <p className="text-center mt-6 text-sm" style={{ color: colors.gray }}>
+            <p
+              className="text-center mt-6 text-sm"
+              style={{ color: colors.gray }}
+            >
               Already have an account?{" "}
-              <span 
+              <span
                 className="text-blue-600 cursor-pointer font-medium"
                 onClick={() => router.push("/astrologer/login")}
               >
@@ -191,9 +211,11 @@ export default function AstrologerSignup() {
                   id={`otp-${index}`}
                   type="text"
                   value={digit}
-                  onChange={(e) => handleOtpChange(index, e.target.value.slice(-1))}
+                  onChange={(e) =>
+                    handleOtpChange(index, e.target.value.slice(-1))
+                  }
                   onKeyDown={(e) => {
-                    if (e.key === 'Backspace' && !digit && index > 0) {
+                    if (e.key === "Backspace" && !digit && index > 0) {
                       document.getElementById(`otp-${index - 1}`)?.focus();
                     }
                   }}
@@ -226,41 +248,49 @@ export default function AstrologerSignup() {
               >
                 Change Number
               </button>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={handleSendOTP}
-                className="text-sm font-medium"
-                style={{ color: colors.primeYellow }}
-                disabled={loading}
+                loading={loading}
+                customStyles={{
+                  color: colors.primeYellow,
+                }}
               >
                 Resend OTP
-              </button>
+              </Button>
             </div>
 
             {/* Verify button always present but hidden when OTP incomplete - maintains fixed layout */}
-            <button
+            <Button
+              variant="custom"
+              size="md" 
+              fullWidth={true} 
               onClick={handleVerifyOTP}
-              disabled={loading || otp.join('').length !== 6}
-              className={`w-full py-3 rounded-lg font-semibold transition-all disabled:cursor-not-allowed ${
-                otp.join('').length === 6 ? 'opacity-100 visible' : 'opacity-0 invisible'
-              }`}
-              style={{ 
-                backgroundColor: colors.primeYellow, 
-                color: colors.black 
+              loading={loading} 
+
+              disabled={otp.join("").length !== 6}
+              customColors={{
+                backgroundColor: colors.primeYellow,
+
+                textColor: colors.black,
               }}
+
+              className={`${
+                otp.join("").length === 6
+                  ? "opacity-100 visible"
+                  : "opacity-0 invisible"
+              }`}
             >
-              {loading ? 'Verifying...' : 'Verify OTP'}
-            </button>
+              Verify OTP
+            </Button>
           </>
         )}
       </div>
 
       {/* Toast Notification */}
       {toast.show && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={hideToast}
-        />
+        <Toast message={toast.message} type={toast.type} onClose={hideToast} />
       )}
     </div>
   );

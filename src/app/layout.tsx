@@ -3,10 +3,10 @@
 import type { Metadata } from "next";
 import { Inter, Kanit } from 'next/font/google';
 import "./globals.css";
-import ChatButton from "@/components/layout/ChatButton";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { CartProvider } from "@/contexts/CartContext";
 import { usePathname } from "next/navigation";
 
 const inter = Inter({
@@ -32,15 +32,21 @@ export default function RootLayout({
 
   return (
     <html lang="en">
+      <head>
+        {/* Razorpay Script */}
+        <script src="https://checkout.razorpay.com/v1/checkout.js" async></script>
+      </head>
       <body
         className={`${inter.variable} ${kanit.variable} antialiased`}
       >
         <AuthProvider>
-          {!shouldHideLayout && <Header />}
-          
-          {children}
-          {!shouldHideLayout && <Footer />}
-          {/* <ChatButton /> */}
+          <CartProvider>
+            {!shouldHideLayout && <Header />}
+            
+            {children}
+            {!shouldHideLayout && <Footer />}
+            {/* <ChatButton /> */}
+          </CartProvider>
         </AuthProvider>
       </body>
     </html>
