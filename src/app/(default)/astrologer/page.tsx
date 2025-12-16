@@ -133,6 +133,7 @@ export default function AstrologersPage() {
     <Link key={astrologer.id} href={`/astrologer/${astrologer.id}`}>
       <AstrologerCard
         astrologer={{
+          id: astrologer.id,
           name: astrologer.fullName,
           title: astrologer.skills.join(', '),
           experience: `${astrologer.yearsOfExperience} years`,

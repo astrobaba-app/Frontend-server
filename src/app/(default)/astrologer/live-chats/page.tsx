@@ -1,145 +1,506 @@
 "use client";
 
-import React, { useState } from "react";
-import { 
-  FiSearch, 
-  FiPhone, 
-  FiVideo, 
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  FiSearch,
+  FiPhone,
+  FiVideo,
   FiMoreVertical,
   FiPaperclip,
   FiMic,
   FiCamera,
   FiSend,
   FiCheck,
-  FiCheckCircle
+  FiCheckCircle,
 } from "react-icons/fi";
 import { colors } from "@/utils/colors";
 import Image from "next/image";
+import { getChatSocket } from "@/utils/chatSocket";
+import type { ChatMessageDto, ChatSessionSummary } from "@/store/api/chat";
+import {
+  approveChatRequest,
+  getAstrologerChatSessions,
+  getChatMessages,
+  rejectChatRequest,
+  sendChatMessageHttp,
+} from "@/store/api/chat";
 
-// Mock data for chat users
-const mockChatUsers = [
-  {
-    id: 1,
-    name: "Rahul Sharma",
-    lastMessage: "Thank you for the reading!",
-    time: "10:30 AM",
-    unread: 2,
-    online: true,
-    avatar: null,
-  },
-  {
-    id: 2,
-    name: "Priya Patel",
-    lastMessage: "Can we discuss my kundli?",
-    time: "Yesterday",
-    unread: 0,
-    online: false,
-    avatar: null,
-  },
-  {
-    id: 3,
-    name: "Amit Kumar",
-    lastMessage: "When is the best time for marriage?",
-    time: "2 days ago",
-    unread: 1,
-    online: true,
-    avatar: null,
-  },
-  {
-    id: 4,
-    name: "Sneha Reddy",
-    lastMessage: "Thank you so much!",
-    time: "3 days ago",
-    unread: 0,
-    online: false,
-    avatar: null,
-  },
-];
+function formatDateLabel(date: Date): string {
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
 
-const mockChatRequests = [
-  {
-    id: 5,
-    name: "Vikas Singh",
-    message: "Hello, I need guidance about my career",
-    time: "5 min ago",
-    avatar: null,
-  },
-  {
-    id: 6,
-    name: "Anjali Gupta",
-    message: "Looking for marriage compatibility analysis",
-    time: "15 min ago",
-    avatar: null,
-  },
-  {
-    id: 7,
-    name: "Rajesh Verma",
-    message: "Need urgent consultation",
-    time: "1 hour ago",
-    avatar: null,
-  },
-];
+  const isSameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
 
-const mockMessages = [
-  {
-    id: 1,
-    text: "Namaste! I need guidance about my career path.",
-    sender: "user",
-    time: "10:25 AM",
-    status: "read",
-  },
-  {
-    id: 2,
-    text: "🙏 Namaste! I'd be happy to help you with career guidance. Please share your birth details for accurate predictions.",
-    sender: "astrologer",
-    time: "10:26 AM",
-    status: "delivered",
-  },
-  {
-    id: 3,
-    text: "Date: 15/03/1995, Time: 08:30 AM, Place: Mumbai",
-    sender: "user",
-    time: "10:27 AM",
-    status: "read",
-  },
-  {
-    id: 4,
-    text: "Thank you for sharing. Let me analyze your chart. Your 10th house shows strong career prospects in technology and communication fields.",
-    sender: "astrologer",
-    time: "10:29 AM",
-    status: "delivered",
-  },
-  {
-    id: 5,
-    text: "That's wonderful! Can you tell me about the timing?",
-    sender: "user",
-    time: "10:30 AM",
-    status: "read",
-  },
-];
+  if (isSameDay(date, today)) return "Today";
+  if (isSameDay(date, yesterday)) return "Yesterday";
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+type MessageGroup = {
+  dateKey: string;
+  label: string;
+  items: ChatMessageDto[];
+};
+
+function groupMessagesByDate(messages: ChatMessageDto[]): MessageGroup[] {
+  const groups: Record<string, MessageGroup> = {};
+
+  messages.forEach((msg) => {
+    const createdAt = new Date(msg.createdAt);
+    const key = createdAt.toISOString().slice(0, 10);
+    if (!groups[key]) {
+      groups[key] = {
+        dateKey: key,
+        label: formatDateLabel(createdAt),
+        items: [],
+      };
+    }
+    groups[key].items.push(msg);
+  });
+
+  return Object.values(groups).sort((a, b) =>
+    a.dateKey.localeCompare(b.dateKey)
+  );
+}
 
 type TabType = "chats" | "requests";
 
 export default function LiveChatsPage() {
+  const [chatSessions, setChatSessions] = useState<ChatSessionSummary[]>([]);
+  const [requestSessions, setRequestSessions] = useState<ChatSessionSummary[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessageDto[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>("chats");
-  const [selectedUser, setSelectedUser] = useState(mockChatUsers[0]);
   const [searchQuery, setSearchQuery] = useState("");
   const [messageInput, setMessageInput] = useState("");
+  const [isTypingUser, setIsTypingUser] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [replyTo, setReplyTo] = useState<ChatMessageDto | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const typingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
-  const filteredChats = mockChatUsers.filter(user =>
-    user.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const selectedSession = useMemo(
+    () => chatSessions.find((s) => s.id === selectedSessionId) || null,
+    [chatSessions, selectedSessionId]
   );
 
-  const filteredRequests = mockChatRequests.filter(user =>
-    user.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const selectedUser = useMemo(() => {
+    if (!selectedSession || !selectedSession.user) return null;
+    return {
+      id: selectedSession.user.id,
+      name: selectedSession.user.fullName,
+      online: true,
+    };
+  }, [selectedSession]);
+
+  const filteredChats = useMemo(
+    () =>
+      chatSessions.filter((session) =>
+        (session.user?.fullName || "")
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase())
+      ),
+    [chatSessions, searchQuery]
   );
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const filteredRequests = useMemo(
+    () =>
+      requestSessions.filter((session) =>
+        (session.user?.fullName || "")
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase())
+      ),
+    [requestSessions, searchQuery]
+  );
+
+  // Ensure a valid selected session whenever the chat session list changes
+  useEffect(() => {
+    if (chatSessions.length === 0) return;
+
+    const stillExists = selectedSessionId
+      ? chatSessions.some((s) => s.id === selectedSessionId)
+      : false;
+
+    if (!stillExists) {
+      setSelectedSessionId(chatSessions[0].id);
+    }
+  }, [chatSessions, selectedSessionId]);
+
+  // Load astrologer chat sessions and requests
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        const [approvedRes, pendingRes] = await Promise.all([
+          getAstrologerChatSessions({ requestStatus: "approved", page: 1, limit: 100 }),
+          getAstrologerChatSessions({ requestStatus: "pending", page: 1, limit: 100 }),
+        ]);
+
+        const chats = approvedRes.sessions || [];
+        const requests = pendingRes.sessions || [];
+
+        setChatSessions(chats);
+        setRequestSessions(requests);
+
+        if (!selectedSessionId && chats.length > 0) {
+          setSelectedSessionId(chats[0].id);
+        }
+      } catch (error) {
+        console.error("Failed to load astrologer chat sessions", error);
+      }
+    };
+
+    fetchSessions();
+  }, [selectedSessionId]);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openMenuId) {
+        setOpenMenuId(null);
+      }
+    };
+
+    if (openMenuId) {
+      document.addEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [openMenuId]);
+
+  // Load messages when selected session changes
+  useEffect(() => {
+    if (!selectedSessionId) return;
+
+    const loadMessages = async () => {
+      try {
+        const data = await getChatMessages(selectedSessionId, {
+          page: 1,
+          limit: 100,
+        });
+        setMessages(data.messages || []);
+      } catch (error) {
+        console.error("Failed to load messages for session", error);
+      }
+    };
+
+    loadMessages();
+  }, [selectedSessionId]);
+
+  // Socket.IO integration for real-time updates
+  useEffect(() => {
+    if (!selectedSessionId) return;
+    const socket = getChatSocket();
+    if (!socket) return;
+
+    socket.emit("join_chat", { sessionId: selectedSessionId });
+
+    // Mark messages as read when opening chat
+    socket.emit("mark_read", { sessionId: selectedSessionId });
+
+    const handleNewMessage = (payload: { sessionId: string; message: ChatMessageDto }) => {
+      if (payload.sessionId !== selectedSessionId) return;
+      
+      setMessages((prev) => {
+        // Check if message already exists to avoid duplicates
+        if (prev.some(m => m.id === payload.message.id)) {
+          return prev;
+        }
+        return [...prev, payload.message];
+      });
+
+      // Mark as read immediately when astrologer has this chat open
+      if (payload.message.senderType === "user") {
+        socket.emit("mark_read", { sessionId: selectedSessionId });
+      }
+    };
+
+    const handleTyping = (payload: { sessionId: string; from: "user" | "astrologer"; isTyping: boolean }) => {
+      if (payload.sessionId !== selectedSessionId) return;
+      if (payload.from === "user") {
+        setIsTypingUser(payload.isTyping);
+      }
+    };
+
+    const handleChatUpdated = (payload: { sessionId: string; session: ChatSessionSummary }) => {
+      setChatSessions((prev) =>
+        prev.map((s) =>
+          s.id === payload.sessionId
+            ? {
+                // Preserve existing related data like user details
+                ...s,
+                ...payload.session,
+                user: s.user,
+              }
+            : s
+        )
+      );
+
+      setRequestSessions((prev) =>
+        prev.map((s) =>
+          s.id === payload.sessionId
+            ? {
+                ...s,
+                ...payload.session,
+                user: s.user,
+              }
+            : s
+        )
+      );
+    };
+
+    const handleMessagesRead = (payload: { sessionId: string; readerRole: "user" | "astrologer" }) => {
+      if (payload.sessionId !== selectedSessionId) return;
+
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (payload.readerRole === "astrologer") {
+            // Astrologer read user messages
+            if (m.senderType === "user") {
+              return { ...m, isRead: true };
+            }
+          } else {
+            // User read astrologer messages
+            if (m.senderType === "astrologer") {
+              return { ...m, isRead: true };
+            }
+          }
+          return m;
+        })
+      );
+    };
+
+    const handleUnreadUpdate = (payload: { sessionId: string; unreadCount: number; viewerRole: "user" | "astrologer" }) => {
+      if (payload.viewerRole !== "astrologer") return;
+
+      setChatSessions((prev) =>
+        prev.map((s) =>
+          s.id === payload.sessionId ? { ...s, unreadCount: payload.unreadCount } : s
+        )
+      );
+    };
+
+    socket.on("message:new", handleNewMessage);
+    socket.on("typing", handleTyping);
+    socket.on("chat:updated", handleChatUpdated);
+    socket.on("messages:read", handleMessagesRead);
+    socket.on("unread:update", handleUnreadUpdate);
+
+    return () => {
+      socket.emit("leave_chat", { sessionId: selectedSessionId });
+      socket.off("message:new", handleNewMessage);
+      socket.off("typing", handleTyping);
+      socket.off("chat:updated", handleChatUpdated);
+      socket.off("messages:read", handleMessagesRead);
+      socket.off("unread:update", handleUnreadUpdate);
+      
+      // Clean up typing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [selectedSessionId]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image size should be less than 5MB");
+      return;
+    }
+
+    setSelectedFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    if (event.target) {
+      event.target.value = "";
+    }
+  };
+
+  const handleSendImage = async () => {
+    if (!selectedFile || !selectedSessionId) return;
+
+    try {
+      setIsUploading(true);
+      await sendChatMessageHttp(selectedSessionId, {
+        message: "[Image]",
+        messageType: "image",
+        file: selectedFile,
+        replyToMessageId: replyTo?.id,
+      });
+
+      // Don't manually add message - let socket event handle it to avoid duplicates
+
+      setImagePreview(null);
+      setSelectedFile(null);
+      setReplyTo(null);
+    } catch (error) {
+      console.error("Failed to send image", error);
+      alert("Failed to send image. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleCancelImage = () => {
+    setImagePreview(null);
+    setSelectedFile(null);
+  };
+
+  // Handle input change and emit typing events
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setMessageInput(value);
+
+    if (!selectedSessionId) return;
+
+    const socket = getChatSocket();
+    if (socket && socket.connected) {
+      // Emit typing event
+      socket.emit("typing", {
+        sessionId: selectedSessionId,
+        isTyping: value.length > 0,
+      });
+
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      // Set timeout to stop typing indicator after user stops typing
+      if (value.length > 0) {
+        typingTimeoutRef.current = setTimeout(() => {
+          socket.emit("typing", {
+            sessionId: selectedSessionId,
+            isTyping: false,
+          });
+        }, 1000);
+      }
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (messageInput.trim()) {
-      // Handle send message logic here
-      console.log("Sending message:", messageInput);
+    if (!messageInput.trim() || !selectedSessionId || isSending) return;
+
+    try {
+      setIsSending(true);
+      const socket = getChatSocket();
+      let shouldFallbackToHttp = true;
+
+      if (socket && socket.connected) {
+        await new Promise<void>((resolve) => {
+          socket.emit(
+            "send_message",
+            {
+              sessionId: selectedSessionId,
+              text: messageInput,
+              messageType: "text",
+              replyToMessageId: replyTo?.id,
+            },
+            (response: { success: boolean; error?: string; message?: ChatMessageDto }) => {
+              if (!response?.success && response?.error) {
+                console.error("Failed to send message via socket:", response.error);
+                shouldFallbackToHttp = true;
+              } else if (response?.success) {
+                shouldFallbackToHttp = false;
+              }
+              resolve();
+            }
+          );
+        });
+      }
+
+      if (shouldFallbackToHttp) {
+        const response = await sendChatMessageHttp(selectedSessionId, {
+          message: messageInput,
+          messageType: "text",
+          replyToMessageId: replyTo?.id,
+        });
+
+        // When Socket.IO is not connected, we won't receive "message:new".
+        // Optimistically append the sent message from HTTP response so the
+        // astrologer immediately sees their message in the UI.
+        if (response?.success && response.chatMessage) {
+          setMessages((prev) => [...prev, response.chatMessage as ChatMessageDto]);
+        }
+      }
+
       setMessageInput("");
+      setReplyTo(null);
+    } catch (error) {
+      console.error("Error sending message", error);
+      if (typeof window !== "undefined") {
+        alert("Failed to send message. Please try again.");
+      }
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleAcceptRequest = async (sessionId: string) => {
+    try {
+      await approveChatRequest(sessionId);
+      setRequestSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      const updatedReq = await getAstrologerChatSessions({ requestStatus: "pending" });
+      const updatedChats = await getAstrologerChatSessions({ requestStatus: "approved" });
+      setRequestSessions(updatedReq.sessions || []);
+      setChatSessions(updatedChats.sessions || []);
+    } catch (error) {
+      console.error("Failed to approve chat request", error);
+    }
+  };
+
+  const handleDeclineRequest = async (sessionId: string) => {
+    try {
+      await rejectChatRequest(sessionId);
+      setRequestSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    } catch (error) {
+      console.error("Failed to reject chat request", error);
+    }
+  };
+
+  const handleReplyClick = (message: ChatMessageDto) => {
+    if (message.isDeleted) return;
+    setReplyTo(message);
+  };
+
+  const handleDeleteMessage = (messageId: string) => {
+    const socket = getChatSocket();
+    if (!socket) return;
+    socket.emit("delete_message", { messageId });
+  };
+
+  const handleCopyMessage = async (text: string | null) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      console.error("Failed to copy message", err);
     }
   };
 
@@ -177,9 +538,9 @@ export default function LiveChatsPage() {
             }`}
           >
             Chats
-            {mockChatUsers.filter(u => u.unread > 0).length > 0 && (
+            {chatSessions.filter((s) => s.unreadCount > 0).length > 0 && (
               <span className="ml-2 px-2 py-0.5 bg-[#FFD700] text-xs rounded-full">
-                {mockChatUsers.reduce((acc, u) => acc + u.unread, 0)}
+                {chatSessions.reduce((acc, s) => acc + (s.unreadCount || 0), 0)}
               </span>
             )}
           </button>
@@ -192,9 +553,9 @@ export default function LiveChatsPage() {
             }`}
           >
             Requests
-            {mockChatRequests.length > 0 && (
+            {requestSessions.length > 0 && (
               <span className="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
-                {mockChatRequests.length}
+                {requestSessions.length}
               </span>
             )}
           </button>
@@ -205,23 +566,23 @@ export default function LiveChatsPage() {
           {activeTab === "chats" ? (
             // Chats List
             filteredChats.length > 0 ? (
-              filteredChats.map((user) => (
+              filteredChats.map((session) => (
                 <div
-                  key={user.id}
-                  onClick={() => setSelectedUser(user)}
+                  key={session.id}
+                  onClick={() => setSelectedSessionId(session.id)}
                   className={`p-4 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 ${
-                    selectedUser?.id === user.id ? "bg-yellow-50" : ""
+                    selectedSessionId === session.id ? "bg-yellow-50" : ""
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     {/* Avatar */}
                     <div className="relative">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-200 to-yellow-300 flex items-center justify-center">
+                      <div className="w-12 h-12 rounded-full bg-linear-to-br from-yellow-200 to-yellow-300 flex items-center justify-center">
                         <span className="text-lg font-semibold text-gray-700">
-                          {user.name.charAt(0)}
+                          {(session.user?.fullName || "?").charAt(0)}
                         </span>
                       </div>
-                      {user.online && (
+                      {true && (
                         <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
                       )}
                     </div>
@@ -230,19 +591,24 @@ export default function LiveChatsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start mb-1">
                         <h4 className="font-semibold text-gray-900 truncate">
-                          {user.name}
+                          {session.user?.fullName || "User"}
                         </h4>
-                        <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
-                          {user.time}
+                        <span className="text-xs text-gray-500 ml-2 shrink-0">
+                          {session.lastMessageAt
+                            ? new Date(session.lastMessageAt).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : ""}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
                         <p className="text-sm text-gray-600 truncate">
-                          {user.lastMessage}
+                          {session.lastMessagePreview || "No messages yet"}
                         </p>
-                        {user.unread > 0 && (
-                          <span className="ml-2 px-2 py-0.5 bg-[#FFD700] text-xs rounded-full font-medium flex-shrink-0">
-                            {user.unread}
+                        {session.unreadCount > 0 && (
+                          <span className="ml-2 px-2 py-0.5 bg-[#FFD700] text-xs rounded-full font-medium shrink-0">
+                            {session.unreadCount}
                           </span>
                         )}
                       </div>
@@ -258,16 +624,16 @@ export default function LiveChatsPage() {
           ) : (
             // Requests List
             filteredRequests.length > 0 ? (
-              filteredRequests.map((request) => (
+              filteredRequests.map((session) => (
                 <div
-                  key={request.id}
+                  key={session.id}
                   className="p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-start gap-3">
                     {/* Avatar */}
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-200 to-blue-300 flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-full bg-linear-to-br from-blue-200 to-blue-300 flex items-center justify-center">
                       <span className="text-lg font-semibold text-gray-700">
-                        {request.name.charAt(0)}
+                        {(session.user?.fullName || "?").charAt(0)}
                       </span>
                     </div>
 
@@ -275,20 +641,31 @@ export default function LiveChatsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start mb-1">
                         <h4 className="font-semibold text-gray-900">
-                          {request.name}
+                          {session.user?.fullName || "User"}
                         </h4>
                         <span className="text-xs text-gray-500 ml-2">
-                          {request.time}
+                          {session.startTime
+                            ? new Date(session.startTime).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : ""}
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 mb-2">
-                        {request.message}
+                        {session.lastMessagePreview || "New chat request"}
                       </p>
                       <div className="flex gap-2">
-                        <button className="px-3 py-1 bg-[#FFD700] text-sm font-medium rounded hover:bg-yellow-500 transition-colors">
+                        <button
+                          className="px-3 py-1 bg-[#FFD700] text-sm font-medium rounded hover:bg-yellow-500 transition-colors"
+                          onClick={() => handleAcceptRequest(session.id)}
+                        >
                           Accept
                         </button>
-                        <button className="px-3 py-1 bg-gray-200 text-sm font-medium rounded hover:bg-gray-300 transition-colors">
+                        <button
+                          className="px-3 py-1 bg-gray-200 text-sm font-medium rounded hover:bg-gray-300 transition-colors"
+                          onClick={() => handleDeclineRequest(session.id)}
+                        >
                           Decline
                         </button>
                       </div>
@@ -307,7 +684,7 @@ export default function LiveChatsPage() {
 
       {/* Right Panel - Chat Window */}
       <div className="flex-1 flex flex-col">
-        {selectedUser ? (
+        {selectedUser && selectedSession ? (
           <>
             {/* Chat Header */}
             <div className=" border-b border-gray-200 p-4">
@@ -315,9 +692,9 @@ export default function LiveChatsPage() {
                 <div className="flex items-center gap-3">
                   {/* Avatar */}
                   <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-200 to-yellow-300 flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-full bg-linear-to-br from-yellow-200 to-yellow-300 flex items-center justify-center">
                       <span className="text-lg font-semibold text-gray-700">
-                        {selectedUser.name.charAt(0)}
+                        {(selectedUser.name || "?").charAt(0)}
                       </span>
                     </div>
                     {selectedUser.online && (
@@ -328,10 +705,10 @@ export default function LiveChatsPage() {
                   {/* User Info */}
                   <div>
                     <h3 className="font-semibold text-gray-900">
-                      {selectedUser.name}
+                      {selectedUser.name || "User"}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      {selectedUser.online ? "Online" : "Offline"}
+                        {selectedUser.online ? "Online" : "Offline"}
                     </p>
                   </div>
                 </div>
@@ -365,106 +742,254 @@ export default function LiveChatsPage() {
               <div className="absolute top-1/3 right-1/4 opacity-5">
                 <div className="text-7xl">⭐</div>
               </div>
-
               <div className="max-w-4xl mx-auto space-y-4 relative z-10">
-                {mockMessages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${
-                      message.sender === "astrologer" ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    <div
-                      className={`max-w-[70%] rounded-lg px-4 py-3 shadow-sm ${
-                        message.sender === "astrologer"
-                          ? "bg-[#FFD700] text-gray-900"
-                          : " text-gray-900"
-                      }`}
-                    >
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-                        {message.text}
-                      </p>
-                      <div className="flex items-center justify-end gap-1 mt-1">
-                        <span className="text-xs text-gray-600">
-                          {message.time}
-                        </span>
-                        {message.sender === "astrologer" && (
-                          <span className="text-blue-500">
-                            {message.status === "read" ? (
-                              <FiCheckCircle className="w-3 h-3" />
-                            ) : (
-                              <FiCheck className="w-3 h-3" />
-                            )}
-                          </span>
-                        )}
+                {groupMessagesByDate(messages).map((group) => (
+                  <div key={group.dateKey}>
+                    <div className="flex justify-center mb-4">
+                      <div className="bg-white/80 backdrop-blur-sm px-3 py-1 rounded-lg shadow-sm">
+                        <p className="text-xs text-gray-600 font-medium">{group.label}</p>
                       </div>
                     </div>
+
+                    {group.items.map((message) => {
+                      const isAstrologer = message.senderType === "astrologer";
+                      const repliedTo = message.replyToMessageId
+                        ? messages.find((m) => m.id === message.replyToMessageId) || null
+                        : null;
+
+                      return (
+                        <div
+                          key={message.id}
+                          className={`flex ${isAstrologer ? "justify-end" : "justify-start"} mb-3`}
+                        >
+                          <div
+                            className={`max-w-[70%] rounded-lg shadow-sm ${
+                              message.messageType === "image" ? "p-0 overflow-hidden" : "px-4 py-3"
+                            } ${
+                              isAstrologer ? "bg-[#FFD700] text-gray-900" : " text-gray-900"
+                            }`}
+                          >
+                            {repliedTo && (
+                              <div className="mb-1 px-2 py-1 text-[11px] rounded bg-black/5 text-gray-700">
+                                <span className="font-semibold mr-1">
+                                  Replying to {repliedTo.senderType === "astrologer" ? "You" : selectedUser?.name || "User"}
+                                </span>
+                                <span className="truncate block max-w-[220px]">
+                                  {repliedTo.messageType === "image" ? "[Image]" : (repliedTo.message || "(message)")}
+                                </span>
+                              </div>
+                            )}
+
+                            {message.messageType === "image" && message.fileUrl ? (
+                              <img
+                                src={message.fileUrl}
+                                alt="Sent image"
+                                className="rounded-lg max-w-[250px] max-h-[250px] w-auto h-auto cursor-pointer hover:opacity-90 transition object-cover block"
+                                onClick={() => window.open(message.fileUrl || "", "_blank")}
+                                onError={(e) => {
+                                  e.currentTarget.src = "/images/image-error.png";
+                                }}
+                              />
+                            ) : (
+                              <p className="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">
+                                {message.isDeleted ? "This message was deleted" : message.message}
+                              </p>
+                            )}
+                            <div className="flex items-center justify-between gap-2 mt-1">
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs text-gray-600">
+                                  {new Date(message.createdAt).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
+                                {isAstrologer && (
+                                  message.isRead ? (
+                                    <div className="flex text-blue-500">
+                                      <FiCheck className="w-3 h-3 -mr-1" />
+                                      <FiCheck className="w-3 h-3" />
+                                    </div>
+                                  ) : (
+                                    <FiCheck className="w-3 h-3 text-gray-400" />
+                                  )
+                                )}
+                              </div>
+                              {!message.isDeleted && (
+                                <div className="relative">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOpenMenuId(openMenuId === message.id ? null : message.id);
+                                    }}
+                                    className="p-1 hover:bg-gray-200 rounded-full transition"
+                                    aria-label="Message options"
+                                  >
+                                    <FiMoreVertical className="w-3 h-3 text-gray-600" />
+                                  </button>
+                                  {openMenuId === message.id && (
+                                    <div className="absolute right-0 bottom-full mb-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[120px]">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          handleReplyClick(message);
+                                          setOpenMenuId(null);
+                                        }}
+                                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition"
+                                      >
+                                        Reply
+                                      </button>
+                                      {message.messageType === "text" && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            handleCopyMessage(message.message || null);
+                                            setOpenMenuId(null);
+                                          }}
+                                          className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition"
+                                        >
+                                          Copy
+                                        </button>
+                                      )}
+                                      {isAstrologer && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            handleDeleteMessage(message.id);
+                                            setOpenMenuId(null);
+                                          }}
+                                          className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-red-600 transition"
+                                        >
+                                          Delete
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Message Input Area */}
-            <div className=" border-t border-gray-200 p-4">
-              <form onSubmit={handleSendMessage} className="flex items-end gap-2">
+            <div className=" border-t border-gray-200 p-4 relative">              {/* Image Preview Modal */}
+              {imagePreview && (
+                <div className="mb-3 bg-white border border-gray-200 rounded-lg p-3 shadow-lg">
+                  <div className="flex justify-between items-center mb-2">
+                    <p className="text-sm font-semibold text-gray-700">Send Image</p>
+                    <button
+                      type="button"
+                      onClick={handleCancelImage}
+                      className="text-gray-500 hover:text-gray-700"
+                      aria-label="Cancel"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Image
+                      src={imagePreview}
+                      alt="Preview"
+                      width={200}
+                      height={200}
+                      className="rounded-lg max-w-full h-auto"
+                    />
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      type="button"
+                      onClick={handleSendImage}
+                      disabled={isUploading}
+                      className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-4 py-2 rounded-lg font-medium disabled:opacity-50"
+                    >
+                      {isUploading ? "Sending..." : "Send Image"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Reply Preview */}              {replyTo && (
+                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-full max-w-4xl px-3">
+                  <div className="bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-xs flex justify-between items-start">
+                    <div>
+                      <p className="font-semibold text-gray-700 mb-0.5">
+                        Replying to {replyTo.senderType === "astrologer" ? "You" : selectedUser?.name || "User"}
+                      </p>
+                      <p className="text-gray-600 truncate max-w-xs">
+                        {replyTo.message || "(message)"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setReplyTo(null)}
+                      className="ml-2 text-gray-500 hover:text-gray-700"
+                      aria-label="Cancel reply"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+
                 {/* Attachment Button */}
                 <button
                   type="button"
-                  className="p-3 hover:bg-gray-100 rounded-full transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-3 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
                   title="Attach file"
                 >
                   <FiPaperclip className="w-5 h-5 text-gray-600" />
                 </button>
 
-                {/* Camera Button */}
-                <button
-                  type="button"
-                  className="p-3 hover:bg-gray-100 rounded-full transition-colors"
-                  title="Take photo"
-                >
-                  <FiCamera className="w-5 h-5 text-gray-600" />
-                </button>
-
-                {/* Message Input */}
+                {/* Message Input with Send Button Inside */}
                 <div className="flex-1 relative">
                   <input
                     type="text"
                     value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
+                    onChange={handleInputChange}
                     placeholder="Type a message..."
                     className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-full focus:outline-none focus:border-[#FFD700] bg-gray-50"
                   />
-                  {/* Mic Button (when input is empty) */}
-                  {!messageInput && (
-                    <button
-                      type="button"
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-200 rounded-full transition-colors"
-                      title="Voice message"
-                    >
-                      <FiMic className="w-5 h-5 text-gray-600" />
-                    </button>
+                  {/* Typing Indicator */}
+                  {isTypingUser && (
+                    <div className="absolute -top-8 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-lg shadow-sm text-xs text-gray-600">
+                      {selectedUser?.name || "User"} is typing...
+                    </div>
                   )}
+                  {/* Send Button Inside Input */}
+                  <button
+                    type="submit"
+                    disabled={!messageInput.trim() || isSending}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-colors disabled:opacity-50"
+                    title="Send message"
+                  >
+                    <FiSend className={`w-5 h-5 ${
+                      messageInput.trim() ? "text-[#FFD700] hover:text-yellow-600" : "text-gray-400"
+                    }`} />
+                  </button>
                 </div>
-
-                {/* Send Button */}
-                <button
-                  type="submit"
-                  disabled={!messageInput.trim()}
-                  className={`p-3 rounded-full transition-colors ${
-                    messageInput.trim()
-                      ? "bg-[#FFD700] hover:bg-yellow-500"
-                      : "bg-gray-200 cursor-not-allowed"
-                  }`}
-                  title="Send message"
-                >
-                  <FiSend className={`w-5 h-5 ${messageInput.trim() ? "text-gray-900" : "text-gray-400"}`} />
-                </button>
               </form>
             </div>
           </>
         ) : (
           // No Chat Selected
-          <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-yellow-50 to-orange-50">
+          <div className="flex-1 flex items-center justify-center bg-linear-to-br from-yellow-50 to-orange-50">
             <div className="text-center">
               <div className="text-8xl mb-4">💬</div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2">

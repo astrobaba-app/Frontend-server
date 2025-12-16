@@ -1,60 +1,292 @@
 "use client";
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, ArrowLeft, Phone, ChevronRight, MessageSquare, X } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { Send, ArrowLeft, Phone, ChevronRight, MessageSquare, X, MoreVertical } from 'lucide-react';
 import { IoChatbubblesSharp } from "react-icons/io5";
 import Link from 'next/link';
 import Image from 'next/image';
-import { FiCheckCircle } from 'react-icons/fi'; // Used for message status checkmark
+import { FiCheckCircle, FiPaperclip, FiCheck } from 'react-icons/fi';
 import { colors } from '@/utils/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { FaVideo } from "react-icons/fa";
-// Custom colors based on the design
+import { useSearchParams } from "next/navigation";
+import { getChatSocket } from "@/utils/chatSocket";
+import type { ChatMessageDto, ChatSessionSummary } from "@/store/api/chat";
+import {
+  getMyChatSessions,
+  getChatMessages,
+  startChatSession,
+  sendChatMessageHttp,
+} from "@/store/api/chat";
 
+function formatDateLabel(date: Date): string {
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
 
-// Placeholder Astrologer/User Data (matching the design)
-const ASTROLOGER_INFO = {
-  name: "Astro Preeti",
-  title: "Numerology, Face Reading",
-  photo: "/images/astrologer_preeti.jpg", // Replace with actual path
-  isOnline: true,
+  const isSameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  if (isSameDay(date, today)) return "Today";
+  if (isSameDay(date, yesterday)) return "Yesterday";
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+type MessageGroup = {
+  dateKey: string;
+  label: string;
+  items: ChatMessageDto[];
 };
 
-const USER_INFO = {
-  balance: 2000,
-};
+function groupMessagesByDate(messages: ChatMessageDto[]): MessageGroup[] {
+  const groups: Record<string, MessageGroup> = {};
 
-const INITIAL_PROMPTS = [
-  "What does my chatr say about my career?",
-  "When will I find Love?",
-  "What are my Strengths?",
-  "Tell me about my Sade sati",
-];
+  messages.forEach((msg) => {
+    const createdAt = new Date(msg.createdAt);
+    const key = createdAt.toISOString().slice(0, 10);
+    if (!groups[key]) {
+      groups[key] = {
+        dateKey: key,
+        label: formatDateLabel(createdAt),
+        items: [],
+      };
+    }
+    groups[key].items.push(msg);
+  });
 
-const PREVIOUS_CHATS = [
-  "When will I find Love?",
-  "When will I find Love?",
-  "When will I find Love?",
-  "When will I find Love?",
-];
-
+  return Object.values(groups).sort((a, b) =>
+    a.dateKey.localeCompare(b.dateKey)
+  );
+}
 
 const ChatPage = () => {
-  const { isLoggedIn, loading } = useAuth();
+  const { isLoggedIn, loading, user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const astrologerIdFromUrl = useMemo(
+    () => searchParams.get("astrologerId"),
+    [searchParams]
+  );
   const [showSidebar, setShowSidebar] = useState(false);
-  const [messages, setMessages] = useState<
-    { id: number; text: string; sender: "user" | "bot"; timestamp: string }[]
-  >([]);
+  const [sessions, setSessions] = useState<ChatSessionSummary[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessageDto[]>([]);
+  const [replyTo, setReplyTo] = useState<ChatMessageDto | null>(null);
   const [inputMessage, setInputMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [isTypingAstrologer, setIsTypingAstrologer] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const selectedSession = useMemo(
+    () => sessions.find((s) => s.id === selectedSessionId) || null,
+    [sessions, selectedSessionId]
+  );
+
+  const targetAstrologerId = useMemo(() => {
+    if (astrologerIdFromUrl) return astrologerIdFromUrl;
+    if (selectedSession) return selectedSession.astrologerId;
+    if (sessions.length === 1) return sessions[0].astrologerId;
+    return null;
+  }, [astrologerIdFromUrl, selectedSession, sessions]);
+
+  const astrologerInfo = useMemo(() => {
+    if (!selectedSession || !selectedSession.astrologer) return null;
+    return {
+      name: selectedSession.astrologer.fullName,
+      title: "Astrologer", // Could be extended when backend exposes skills
+      photo: selectedSession.astrologer.photo || "/images/logo.png",
+      isOnline: true,
+    };
+  }, [selectedSession]);
+
+  const userDisplayName = user?.fullName || "Friend";
+
+  const selectedSessionUnread = useMemo(() => {
+    if (!selectedSession) return 0;
+    return selectedSession.unreadCount || 0;
+  }, [selectedSession]);
+
+  // Ensure only one session per astrologer is displayed in Conversations
+  const uniqueSessionsByAstrologer = useMemo(() => {
+    const map = new Map<string, ChatSessionSummary>();
+    sessions.forEach((session) => {
+      const key = session.astrologerId;
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, session);
+      }
+    });
+    return Array.from(map.values());
+  }, [sessions]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!loading && !isLoggedIn) {
-      router.replace('/auth/login');
+      router.replace("/auth/login");
     }
   }, [isLoggedIn, loading, router]);
+
+  // Load existing chat sessions for the logged-in user
+  useEffect(() => {
+    if (!isLoggedIn || loading) return;
+
+    const fetchSessions = async () => {
+      try {
+        const data = await getMyChatSessions({ page: 1, limit: 50 });
+        const list = data.sessions || [];
+        setSessions(list);
+
+        if (astrologerIdFromUrl) {
+          // Try to find an existing session for this astrologer
+          const existing = list.find(
+            (s) => s.astrologerId === astrologerIdFromUrl
+          );
+
+          if (existing) {
+            setSelectedSessionId(existing.id);
+          } else {
+            // Start a new session for this astrologer
+            const { session } = await startChatSession(astrologerIdFromUrl);
+            setSessions((prev) => [session, ...prev]);
+            setSelectedSessionId(session.id);
+          }
+        } else if (list.length > 0) {
+          setSelectedSessionId(list[0].id);
+        }
+      } catch (error) {
+        console.error("Failed to load chat sessions", error);
+      }
+    };
+
+    fetchSessions();
+  }, [isLoggedIn, loading, astrologerIdFromUrl]);
+
+  // Load messages when session changes
+  useEffect(() => {
+    if (!selectedSessionId) return;
+
+    const loadMessages = async () => {
+      try {
+        const data = await getChatMessages(selectedSessionId, {
+          page: 1,
+          limit: 100,
+        });
+        setMessages(data.messages || []);
+      } catch (error) {
+        console.error("Failed to load chat messages", error);
+      }
+    };
+
+    loadMessages();
+  }, [selectedSessionId]);
+
+  // Setup Socket.IO listeners for the selected session
+  useEffect(() => {
+    if (!selectedSessionId || !isLoggedIn || loading) return;
+
+    const socket = getChatSocket();
+    if (!socket) return;
+
+    socket.emit("join_chat", { sessionId: selectedSessionId });
+
+    // Mark messages as read when opening a chat
+    socket.emit("mark_read", { sessionId: selectedSessionId });
+
+    const handleNewMessage = (payload: { sessionId: string; message: ChatMessageDto }) => {
+      if (payload.sessionId !== selectedSessionId) return;
+      
+      // Add new message to the list (whether it's text or image)
+      setMessages((prev) => {
+        // Check if message already exists to avoid duplicates
+        if (prev.some(m => m.id === payload.message.id)) {
+          return prev;
+        }
+        return [...prev, payload.message];
+      });
+
+       // Immediately mark as read when user has this chat open
+       if (payload.message.senderType === "astrologer") {
+         socket.emit("mark_read", { sessionId: selectedSessionId });
+       }
+    };
+
+    const handleTyping = (payload: { sessionId: string; from: "user" | "astrologer"; isTyping: boolean }) => {
+      if (payload.sessionId !== selectedSessionId) return;
+      if (payload.from === "astrologer") {
+        setIsTypingAstrologer(payload.isTyping);
+      }
+    };
+
+    const handleChatUpdated = (payload: { sessionId: string; session: ChatSessionSummary }) => {
+      setSessions((prev) =>
+        prev.map((s) => (s.id === payload.sessionId ? payload.session : s))
+      );
+    };
+
+    const handleMessagesRead = (payload: { sessionId: string; readerRole: "user" | "astrologer" }) => {
+      if (payload.sessionId !== selectedSessionId) return;
+
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (payload.readerRole === "user") {
+            // Current user read astrologer messages
+            if (m.senderType === "astrologer") {
+              return { ...m, isRead: true };
+            }
+          } else {
+            // Astrologer read user messages
+            if (m.senderType === "user") {
+              return { ...m, isRead: true };
+            }
+          }
+          return m;
+        })
+      );
+    };
+
+    const handleUnreadUpdate = (payload: { sessionId: string; unreadCount: number; viewerRole: "user" | "astrologer" }) => {
+      if (payload.viewerRole !== "user") return;
+
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === payload.sessionId ? { ...s, unreadCount: payload.unreadCount } : s
+        )
+      );
+    };
+
+    socket.on("message:new", handleNewMessage);
+    socket.on("typing", handleTyping);
+    socket.on("chat:updated", handleChatUpdated);
+    socket.on("messages:read", handleMessagesRead);
+    socket.on("unread:update", handleUnreadUpdate);
+
+    return () => {
+      socket.emit("leave_chat", { sessionId: selectedSessionId });
+      socket.off("message:new", handleNewMessage);
+      socket.off("typing", handleTyping);
+      socket.off("chat:updated", handleChatUpdated);
+      socket.off("messages:read", handleMessagesRead);
+      socket.off("unread:update", handleUnreadUpdate);
+      
+      // Clean up typing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [selectedSessionId, isLoggedIn, loading]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -64,45 +296,264 @@ const ChatPage = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openMenuId) {
+        setOpenMenuId(null);
+      }
+    };
+
+    if (openMenuId) {
+      document.addEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [openMenuId]);
+
+  // Handle input change and emit typing events
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInputMessage(value);
+
+    if (!selectedSessionId) return;
+
+    const socket = getChatSocket();
+    if (socket && socket.connected) {
+      // Emit typing event
+      socket.emit("typing", {
+        sessionId: selectedSessionId,
+        isTyping: value.length > 0,
+      });
+
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      // Set timeout to stop typing indicator after user stops typing
+      if (value.length > 0) {
+        typingTimeoutRef.current = setTimeout(() => {
+          socket.emit("typing", {
+            sessionId: selectedSessionId,
+            isTyping: false,
+          });
+        }, 1000);
+      }
+    }
+  };
+
   // Don't render anything while checking auth or if not logged in
   if (loading || !isLoggedIn) {
     return null;
   }
 
-  const handleSendMessage = (e: React.FormEvent, messageText: string = inputMessage) => {
+  const handleSendMessage = async (
+    e: React.FormEvent,
+    messageText: string = inputMessage
+  ) => {
     e.preventDefault();
-    
-    if (messageText.trim() === "") return;
+    if (messageText.trim() === "") {
+      return;
+    }
 
-    const userMessage = {
-      id: messages.length + 1,
-      text: messageText,
-      sender: "user" as const,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    if (isSending) return;
+
+    let sessionId = selectedSessionId;
+
+    // If no session is selected yet, try to auto-create or reuse one
+    // based on the target astrologer (from URL or existing sessions).
+    if (!sessionId) {
+      if (!targetAstrologerId) {
+        if (typeof window !== "undefined") {
+          alert("Unable to determine astrologer for this chat. Please start chat from an astrologer profile or select a conversation.");
+        }
+        return;
+      }
+
+      try {
+        const { session } = await startChatSession(targetAstrologerId);
+        setSessions((prev) => {
+          // Ensure we keep a single session per user-astrologer pair by
+          // replacing any existing session for this astrologer.
+          const filtered = prev.filter((s) => s.astrologerId !== targetAstrologerId);
+          return [session, ...filtered];
+        });
+        setSelectedSessionId(session.id);
+        sessionId = session.id;
+      } catch (err) {
+        console.error("Failed to start chat session from send handler", err);
+        if (typeof window !== "undefined") {
+          const anyErr: any = err;
+          const backendMessage =
+            anyErr?.response?.data?.message || anyErr?.response?.data?.error;
+          alert(
+            backendMessage ||
+              "Unable to start chat session. Please refresh the page and try again."
+          );
+        }
+        return;
+      }
+    }
+
+    try {
+      setIsSending(true);
+      const socket = getChatSocket();
+
+      let shouldFallbackToHttp = true;
+
+      if (socket && socket.connected) {
+        await new Promise<void>((resolve) => {
+          socket.emit(
+            "send_message",
+            {
+              sessionId,
+              text: messageText,
+              messageType: "text",
+              replyToMessageId: replyTo?.id,
+            },
+            (response: { success: boolean; error?: string; message?: ChatMessageDto }) => {
+              if (!response?.success && response?.error) {
+                console.error("Failed to send message via socket:", response.error);
+                shouldFallbackToHttp = true;
+              } else if (response?.success) {
+                shouldFallbackToHttp = false;
+              }
+              resolve();
+            }
+          );
+        });
+      }
+
+      if (shouldFallbackToHttp) {
+        const response = await sendChatMessageHttp(sessionId, {
+          message: messageText,
+          messageType: "text",
+          replyToMessageId: replyTo?.id,
+        });
+
+        // When Socket.IO is not connected, we won't receive "message:new".
+        // Optimistically append the sent message from HTTP response so the
+        // user immediately sees their message in the UI.
+        if (response?.success && response.chatMessage) {
+          setMessages((prev) => [...prev, response.chatMessage as ChatMessageDto]);
+        }
+      }
+
+      setInputMessage("");
+      setReplyTo(null);
+    } catch (error) {
+      console.error("Send message error", error);
+      if (typeof window !== "undefined") {
+        alert("Failed to send message. Please try again.");
+      }
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleTypingChange = (value: string) => {
+    setInputMessage(value);
+
+    if (!selectedSessionId) return;
+    const socket = getChatSocket();
+    if (!socket) return;
+
+    socket.emit("typing", { sessionId: selectedSessionId, isTyping: true });
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit("typing", { sessionId: selectedSessionId, isTyping: false });
+    }, 1500);
+  };
+
+  const handleAttachClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file");
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image size should be less than 5MB");
+      return;
+    }
+
+    setSelectedFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
     };
-    
-    setMessages((prev) => [...prev, userMessage]);
-    setInputMessage("");
+    reader.readAsDataURL(file);
 
-    // Simulate Bot response after a short delay
-    setTimeout(() => {
-      const botMessage = {
-        id: messages.length + 2,
-        text: `The stars are aligning to analyze your query: "${messageText}". Please wait for the astrologer to connect.`,
-        sender: "bot" as const,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, botMessage]);
-    }, 1000);
+    if (event.target) {
+      event.target.value = "";
+    }
   };
 
-  const handlePromptClick = (prompt: string) => {
-    // Treat prompt click as sending a user message
-    handleSendMessage({ preventDefault: () => {} } as React.FormEvent, prompt);
+  const handleSendImage = async () => {
+    if (!selectedFile || !selectedSessionId) return;
+
+    try {
+      setIsUploading(true);
+      await sendChatMessageHttp(selectedSessionId, {
+        message: "[Image]",
+        messageType: "image",
+        file: selectedFile,
+        replyToMessageId: replyTo?.id,
+      });
+
+      // Don't manually add message - let socket event handle it to avoid duplicates
+
+      // Clear preview and states
+      setImagePreview(null);
+      setSelectedFile(null);
+      setReplyTo(null);
+    } catch (error) {
+      console.error("Failed to send image", error);
+      alert("Failed to send image. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
-  // Check if initial prompts should be shown
-  const showInitialContent = messages.length === 0;
+  const handleCancelImage = () => {
+    setImagePreview(null);
+    setSelectedFile(null);
+  };
+
+  const handleReplyClick = (message: ChatMessageDto) => {
+    if (message.isDeleted) return;
+    setReplyTo(message);
+  };
+
+  const handleDeleteMessage = (messageId: string) => {
+    const socket = getChatSocket();
+    if (!socket) return;
+    socket.emit("delete_message", { messageId });
+  };
+
+  const handleCopyMessage = async (text: string | null) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      console.error("Failed to copy message", err);
+    }
+  };
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
@@ -122,27 +573,29 @@ const ChatPage = () => {
             <X className="w-5 h-5 text-gray-900" />
           </button>
         </div>
-        {/* Astrologer Info Header */}
-        <div className="p-8 flex items-center gap-3 border-b border-gray-100">
-          <div className="relative shrink-0">
-            <div className="w-16 h-16 rounded-full overflow-hidden">
-              <Image 
-                src={ASTROLOGER_INFO.photo || "/images/logo.png"} 
-                alt={ASTROLOGER_INFO.name} 
-                width={48}
-                height={48}
-                className="object-cover w-full h-full"
-              />
+        {/* Astrologer Info Header for selected session */}
+        {astrologerInfo && (
+          <div className="p-8 flex items-center gap-3 border-b border-gray-100">
+            <div className="relative shrink-0">
+              <div className="w-16 h-16 rounded-full overflow-hidden">
+                <Image
+                  src={astrologerInfo.photo}
+                  alt={astrologerInfo.name}
+                  width={48}
+                  height={48}
+                  className="object-cover w-full h-full"
+                />
+              </div>
+              {astrologerInfo.isOnline && (
+                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+              )}
             </div>
-            {ASTROLOGER_INFO.isOnline && (
-              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-            )}
+            <div>
+              <p className="text-lg font-bold text-gray-900">{astrologerInfo.name}</p>
+              <p className="text-sm text-gray-500">{astrologerInfo.title}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-lg font-bold text-gray-900">{ASTROLOGER_INFO.name}</p>
-            <p className="text-sm text-gray-500">{ASTROLOGER_INFO.title}</p>
-          </div>
-        </div>
+        )}
         
         {/* Chat/Call Tabs (Matching the design image) */}
         <div className="flex p-4 gap-2 border-b border-gray-100">
@@ -159,28 +612,44 @@ const ChatPage = () => {
           </button>
         </div>
 
-        {/* Balance */}
-        <div className="p-4 border-b border-gray-100">
-          <div className="flex items-center justify-center bg-green-100 text-green-700 font-semibold py-2 rounded-lg text-sm">
-            Available balance: ₹{USER_INFO.balance.toLocaleString()}
-          </div>
-        </div>
-
-        {/* New Chat & Past Conversations */}
+        {/* Conversations list */}
         <div className="p-4 flex-1 overflow-y-auto">
-          <p className="text-md font-bold text-gray-800 mb-3 uppercase">+ New Chat</p>
-          <p className="text-md font-bold text-gray-800 mb-2">Past Conversation</p>
-          
-          <ul className="space-y-1">
-            {PREVIOUS_CHATS.map((chat, index) => (
-              <li key={index}>
-                <Link href="#" className="flex justify-between items-center p-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                  {chat}
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <p className="text-md font-bold text-gray-800 mb-3 uppercase">Conversations</p>
+
+          {uniqueSessionsByAstrologer.length === 0 ? (
+            <p className="text-sm text-gray-500">No conversations yet.</p>
+          ) : (
+            <ul className="space-y-1">
+              {uniqueSessionsByAstrologer.map((session) => (
+                <li key={session.id}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSessionId(session.id)}
+                    className={`w-full flex justify-between items-center p-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left ${
+                      selectedSessionId === session.id ? "bg-yellow-50" : ""
+                    }`}
+                  >
+                    <span className="flex-1 truncate">
+                      {session.astrologer?.fullName || "Astrologer"}
+                    </span>
+                    <div className="flex flex-col items-end ml-2">
+                      {session.lastMessagePreview && (
+                        <span className="text-xs text-gray-500 max-w-[140px] truncate">
+                          {session.lastMessagePreview}
+                        </span>
+                      )}
+                      {session.unreadCount > 0 && (
+                        <span className="mt-1 inline-flex items-center justify-center rounded-full bg-[#F0DF20] text-[10px] font-semibold px-2 py-0.5 text-gray-900">
+                          {session.unreadCount}
+                        </span>
+                      )}
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-400 ml-1" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
       
@@ -236,70 +705,154 @@ const ChatPage = () => {
             backgroundSize: 'contain',
           }}
         >
-          {showInitialContent ? (
-            // Initial Content (Matching Design Image)
+          {messages.length === 0 ? (
+            // Empty state when there are no messages yet
             <div className="flex flex-col items-center justify-center h-full text-center">
               <div className="mb-8">
-                <Image 
-                  src="/images/shooting-stars.png" // Replace with actual path for shooting stars icon
+                <Image
+                  src="/images/shooting-stars.png"
                   alt="Shooting Stars"
                   width={60}
                   height={60}
                   className="mx-auto mb-4"
                 />
-                <h2 className="text-3xl font-bold text-gray-900 mb-2">Namaste, John Doe</h2>
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">Namaste, {userDisplayName}</h2>
                 <p className="text-gray-600 max-w-sm mx-auto">
-                  I have prepared your birth chart. The stars have much to reveal. Ask me anything about your destiny.
+                  Start a conversation with your astrologer. Your previous chats and new messages will appear here.
                 </p>
-              </div>
-              
-              <div className="w-full max-w-sm space-y-3">
-                {INITIAL_PROMPTS.map((prompt, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handlePromptClick(prompt)}
-                    className="w-full py-3 px-4 bg-white rounded-lg border border-gray-200 text-gray-800 font-medium hover:bg-gray-50 transition-colors shadow-sm text-sm"
-                  >
-                    {prompt}
-                  </button>
-                ))}
               </div>
             </div>
           ) : (
             // Conversation History
             <div className="max-w-4xl mx-auto px-2">
-              <div className="flex justify-center mb-4">
-                <div className="bg-white/80 backdrop-blur-sm px-3 py-1 rounded-lg shadow-sm">
-                  <p className="text-xs text-gray-600 font-medium">
-                    {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </p>
-                </div>
-              </div>
-
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} mb-2`}
-                >
-                  <div
-                    className={`max-w-[75%] sm:max-w-[65%] rounded-lg px-3 py-2 shadow-md ${
-                      message.sender === 'user'
-                        ? 'bg-[#F0DF20] text-gray-900 rounded-br-none'
-                        : 'bg-white text-gray-900 rounded-bl-none'
-                    }`}
-                  >
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">
-                      {message.text}
-                    </p>
-                    <div className={`flex items-center justify-end gap-1 mt-1`}>
-                      <p className="text-[10px] text-gray-600">
-                        {message.timestamp}
-                      </p>
-                      {message.sender === 'user' && (
-                        <FiCheckCircle className="w-3 h-3 text-blue-500" />
-                      )}
+              {groupMessagesByDate(messages).map((group) => (
+                <div key={group.dateKey}>
+                  <div className="flex justify-center mb-4">
+                    <div className="bg-white/80 backdrop-blur-sm px-3 py-1 rounded-lg shadow-sm">
+                      <p className="text-xs text-gray-600 font-medium">{group.label}</p>
                     </div>
                   </div>
+
+                  {group.items.map((message) => {
+                    const isUser = message.senderType === "user";
+                    const repliedTo = message.replyToMessageId
+                      ? messages.find((m) => m.id === message.replyToMessageId) || null
+                      : null;
+
+                    return (
+                      <div
+                        key={message.id}
+                        className={`flex ${isUser ? "justify-end" : "justify-start"} mb-2`}
+                      >
+                        <div
+                          className={`max-w-[75%] sm:max-w-[65%] rounded-lg shadow-md ${
+                            message.messageType === "image" ? "p-0 overflow-hidden" : "px-3 py-2"
+                          } ${
+                            isUser
+                              ? "bg-[#F0DF20] text-gray-900 rounded-br-none"
+                              : "bg-white text-gray-900 rounded-bl-none"
+                          }`}
+                        >
+                          {repliedTo && (
+                            <div className="mb-1 px-2 py-1 text-[11px] rounded bg-black/5 text-gray-700">
+                              <span className="font-semibold mr-1">
+                                Replying to {repliedTo.senderType === "user" ? "You" : astrologerInfo?.name || "Astrologer"}
+                              </span>
+                              <span className="truncate block max-w-[180px]">
+                                {repliedTo.messageType === "image" ? "[Image]" : (repliedTo.message || "(message)")}
+                              </span>
+                            </div>
+                          )}
+
+                          {message.messageType === "image" && message.fileUrl ? (
+                            <img
+                              src={message.fileUrl}
+                              alt="Sent image"
+                              className="rounded-lg max-w-[250px] max-h-[250px] w-auto h-auto cursor-pointer hover:opacity-90 transition object-cover block"
+                              onClick={() => window.open(message.fileUrl || "", "_blank")}
+                              onError={(e) => {
+                                e.currentTarget.src = "/images/image-error.png";
+                              }}
+                            />
+                          ) : (
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">
+                              {message.isDeleted ? "This message was deleted" : message.message}
+                            </p>
+                          )}
+                          <div className="flex items-center justify-between gap-2 mt-1">
+                            <div className="flex items-center gap-1">
+                              <p className="text-[10px] text-gray-600">
+                                {new Date(message.createdAt).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </p>
+                              {isUser && (
+                                message.isRead ? (
+                                  <div className="flex">
+                                    <FiCheck className="w-3 h-3 text-blue-500 -mr-1" />
+                                    <FiCheck className="w-3 h-3 text-blue-500" />
+                                  </div>
+                                ) : (
+                                  <FiCheck className="w-3 h-3 text-gray-400" />
+                                )
+                              )}
+                            </div>
+                            {!message.isDeleted && (
+                              <div className="relative">
+                                <button
+                                  type="button"
+                                  onClick={() => setOpenMenuId(openMenuId === message.id ? null : message.id)}
+                                  className="p-1 hover:bg-gray-200 rounded-full transition"
+                                  aria-label="Message options"
+                                >
+                                  <MoreVertical className="w-3 h-3 text-gray-600" />
+                                </button>
+                                {openMenuId === message.id && (
+                                  <div className="absolute right-0 bottom-full mb-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[120px]">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        handleReplyClick(message);
+                                        setOpenMenuId(null);
+                                      }}
+                                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition"
+                                    >
+                                      Reply
+                                    </button>
+                                    {message.messageType === "text" && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          handleCopyMessage(message.message || null);
+                                          setOpenMenuId(null);
+                                        }}
+                                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition"
+                                      >
+                                        Copy
+                                      </button>
+                                    )}
+                                    {isUser && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          handleDeleteMessage(message.id);
+                                          setOpenMenuId(null);
+                                        }}
+                                        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-red-600 transition"
+                                      >
+                                        Delete
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ))}
               <div ref={messagesEndRef} />
@@ -313,32 +866,115 @@ const ChatPage = () => {
             onSubmit={(e) => handleSendMessage(e, inputMessage)}
             className="max-w-4xl mx-auto flex items-center gap-3"
           >
-            <div className="flex-1 flex items-center bg-gray-100 rounded-full overflow-hidden border border-gray-300">
+            {/* Image Preview Modal */}
+            {imagePreview && (
+              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-full max-w-4xl px-3">
+                <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg">
+                  <div className="flex justify-between items-center mb-2">
+                    <p className="text-sm font-semibold text-gray-700">Send Image</p>
+                    <button
+                      type="button"
+                      onClick={handleCancelImage}
+                      className="text-gray-500 hover:text-gray-700"
+                      aria-label="Cancel"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Image
+                      src={imagePreview}
+                      alt="Preview"
+                      width={200}
+                      height={200}
+                      className="rounded-lg max-w-full h-auto"
+                    />
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      type="button"
+                      onClick={handleSendImage}
+                      disabled={isUploading}
+                      className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-4 py-2 rounded-lg font-medium disabled:opacity-50"
+                    >
+                      {isUploading ? "Sending..." : "Send Image"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {replyTo && (
+              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-full max-w-4xl px-3">
+                <div className="bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-xs flex justify-between items-start">
+                  <div>
+                    <p className="font-semibold text-gray-700 mb-0.5">
+                      Replying to {replyTo.senderType === "user" ? "You" : astrologerInfo?.name || "Astrologer"}
+                    </p>
+                    <p className="text-gray-600 truncate max-w-xs">
+                      {replyTo.message || "(message)"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setReplyTo(null)}
+                    className="ml-2 text-gray-500 hover:text-gray-700"
+                    aria-label="Cancel reply"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={handleAttachClick}
+              className="p-3 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
+              aria-label="Attach image"
+            >
+              <FiPaperclip className="w-5 h-5 text-gray-600" />
+            </button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+
+            <div className="flex-1 relative">
               <input
                 type="text"
                 value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                placeholder="Ask Anything Form Our Astrologer......"
-                className="flex-1 px-5 py-3 bg-transparent focus:outline-none text-sm text-gray-900 placeholder-gray-500"
+                onChange={(e) => handleTypingChange(e.target.value)}
+                placeholder="Ask Anything From Our Astrologer......"
+                className="w-full px-5 py-3 pr-12 bg-gray-100 border border-gray-300 rounded-full focus:outline-none text-sm text-gray-900 placeholder-gray-500"
                 autoFocus
               />
+              {isTypingAstrologer && (
+                <div className="absolute -top-8 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-lg shadow-sm text-xs text-gray-600">
+                  Astrologer is typing...
+                </div>
+              )}
+              {/* Send Button Inside Input */}
+              <button
+                type="submit"
+                disabled={!inputMessage.trim()}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-all duration-200 disabled:opacity-50"
+                aria-label="Send message"
+              >
+                <Send className={`w-5 h-5 ${
+                  inputMessage.trim() ? "text-[#F0DF20] hover:text-[#ffea00]" : "text-gray-400"
+                }`} />
+              </button>
             </div>
-            
-            <button
-              type="submit"
-              disabled={!inputMessage.trim()}
-              className={`
-                rounded-full p-3 transition-all duration-200 flex items-center justify-center shadow-md shrink-0
-                ${inputMessage.trim() 
-                  ? 'bg-[#F0DF20] hover:bg-[#ffea00] hover:scale-105' 
-                  : 'bg-gray-300 cursor-not-allowed'
-                }
-              `}
-              aria-label="Send message"
-            >
-              <Send className={`w-5 h-5 ${inputMessage.trim() ? 'text-gray-900' : 'text-gray-500'}`} />
-            </button>
           </form>
+          {isTypingAstrologer && (
+            <div className="max-w-4xl mx-auto mt-2 text-xs text-gray-500">
+              Astrologer is typing...
+            </div>
+          )}
         </div>
       </div>
     </div>

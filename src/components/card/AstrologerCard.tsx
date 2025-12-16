@@ -28,6 +28,7 @@ interface OurAstrologerCardProps {
 
 const AstrologerCard: React.FC<OurAstrologerCardProps> = ({ astrologer, mode = "chat", onCallClick }) => {
   const {
+    id,
     name,
     experience,
     rating,
@@ -131,7 +132,7 @@ const AstrologerCard: React.FC<OurAstrologerCardProps> = ({ astrologer, mode = "
             </Button>
           ) : (
             <Button
-              href="/chat"
+              href={id ? `/chat?astrologerId=${id}` : "/chat"}
               variant="custom"
               size="md"
               className="shadow-lg w-full"

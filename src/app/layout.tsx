@@ -27,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
-  const NO_LAYOUT_ROUTES = ['/aichat', '/chat'];
+  const NO_LAYOUT_ROUTES = ['/aichat', '/chat','/astrologer/live-chats'];
   const shouldHideLayout = NO_LAYOUT_ROUTES.includes(pathname);
 
   return (

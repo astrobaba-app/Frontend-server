@@ -126,8 +126,9 @@ export default function AstrologerDetailPage() {
   };
 
   const handleChatClick = () => {
-   router.push('/chat');
-  }
+    if (!id) return;
+    router.push(`/chat?astrologerId=${id}`);
+  };
 
    const handleCallClick = () => {
     showToast("Call feature coming soon!", "info");  }
