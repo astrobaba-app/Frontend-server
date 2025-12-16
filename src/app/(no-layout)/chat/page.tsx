@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Send, ArrowLeft, Phone, ChevronRight, X, MoreVertical, Video } from 'lucide-react';
+import { Send, ArrowLeft, Phone, ChevronRight, X, MoreVertical, Video, Clock, AlertCircle, Wallet as WalletIcon } from 'lucide-react';
 import { IoChatbubblesSharp } from "react-icons/io5";
 import Image from 'next/image';
 import {  FiPaperclip, FiCheck } from 'react-icons/fi';
@@ -25,6 +25,8 @@ import {
 } from "@/store/api/call";
 import { useToast } from "@/hooks/useToast";
 import Toast from "@/components/atoms/Toast";
+import { useAstrologerChatWallet } from "@/hooks/useAstrologerChatWallet";
+import Link from "next/link";
 
 function formatDateLabel(date: Date): string {
   const today = new Date();
@@ -96,6 +98,8 @@ const ChatPage = () => {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [activeCall, setActiveCall] = useState<CallSession | null>(null);
   const [isInitiatingCall, setIsInitiatingCall] = useState(false);
+  const [isChatSessionActive, setIsChatSessionActive] = useState(false);
+  const [showInsufficientBalanceModal, setShowInsufficientBalanceModal] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -121,6 +125,38 @@ const ChatPage = () => {
       isOnline: true,
     };
   }, [selectedSession]);
+
+  const astrologerPricePerMinute = useMemo(() => {
+    // Treat 0, null, undefined as invalid - use fallback
+    const sessionPrice = selectedSession?.pricePerMinute;
+    const astrologerPrice = selectedSession?.astrologer?.pricePerMinute;
+    const price = (sessionPrice && sessionPrice > 0) ? sessionPrice : 
+                  (astrologerPrice && astrologerPrice > 0) ? astrologerPrice : 10;
+    console.log('=== PRICE DEBUG ===');
+    console.log('selectedSession.pricePerMinute:', sessionPrice);
+    console.log('selectedSession.astrologer?.pricePerMinute:', astrologerPrice);
+    console.log('Final price:', price);
+    return price;
+  }, [selectedSession]);
+
+  // Wallet integration
+  const {
+    balance,
+    isChatting,
+    chatDuration,
+    chatCost,
+    startChatTimer,
+    stopChatTimer,
+    hasSufficientBalance,
+    pricePerMinute,
+  } = useAstrologerChatWallet({
+    userId: user?.id,
+    astrologerPricePerMinute,
+    onInsufficientBalance: () => {
+      setShowInsufficientBalanceModal(true);
+      showToast("Insufficient balance. Please recharge your wallet.", "error");
+    },
+  });
 
   const userDisplayName = user?.fullName || "Friend";
 
@@ -343,6 +379,14 @@ const ChatPage = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      stopChatTimer();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -403,6 +447,12 @@ const ChatPage = () => {
   ) => {
     e.preventDefault();
     if (messageText.trim() === "") {
+      return;
+    }
+
+    // Require active chat session
+    if (!isChatSessionActive) {
+      showToast("Please start chat session first", "error");
       return;
     }
 
@@ -720,13 +770,70 @@ const ChatPage = () => {
           </button>
         </div>
 
-        {/* Available Balance Section */}
-        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-white">
-          <div className="flex items-center gap-2">
-            <TfiWallet className="w-5 h-5 text-gray-800" />
-            <span className="text-sm font-semibold text-gray-900">Available Balance</span>
-          </div>
-          <span className="text-sm font-bold text-gray-900">₹0.00</span>
+        {/* Available Balance & Chat Control Section */}
+        <div className="px-4 py-3 border-b border-gray-100 bg-white space-y-3">
+          {/* Balance Display */}
+          <Link href="/profile/wallet" className="flex items-center justify-between hover:bg-gray-50 p-2 rounded-lg transition-colors">
+            <div className="flex items-center gap-2">
+              <WalletIcon className="w-5 h-5 text-gray-800" />
+              <span className="text-sm font-semibold text-gray-900">Available Balance</span>
+            </div>
+            <span className="text-sm font-bold text-gray-900">₹{balance.toFixed(2)}</span>
+          </Link>
+          
+          {/* Chat Timer & Cost */}
+          {isChatting && (
+            <div
+              className="flex items-center justify-between p-3 rounded-lg"
+              style={{ backgroundColor: colors.offYellow, border: `2px solid ${colors.primeYellow}` }}
+            >
+              <div className="flex items-center gap-2">
+                <Clock size={18} style={{ color: colors.darkGray }} />
+                <div>
+                  <p className="text-sm font-medium" style={{ color: colors.darkGray }}>
+                    {chatDuration}
+                  </p>
+                  <p className="text-xs" style={{ color: colors.gray }}>
+                    ₹{pricePerMinute}/min
+                  </p>
+                </div>
+              </div>
+              <p className="text-sm font-bold" style={{ color: colors.darkGray }}>
+                ₹{chatCost.toFixed(2)}
+              </p>
+            </div>
+          )}
+          
+          {/* Start/Stop Chat Button */}
+          {selectedSession && (
+            <button
+              onClick={() => {
+                if (isChatSessionActive) {
+                  setIsChatSessionActive(false);
+                  stopChatTimer();
+                  showToast("Chat session ended", "success");
+                } else {
+                  if (!hasSufficientBalance(pricePerMinute)) {
+                    setShowInsufficientBalanceModal(true);
+                    showToast("Insufficient balance to start chat", "error");
+                    return;
+                  }
+                  setIsChatSessionActive(true);
+                  startChatTimer();
+                  showToast(`Chat session started. ₹${pricePerMinute} will be deducted per minute.`, "success");
+                }
+              }}
+              disabled={!isChatSessionActive && !hasSufficientBalance(pricePerMinute)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm"
+              style={{
+                backgroundColor: isChatSessionActive ? "#EF4444" : colors.primeGreen,
+                color: colors.white,
+              }}
+            >
+              <Clock size={18} />
+              <span>{isChatSessionActive ? "Stop Chat" : "Start Chat"}</span>
+            </button>
+          )}
         </div>
       </div>
       
@@ -777,16 +884,60 @@ const ChatPage = () => {
               )}
             </div>
 
-            <div className="text-md sm:text-base font-bold text-green-600 mx-2">
-              08:39
-            </div>
+            {/* Right Side: Start/Stop Chat, Timer, Wallet, Call Buttons */}
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              {/* Start/Stop Chat Button */}
+              {selectedSession && (
+                <button
+                  onClick={() => {
+                    if (isChatSessionActive) {
+                      setIsChatSessionActive(false);
+                      stopChatTimer();
+                      showToast("Chat session ended", "success");
+                    } else {
+                      if (!hasSufficientBalance(pricePerMinute)) {
+                        setShowInsufficientBalanceModal(true);
+                        showToast("Insufficient balance to start chat", "error");
+                        return;
+                      }
+                      setIsChatSessionActive(true);
+                      startChatTimer();
+                      showToast(`Chat session started. ₹${pricePerMinute} will be deducted per minute.`, "success");
+                    }
+                  }}
+                  disabled={!isChatSessionActive && !hasSufficientBalance(pricePerMinute)}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold"
+                  style={{
+                    backgroundColor: isChatSessionActive ? "#EF4444" : colors.primeGreen,
+                    color: colors.white,
+                  }}
+                >
+                  <Clock size={14} />
+                  <span>{isChatSessionActive ? "Stop" : "Start"}</span>
+                </button>
+              )}
 
-            <div className="flex items-center gap-1 sm:gap-3 shrink-0">
-              <div className="flex items-center gap-1 text-[16px] sm:text-md font-semibold text-green-700 mr-1 sm:mr-2">
+              {/* Chat Timer */}
+              {isChatting && (
+                <div
+                  className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium"
+                  style={{ backgroundColor: colors.offYellow, border: `1px solid ${colors.primeYellow}` }}
+                >
+                  <Clock size={14} style={{ color: colors.darkGray }} />
+                  <span style={{ color: colors.darkGray }}>{chatDuration}</span>
+                  <span style={{ color: colors.gray }}>|</span>
+                  <span style={{ color: colors.darkGray }}>₹{chatCost.toFixed(2)}</span>
+                </div>
+              )}
+
+              {/* Wallet Balance */}
+              <Link href="/profile/wallet" className="flex items-center gap-1 text-xs sm:text-sm font-semibold text-green-700 hover:bg-yellow-200/80 px-2 py-1 rounded transition-colors">
                 <TfiWallet className="w-4 h-4" />
                 <span className="hidden sm:inline">Balance:</span>
-                <span>Rs100</span>
-              </div>
+                <span>₹{balance.toFixed(2)}</span>
+              </Link>
+
+              {/* Call Buttons */}
               <button
                 type="button"
                 onClick={() => handleInitiateCall("audio")}
@@ -1068,8 +1219,13 @@ const ChatPage = () => {
                 type="text"
                 value={inputMessage}
                 onChange={(e) => handleTypingChange(e.target.value)}
-                placeholder="Ask Anything From Our Astrologer......"
-                className="w-full px-5 py-3 pr-12 bg-gray-100 border border-gray-300 rounded-full focus:outline-none text-sm text-gray-900 placeholder-gray-500"
+                placeholder={
+                  !isChatSessionActive
+                    ? "Click 'Start Chat' to begin..."
+                    : "Ask Anything From Our Astrologer......"
+                }
+                disabled={!isChatSessionActive}
+                className="w-full px-5 py-3 pr-12 bg-gray-100 border border-gray-300 rounded-full focus:outline-none text-sm text-gray-900 placeholder-gray-500 disabled:opacity-60 disabled:cursor-not-allowed"
                 autoFocus
               />
               {isTypingAstrologer && (
@@ -1105,6 +1261,61 @@ const ChatPage = () => {
           callSession={activeCall} 
           onCallEnd={() => setActiveCall(null)} 
         />
+      )}
+
+      {/* Insufficient Balance Modal */}
+      {showInsufficientBalanceModal && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col items-center text-center">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+                style={{ backgroundColor: "#FEF2F2" }}
+              >
+                <AlertCircle size={32} style={{ color: "#EF4444" }} />
+              </div>
+
+              <h3
+                className="text-xl font-bold mb-2"
+                style={{ color: colors.darkGray }}
+              >
+                Insufficient Balance
+              </h3>
+
+              <p className="text-sm mb-6" style={{ color: colors.gray }}>
+                You don't have enough balance to chat with {astrologerInfo?.name || 'this astrologer'}.
+                Price: ₹{pricePerMinute}/minute. Please recharge your wallet to continue.
+              </p>
+
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => setShowInsufficientBalanceModal(false)}
+                  className="flex-1 px-4 py-3 rounded-xl border hover:bg-gray-50 transition-colors"
+                  style={{
+                    borderColor: colors.gray,
+                    color: colors.darkGray,
+                  }}
+                >
+                  Cancel
+                </button>
+                <Link href="/profile/wallet" className="flex-1">
+                  <button
+                    className="w-full px-4 py-3 rounded-xl hover:opacity-90 transition-opacity"
+                    style={{
+                      backgroundColor: colors.primeYellow,
+                      color: colors.white,
+                    }}
+                  >
+                    Recharge Wallet
+                  </button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Toast Notification */}
