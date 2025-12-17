@@ -25,6 +25,7 @@ export default function AstrologerRegister() {
     password: "",
     dateOfBirth: "",
     yearsOfExperience: "",
+    pricePerMinute: "",
     languages: "",
     skills: "",
     bio: "",
@@ -107,6 +108,9 @@ export default function AstrologerRegister() {
     if (!formData.yearsOfExperience) {
       newErrors.yearsOfExperience = "Years of experience is required";
     }
+    if (!formData.pricePerMinute) {
+      newErrors.pricePerMinute = "Price per minute is required";
+    }
     if (!formData.phoneNumber) newErrors.phoneNumber = "Phone number is required";
 
     setErrors(newErrors);
@@ -127,6 +131,7 @@ export default function AstrologerRegister() {
         password: formData.password,
         dateOfBirth: formData.dateOfBirth || undefined,
         yearsOfExperience: parseInt(formData.yearsOfExperience) || undefined,
+        pricePerMinute: parseFloat(formData.pricePerMinute) || undefined,
         languages: formData.languages,
         skills: formData.skills,
         bio: formData.bio || undefined,
@@ -248,6 +253,23 @@ export default function AstrologerRegister() {
                   onChange={handleInputChange}
                   error={errors.yearsOfExperience}
                   min="0"
+                />
+              </div>
+
+              {/* Price Per Minute */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
+                  Price Per Minute (₹)
+                </label>
+                <Input
+                  type="number"
+                  name="pricePerMinute"
+                  placeholder="Enter your price per minute"
+                  value={formData.pricePerMinute}
+                  onChange={handleInputChange}
+                  error={errors.pricePerMinute}
+                  min="0"
+                  step="0.5"
                 />
               </div>
 

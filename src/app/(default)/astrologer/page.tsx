@@ -8,7 +8,6 @@ import AstrologerCard from '@/components/card/AstrologerCard';
 import { AstrologersListSkeleton } from '@/components/skeletons';
 import { colors } from '@/utils/colors';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useToast } from '@/hooks/useToast';
 import Toast from '@/components/atoms/Toast';
 
@@ -31,20 +30,27 @@ const TrendingAstrologerCard: React.FC<TrendingAstrologerCardProps> = ({ astro }
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 flex flex-col items-center text-center hover:shadow-md transition-shadow duration-200 w-full">
       <div className="relative w-16 h-16 rounded-full overflow-hidden mb-2 ring-2 ring-yellow-200">
-        {astro.photo ? (
-          <Image
-            src={astro.photo}
-            alt={astro.fullName}
-            fill
-            className="object-cover"
-          />
-        ) : (
-          <div className="w-full h-full bg-linear-to-br from-yellow-100 to-yellow-200 flex items-center justify-center">
+        <div
+          className="w-full h-full flex items-center justify-center"
+          style={
+            astro.photo
+              ? {
+                  backgroundImage: `url(${astro.photo})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }
+              : {
+                  background:
+                    'linear-gradient(to bottom right, #FEF3C7, #FDE68A)',
+                }
+          }
+        >
+          {!astro.photo && (
             <span className="text-xl font-bold text-gray-700">
               {astro.fullName.charAt(0)}
             </span>
-          </div>
-        )}
+          )}
+        </div>
         {astro.isOnline && (
           <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
         )}
@@ -135,6 +141,7 @@ export default function AstrologersPage() {
         astrologer={{
           id: astrologer.id,
           name: astrologer.fullName,
+          photo: astrologer.photo,
           title: astrologer.skills.join(', '),
           experience: `${astrologer.yearsOfExperience} years`,
           rating: astrologer.rating,

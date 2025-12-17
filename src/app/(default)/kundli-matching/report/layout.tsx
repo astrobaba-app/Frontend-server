@@ -7,7 +7,7 @@ import { colors } from "@/utils/colors";
 import { type KundliMatchingData } from "@/store/api/kundlimatiching";
 import { getAllAstrologers } from "@/store/api/general/astrologer";
 import AstrologerCard, { type Astrologer } from "@/components/card/AstrologerCard";
-import KundliReportSkeleton from "@/components/skeleton/KundliReportSkeleton";
+import {KundliReportSkeleton} from "@/components/skeletons/KundliReportSkeleton";
 
 export default function ReportLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -32,16 +32,19 @@ export default function ReportLayout({ children }: { children: React.ReactNode }
         const response = await getAllAstrologers();
         if (response.success) {
           // Transform API data to match AstrologerCard interface
-          const transformedAstrologers: Astrologer[] = response.astrologers.slice(0, 3).map((astro) => ({
-            name: astro.fullName,
-            title: "PRO",
-            experience: `${astro.yearsOfExperience} years`,
-            rating: astro.rating,
-            topics: astro.skills,
-            languages: astro.languages,
-            price: parseFloat(astro.pricePerMinute),
-            status: astro.isOnline ? ("available" as const) : ("offline" as const),
-          }));
+          const transformedAstrologers: Astrologer[] = response.astrologers
+            .slice(0, 3)
+            .map((astro) => ({
+              photo: astro.photo,
+              name: astro.fullName,
+              title: "PRO",
+              experience: `${astro.yearsOfExperience} years`,
+              rating: astro.rating,
+              topics: astro.skills,
+              languages: astro.languages,
+              price: parseFloat(astro.pricePerMinute),
+              status: astro.isOnline ? ("available" as const) : ("offline" as const),
+            }));
           setAstrologers(transformedAstrologers);
         }
       } catch (error) {

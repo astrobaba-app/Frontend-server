@@ -61,24 +61,9 @@ export default function ProfileSidebar({ userName = 'John Doe', userEmail = 'exa
  
     <div className="bg-white rounded-lg overflow-hidden w-full max-w-xs border border-[#FFD700]">
     
-      <div className="bg-white p-6 text-center">
-        
-        <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden">
-        
-            <div className="relative w-full h-full scale-75">
-                <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-blue-300 border-2 border-white z-10"></div> 
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 w-16 h-16 rounded-t-full bg-blue-700"></div>
-                <div className="absolute top-2/3 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red-600 z-20"></div> 
-            </div>
-        </div>
-
-
-        <h3 className="text-xl font-semibold text-gray-900 mb-1">{userName}</h3>
-        <p className="text-sm text-gray-600">{userEmail}</p>
-      </div>
 
       {/* Menu Items */}
-      <div className="pt-2 pb-2">
+      <div className="pt-0 pb-0">
         {MENU_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;

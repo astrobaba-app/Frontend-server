@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef, use } from "react";
 import { useParams, notFound,useRouter } from "next/navigation";
-import Image from "next/image";
 import { Star, MessageCircle, Phone, User } from "lucide-react";
 import {
   getAstrologerById,
@@ -188,11 +187,9 @@ export default function AstrologerDetailPage() {
             <div className="relative shrink-0">
               <div className="w-32 h-32 rounded-full overflow-hidden ring-4 ring-yellow-400">
                 {astrologer.photo ? (
-                  <Image
+                  <img
                     src={astrologer.photo}
                     alt={astrologer.fullName}
-                    width={128}
-                    height={128}
                     className="object-cover w-full h-full"
                   />
                 ) : (

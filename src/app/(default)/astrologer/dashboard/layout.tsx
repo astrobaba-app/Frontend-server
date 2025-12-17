@@ -23,6 +23,29 @@ export default function AstrologerDashboardLayout({
     fetchProfile();
   }, []);
 
+  useEffect(() => {
+    const handleProfileUpdated = (event: Event) => {
+      try {
+        const customEvent = event as CustomEvent<AstrologerProfile>;
+        if (customEvent.detail) {
+          setProfile(customEvent.detail);
+        }
+      } catch (e) {
+        console.error("Failed to handle astrologer_profile_updated", e);
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("astrologer_profile_updated", handleProfileUpdated);
+    }
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("astrologer_profile_updated", handleProfileUpdated);
+      }
+    };
+  }, []);
+
   const fetchProfile = async () => {
     try {
       const response = await getAstrologerProfile();

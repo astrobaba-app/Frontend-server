@@ -736,11 +736,9 @@ const ChatPage = () => {
           <div className="p-8 flex items-center gap-3 border-b border-gray-100">
             <div className="relative shrink-0">
               <div className="w-16 h-16 rounded-full overflow-hidden">
-                <Image
+                <img
                   src={astrologerInfo.photo}
                   alt={astrologerInfo.name}
-                  width={48}
-                  height={48}
                   className="object-cover w-full h-full"
                 />
               </div>
@@ -868,11 +866,9 @@ const ChatPage = () => {
               {astrologerInfo && (
                 <div className="hidden md:flex flex-row items-center gap-2 min-w-0">
                   <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-white">
-                    <Image
+                    <img
                       src={astrologerInfo.photo}
                       alt={astrologerInfo.name}
-                      width={32}
-                      height={32}
                       className="object-cover w-full h-full"
                     />
                   </div>

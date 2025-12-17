@@ -82,19 +82,23 @@ export const updateAstrologerProfile = async (data: UpdateProfileRequest): Promi
     if (data.pricePerMinute) formData.append('pricePerMinute', data.pricePerMinute.toString());
     if (data.availability) formData.append('availability', data.availability);
     
-    // Handle languages
+    // Handle languages as array fields so backend receives a proper array
     if (data.languages) {
       if (Array.isArray(data.languages)) {
-        formData.append('languages', JSON.stringify(data.languages));
+        data.languages.forEach((lang) => {
+          formData.append('languages', lang);
+        });
       } else {
         formData.append('languages', data.languages);
       }
     }
-    
-    // Handle skills
+
+    // Handle skills as array fields so backend receives a proper array
     if (data.skills) {
       if (Array.isArray(data.skills)) {
-        formData.append('skills', JSON.stringify(data.skills));
+        data.skills.forEach((skill) => {
+          formData.append('skills', skill);
+        });
       } else {
         formData.append('skills', data.skills);
       }

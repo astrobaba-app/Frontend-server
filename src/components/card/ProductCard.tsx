@@ -13,7 +13,7 @@ interface ProductCardProps {
   slug: string;
   productName: string;
   price: number;
-  images?: string[];
+  images?: string[] | string | null;
   averageRating?: number;
   totalReviews?: number;
 }
@@ -59,12 +59,22 @@ const ProductCard: React.FC<ProductCardProps> = ({
       <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition overflow-hidden w-full max-w-[260px]">
         {/* Image */}
         <div className="relative w-full h-44 bg-gray-100">
-          <Image
-            src={images?.[0] || "/images/placeholder.png"}
-            alt={productName}
-            fill
-            className="object-cover"
-          />
+          {(() => {
+            const primaryImage = Array.isArray(images)
+              ? images[0]
+              : typeof images === "string"
+              ? images
+              : undefined;
+            const imageSrc = primaryImage || "/images/placeholder.png";
+
+            return (
+              <img
+                src={imageSrc}
+                alt={productName}
+                className="object-cover w-full h-full"
+              />
+            );
+          })()}
         </div>
 
         {/* Content */}

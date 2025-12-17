@@ -5,11 +5,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import Card from "@/components/atoms/Card";
 import Heading from "@/components/atoms/Heading";
-import { Heart } from "lucide-react";
+import { ShoppingBag } from "lucide-react";
 import { IoIosMore } from "react-icons/io";
 import { RxCross2 } from "react-icons/rx";
 
-export default function FollowingPage() {
+export default function OrdersPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -48,14 +48,16 @@ export default function FollowingPage() {
           {/* Main Content */}
           <Card padding="lg">
             <div className="text-center py-16 sm:py-20">
-              <Heart className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-6 text-[#FFD700]" fill="#FFD700" />
+              <ShoppingBag className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-6 text-[#FFD700]" />
               <Heading level={2} className="mb-4">
-                My Following
+                My Orders
               </Heading>
-              <p className="text-gray-600 text-base sm:text-lg mb-6 sm:mb-8">Coming Soon!</p>
+              <p className="text-gray-600 text-base sm:text-lg mb-6 sm:mb-8">
+                Coming Soon!
+              </p>
               <p className="text-gray-500 max-w-md mx-auto text-sm sm:text-base">
-                Follow your favorite astrologers and get notified when they're online.
-                This feature will help you stay connected with the experts you trust.
+                Track all your orders, purchases, and service bookings in one place.
+                View order history, download invoices, and manage your transactions effortlessly.
               </p>
             </div>
           </Card>

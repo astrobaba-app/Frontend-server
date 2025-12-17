@@ -40,7 +40,7 @@ interface Product {
 
   discountPrice?: number;
 
-  images?: string[];
+  images?: string[] | string | null;
 
   category: string;
 
@@ -276,6 +276,14 @@ export default function ProductDetailPage() {
 
   const isOutOfStock = product.stock === 0;
 
+  const imageList = Array.isArray(product.images)
+    ? product.images
+    : typeof product.images === "string"
+    ? [product.images]
+    : [];
+
+  const mainImage = imageList[selectedImage] || "/images/placeholder.png";
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
       {/* Product Section */}
@@ -287,19 +295,18 @@ export default function ProductDetailPage() {
 
         <div>
           <div className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden">
-            <Image
-          src={product.images?.[selectedImage] || "/images/placeholder.png"}
-          alt={product.productName}
-          fill
-          className="object-cover"
-        />
+            <img
+              src={mainImage}
+              alt={product.productName}
+              className="object-cover w-full h-full"
+            />
           </div>
 
           {/* Thumbnails */}
 
-          {product.images && product.images.length > 1 && (
+          {imageList && imageList.length > 1 && (
             <div className="flex gap-3 mt-4">
-              {product.images.map((img, i) => (
+              {imageList.map((img, i) => (
                 <button
                   key={i}
                   onClick={() => setSelectedImage(i)}
@@ -309,7 +316,7 @@ export default function ProductDetailPage() {
                       : "border-gray-300"
                   }`}
                 >
-                  <Image src={img} alt="" fill className="object-cover" />
+                  <img src={img || "/images/placeholder.png"} alt="" className="object-cover w-full h-full" />
                 </button>
               ))}
             </div>

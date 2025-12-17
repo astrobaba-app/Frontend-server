@@ -1,10 +1,10 @@
-'use client';
-import React, { useState, useEffect } from 'react';
-import ProfileSidebar from '@/components/layout/UserProfileSidebar';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import Card from '@/components/atoms/Card';
-import Heading from '@/components/atoms/Heading';
+"use client";
+import React, { useState, useEffect } from "react";
+import ProfileSidebar from "@/components/layout/UserProfileSidebar";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import Card from "@/components/atoms/Card";
+import Heading from "@/components/atoms/Heading";
 import {
   Wallet,
   TrendingUp,
@@ -15,9 +15,9 @@ import {
   RefreshCw,
   Calendar,
   CreditCard,
-} from 'lucide-react';
-import RechargeModal from '@/components/wallet/RechargeModal';
-import PaymentModal from '@/components/wallet/PaymentModal';
+} from "lucide-react";
+import RechargeModal from "@/components/wallet/RechargeModal";
+import PaymentModal from "@/components/wallet/PaymentModal";
 import {
   getWalletBalance,
   getTransactionHistory,
@@ -26,11 +26,14 @@ import {
   getStatusColor,
   WalletBalance,
   WalletTransaction,
-} from '@/utils/wallet';
+} from "@/utils/wallet";
+import { IoIosMore } from "react-icons/io";
+import { RxCross2 } from "react-icons/rx";
 
 export default function WalletPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [balance, setBalance] = useState<WalletBalance | null>(null);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
@@ -53,13 +56,26 @@ export default function WalletPage() {
 
   const handleLogout = async () => {
     await logout();
-    router.push('/');
+    router.push("/");
   };
 
   const fetchWalletData = async () => {
     try {
       setLoading(true);
       const balanceData = await getWalletBalance();
+          {/* Mobile header with menu button */}
+          <div className="flex items-center justify-between mb-4 lg:hidden">
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Open menu"
+            >
+              <IoIosMore className="w-6 h-6 text-gray-800" />
+            </button>
+            <span className="w-6" aria-hidden="true" />
+          </div>
+
       setBalance(balanceData);
     } catch (error) {
       console.error('Failed to fetch wallet balance:', error);
@@ -92,6 +108,39 @@ export default function WalletPage() {
   }, []);
 
   const handleRechargeSuccess = async () => {
+
+      {/* Mobile sidebar overlay */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 z-40 flex lg:hidden">
+          <div
+            className="flex-1 bg-black/40"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+          <div className="w-80 max-w-full bg-transparent h-full flex flex-col">
+            <div className="bg-white shadow-xl h-full p-4 border-l border-[#FFD700] flex flex-col transition-transform duration-300 transform translate-x-0">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Menu</h2>
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  aria-label="Close menu"
+                >
+                  <RxCross2 className="w-5 h-5 text-gray-700" />
+                </button>
+              </div>
+              <div className="overflow-y-auto">
+                <ProfileSidebar
+                  userName={user?.fullName || "User"}
+                  userEmail={user?.email || "Not provided"}
+                  onLogout={handleLogout}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     setPaymentModal({
       isOpen: true,
       type: 'success',
@@ -108,15 +157,30 @@ export default function WalletPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="grid lg:grid-cols-[300px_1fr] gap-8">
-          {/* Sidebar */}
-          <ProfileSidebar
-            userName={user?.fullName || 'User'}
-            userEmail={user?.email || 'Not provided'}
-            onLogout={handleLogout}
-          />
+    <div className="min-h-screen py-6 sm:py-8 bg-gray-50 relative">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Mobile header with menu button */}
+        <div className="flex items-center justify-between mb-4 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            aria-label="Open menu"
+          >
+            <IoIosMore className="w-6 h-6 text-gray-800" />
+          </button>
+          <span className="w-6" aria-hidden="true" />
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[300px_1fr] lg:gap-8 items-start">
+          {/* Sidebar - Desktop view */}
+          <div className="hidden lg:block">
+            <ProfileSidebar
+              userName={user?.fullName || "User"}
+              userEmail={user?.email || "Not provided"}
+              onLogout={handleLogout}
+            />
+          </div>
 
           {/* Main Content */}
           <div className="space-y-6">

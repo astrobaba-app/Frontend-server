@@ -3,18 +3,17 @@
 import React from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import type { AstrologerProfile } from "@/store/api/astrologer/auth";
-import { 
-  User, 
-  Wallet, 
-  Heart, 
-  Eye, 
-  MessageSquare, 
-  FileText, 
-  Bell, 
-  Settings, 
-  LogOut 
+import {
+  User,
+  Wallet,
+  Heart,
+  Eye,
+  MessageSquare,
+  FileText,
+  Bell,
+  Settings,
+  LogOut,
 } from "lucide-react";
 import { IoChatboxEllipsesOutline } from "react-icons/io5";
 interface AstrologerSidebarProps {
@@ -22,9 +21,12 @@ interface AstrologerSidebarProps {
   onLogout: () => void;
 }
 
-const ACCENT_YELLOW = '#FFD700';
+const ACCENT_YELLOW = "#FFD700";
 
-export default function AstrologerSidebar({ profile, onLogout }: AstrologerSidebarProps) {
+export default function AstrologerSidebar({
+  profile,
+  onLogout,
+}: AstrologerSidebarProps) {
   const pathname = usePathname();
 
   const menuItems = [
@@ -79,29 +81,33 @@ export default function AstrologerSidebar({ profile, onLogout }: AstrologerSideb
     <div className="bg-white rounded-lg overflow-hidden w-full max-w-xs border border-[#FFD700] h-fit sticky top-4">
       {/* Profile Section */}
       <div className="bg-white p-6 text-center">
-        <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden">
+        <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
           {profile?.photo ? (
-            <Image
+            <img
               src={profile.photo}
               alt={profile.fullName}
-              width={96}
-              height={96}
-              className="rounded-full object-cover"
+              className="w-full h-full rounded-full object-cover"
             />
           ) : (
-            <div className="relative w-full h-full scale-75">
-              <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-blue-300 border-2 border-white z-10"></div>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 w-16 h-16 rounded-t-full bg-blue-700"></div>
-              <div className="absolute top-2/3 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red-600 z-20"></div>
-            </div>
+            /* Show a neutral pulse loader instead of a dummy icon */
+            <div className="w-full h-full bg-gray-200 animate-pulse" />
           )}
         </div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-1">
-          {profile?.fullName || "John Doe"}
-        </h3>
-        <p className="text-sm text-gray-600">
-          {profile?.email || "example@gmail.com"}
-        </p>
+
+        {profile ? (
+          <>
+            <h3 className="text-xl font-semibold text-gray-900 mb-1">
+              {profile.fullName}
+            </h3>
+            <p className="text-sm text-gray-600">{profile.email}</p>
+          </>
+        ) : (
+          /* Skeleton text loaders while data is fetching */
+          <div className="flex flex-col items-center gap-2 animate-pulse">
+            <div className="h-5 w-32 bg-gray-200 rounded"></div>
+            <div className="h-4 w-40 bg-gray-100 rounded"></div>
+          </div>
+        )}
       </div>
 
       {/* Menu Items */}
@@ -116,12 +122,16 @@ export default function AstrologerSidebar({ profile, onLogout }: AstrologerSideb
               href={item.href}
               className={`flex items-center gap-4 px-6 py-4 transition-all border-t border-[#f9f5e0]`}
               style={{
-                backgroundColor: isActive ? ACCENT_YELLOW : 'white',
-                borderBottom: '1px solid #FFD700',
+                backgroundColor: isActive ? ACCENT_YELLOW : "white",
+                borderBottom: "1px solid #FFD700",
               }}
             >
               <Icon className="w-5 h-5" />
-              <span className={`text-base font-medium ${isActive ? 'text-gray-900' : 'text-gray-800'}`}>
+              <span
+                className={`text-base font-medium ${
+                  isActive ? "text-gray-900" : "text-gray-800"
+                }`}
+              >
                 {item.label}
               </span>
             </Link>

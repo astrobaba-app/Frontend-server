@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import Image from "next/image";
 import Input from "@/components/atoms/Input";
 import Textarea from "@/components/atoms/Textarea";
 import Button from "@/components/atoms/Button";
@@ -27,6 +26,7 @@ export default function AstrologerProfilePage() {
     phoneNumber: "",
     yearsOfExperience: "",
     dateOfBirth: "",
+    pricePerMinute: "",
     languages: [] as string[],
     skills: [] as string[],
     bio: "",
@@ -46,6 +46,7 @@ export default function AstrologerProfilePage() {
           phoneNumber: response.astrologer.phoneNumber || "",
           yearsOfExperience: response.astrologer.yearsOfExperience?.toString() || "",
           dateOfBirth: response.astrologer.dateOfBirth || "",
+          pricePerMinute: response.astrologer.pricePerMinute?.toString() || "",
           languages: Array.isArray(response.astrologer.languages) 
             ? response.astrologer.languages 
             : [],
@@ -118,6 +119,7 @@ export default function AstrologerProfilePage() {
         fullName: formData.fullName,
         dateOfBirth: formData.dateOfBirth || undefined,
         yearsOfExperience: parseInt(formData.yearsOfExperience) || undefined,
+        pricePerMinute: parseFloat(formData.pricePerMinute) || undefined,
         languages: formData.languages,
         skills: formData.skills,
         bio: formData.bio || undefined,
@@ -128,8 +130,19 @@ export default function AstrologerProfilePage() {
 
       if (response.success) {
         setProfile(response.astrologer);
+        if (response.astrologer.photo) {
+          setImagePreview(response.astrologer.photo);
+        }
         setNewImage(null);
         showToast("Profile updated successfully!", "success");
+
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("astrologer_profile_updated", {
+              detail: response.astrologer,
+            })
+          );
+        }
       }
     } catch (err: any) {
       showToast(err.message || "Failed to update profile", "error");
@@ -198,6 +211,22 @@ export default function AstrologerProfilePage() {
                 value={formData.yearsOfExperience}
                 onChange={handleInputChange}
                 min="0"
+              />
+            </div>
+
+            {/* Price Per Minute */}
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
+                Price Per Minute (₹)
+              </label>
+              <Input
+                type="number"
+                name="pricePerMinute"
+                placeholder="Enter your price per minute"
+                value={formData.pricePerMinute}
+                onChange={handleInputChange}
+                min="0"
+                step="0.5"
               />
             </div>
 
@@ -304,38 +333,39 @@ export default function AstrologerProfilePage() {
             />
           </div>
 
-          {/* Profile Image Preview (if exists) */}
-          {imagePreview && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
-                Profile Image
-              </label>
-              <div className="flex items-center gap-4 flex-wrap">
-                <div className="relative w-24 h-24">
-                  <Image
+          {/* Profile Image Upload / Preview */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
+              Profile Image
+            </label>
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="relative w-24 h-24 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                {imagePreview ? (
+                  <img
                     src={imagePreview}
                     alt="Profile"
-                    fill
-                    className="rounded-full object-cover"
+                    className="w-full h-full object-cover"
                   />
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageSelect}
-                  className="hidden"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Change Image
-                </Button>
+                ) : (
+                  <span className="text-sm text-gray-400">No Image</span>
+                )}
               </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageSelect}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {imagePreview ? "Change Image" : "Upload Image"}
+              </Button>
             </div>
-          )}
+          </div>
 
           {/* Update Button */}
           <Button

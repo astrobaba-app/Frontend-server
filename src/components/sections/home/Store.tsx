@@ -10,32 +10,40 @@ interface StoreProduct {
   slug: string;
   productName: string;
   price: number;
-  images?: string[];
+  images?: string[] | string | null;
 }
 
 interface ProductCardProps {
   product: StoreProduct;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product }) => (
-  <Link
-    href={`/store/products/${product.slug}`}
-    className="text-center w-24 sm:w-28 md:w-32 flex flex-col items-center"
-  >
-    <div className="w-[100px] h-[100px] sm:w-[120px] sm:h-[120px] md:w-[150px] md:h-[150px] bg-[#FFFFEC] rounded-lg mb-2 flex justify-center items-center p-2 shadow-sm overflow-hidden relative">
-      <Image
-        src={product.images?.[0] || "/images/placeholder.png"}
-        alt={product.productName}
-        fill
-        className="object-contain"
-        sizes="(max-width: 640px) 100px, (max-width: 768px) 120px, 150px"
-      />
-    </div>
-    <div className="text-xs sm:text-sm font-medium text-gray-800">
-      {product.productName}
-    </div>
-  </Link>
-);
+const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const primaryImage = Array.isArray(product.images)
+    ? product.images[0]
+    : typeof product.images === "string"
+    ? product.images
+    : undefined;
+
+  const imageSrc = primaryImage || "/images/placeholder.png";
+
+  return (
+    <Link
+      href={`/store/products/${product.slug}`}
+      className="text-center w-24 sm:w-28 md:w-32 flex flex-col items-center"
+    >
+      <div className="w-[100px] h-[100px] sm:w-[120px] sm:h-[120px] md:w-[150px] md:h-[150px] bg-[#FFFFEC] rounded-lg mb-2 flex justify-center items-center p-2 shadow-sm overflow-hidden relative">
+        <img
+          src={imageSrc}
+          alt={product.productName}
+          className="object-contain w-full h-full"
+        />
+      </div>
+      <div className="text-xs sm:text-sm font-medium text-gray-800">
+        {product.productName}
+      </div>
+    </Link>
+  );
+};
 
 const Store: React.FC = () => {
   const [products, setProducts] = useState<StoreProduct[]>([]);

@@ -1,23 +1,25 @@
-'use client';
-import React, { useState, useEffect } from 'react';
-import ProfileSidebar from '@/components/layout/UserProfileSidebar';
+"use client";
+import React, { useState, useEffect } from "react";
+import ProfileSidebar from "@/components/layout/UserProfileSidebar";
 import StepIndicator from '@/components/userprofile/StepIndicator';
-import { useRouter } from 'next/navigation';
-import Card from '@/components/atoms/Card';
-import Heading from '@/components/atoms/Heading';
-import Input from '@/components/atoms/Input';
-import Select from '@/components/atoms/Select';
-import Button from '@/components/atoms/Button';
-import KundliCard from '@/components/card/KundliCard';
-import Toast from '@/components/atoms/Toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/useToast';
-import { getAllKundlis, createKundli } from '@/store/api/kundli';
-import api from '@/store/api';
-import { getProfile } from '@/store/api/auth/profile';
-import { KundliCardSkeleton } from '@/components/skeletons/KundliCardSkeleton';
-import { ProfileSkeleton } from '@/components/skeletons/ProfileSkeleton';
-import { Loader2 } from 'lucide-react';
+import { useRouter } from "next/navigation";
+import Card from "@/components/atoms/Card";
+import Heading from "@/components/atoms/Heading";
+import Input from "@/components/atoms/Input";
+import Select from "@/components/atoms/Select";
+import Button from "@/components/atoms/Button";
+import KundliCard from "@/components/card/KundliCard";
+import Toast from "@/components/atoms/Toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/useToast";
+import { getAllKundlis, createKundli } from "@/store/api/kundli";
+import api from "@/store/api";
+import { getProfile } from "@/store/api/auth/profile";
+import { KundliCardSkeleton } from "@/components/skeletons/KundliCardSkeleton";
+import { ProfileSkeleton } from "@/components/skeletons/ProfileSkeleton";
+import { Loader2 } from "lucide-react";
+import { IoIosMore } from "react-icons/io";
+import { RxCross2 } from "react-icons/rx";
 
 export default function FreeKundliPage() {
   const router = useRouter();
@@ -48,6 +50,7 @@ export default function FreeKundliPage() {
   }[]>([]);
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(false);
   const [placesError, setPlacesError] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !isLoggedIn) {
@@ -81,7 +84,7 @@ export default function FreeKundliPage() {
 
   const handleLogout = async () => {
     await logout();
-    router.push('/');
+    router.push("/");
   };
 
   const handleFetchFromProfile = async () => {
@@ -476,15 +479,30 @@ export default function FreeKundliPage() {
   };
 
   return (
-    <div className=" bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="grid lg:grid-cols-[300px_1fr] gap-8">
-          {/* Sidebar */}
-          <ProfileSidebar
-            userName={user?.fullName || 'User'}
-            userEmail={user?.email || 'Not provided'}
-            onLogout={handleLogout}
-          />
+    <div className="min-h-screen py-6 sm:py-8 bg-gray-50 relative">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Mobile header with menu button */}
+        <div className="flex items-center justify-between mb-4 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            aria-label="Open menu"
+          >
+            <IoIosMore className="w-6 h-6 text-gray-800" />
+          </button>
+          <span className="w-6" aria-hidden="true" />
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[300px_1fr] lg:gap-8 items-start">
+          {/* Sidebar - Desktop view */}
+          <div className="hidden lg:block">
+            <ProfileSidebar
+              userName={user?.fullName || "User"}
+              userEmail={user?.email || "Not provided"}
+              onLogout={handleLogout}
+            />
+          </div>
 
           {/* Main Content */}
           <div className="space-y-6">
@@ -561,6 +579,38 @@ export default function FreeKundliPage() {
           </div>
         </div>
       </div>
+
+      {/* Mobile sidebar overlay */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 z-40 flex lg:hidden">
+          <div
+            className="flex-1 bg-black/40"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+          <div className="w-80 max-w-full bg-transparent h-full flex flex-col">
+            <div className="bg-white shadow-xl h-full p-4 border-l border-[#FFD700] flex flex-col transition-transform duration-300 transform translate-x-0">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Menu</h2>
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  aria-label="Close menu"
+                >
+                  <RxCross2 className="w-5 h-5 text-gray-700" />
+                </button>
+              </div>
+              <div className="overflow-y-auto">
+                <ProfileSidebar
+                  userName={user?.fullName || "User"}
+                  userEmail={user?.email || "Not provided"}
+                  onLogout={handleLogout}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast Notification */}
       {toastProps.isVisible && (

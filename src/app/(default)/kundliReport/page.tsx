@@ -154,6 +154,7 @@ export default function KundliReportPage() {
 
   // Map API astrologer data to AstrologerCard component format
   const mapAstrologerData = (astrologer: ApiAstrologer) => ({
+    photo: astrologer.photo,
     name: astrologer.fullName,
     title: astrologer.skills.slice(0, 2).join(", "),
     experience: `${astrologer.yearsOfExperience} Years`,

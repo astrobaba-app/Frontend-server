@@ -1,13 +1,16 @@
-'use client';
-import React from 'react';
-import ProfileSidebar from '@/components/layout/UserProfileSidebar';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+"use client";
+import React, { useState } from "react";
+import ProfileSidebar from "@/components/layout/UserProfileSidebar";
+import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { IoIosMore } from "react-icons/io";
+import { RxCross2 } from "react-icons/rx";
 
 export default function SettingsPage() {
   const router = useRouter();
   const { logout } = useAuth();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -15,18 +18,33 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="grid lg:grid-cols-[300px_1fr] gap-8">
-          {/* Sidebar */}
-          <ProfileSidebar
-            userName="John Doe"
-            userEmail="example@gmail.com"
-            onLogout={handleLogout}
-          />
+    <div className="min-h-screen py-6 sm:py-8 bg-gray-50 relative">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Mobile header with menu button */}
+        <div className="flex items-center justify-between mb-4 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            aria-label="Open menu"
+          >
+            <IoIosMore className="w-6 h-6 text-gray-800" />
+          </button>
+          <span className="w-6" aria-hidden="true" />
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[300px_1fr] lg:gap-8 items-start">
+          {/* Sidebar - Desktop view */}
+          <div className="hidden lg:block">
+            <ProfileSidebar
+              userName="John Doe"
+              userEmail="example@gmail.com"
+              onLogout={handleLogout}
+            />
+          </div>
 
           {/* Main Content */}
-          <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-200">
+          <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8 border border-gray-200">
             <button
               onClick={() => router.back()}
               className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
@@ -81,6 +99,38 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Mobile sidebar overlay */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 z-40 flex lg:hidden">
+          <div
+            className="flex-1 bg-black/40"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+          <div className="w-80 max-w-full bg-transparent h-full flex flex-col">
+            <div className="bg-white shadow-xl h-full p-4 border-l border-[#FFD700] flex flex-col transition-transform duration-300 transform translate-x-0">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Menu</h2>
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  aria-label="Close menu"
+                >
+                  <RxCross2 className="w-5 h-5 text-gray-700" />
+                </button>
+              </div>
+              <div className="overflow-y-auto">
+                <ProfileSidebar
+                  userName="John Doe"
+                  userEmail="example@gmail.com"
+                  onLogout={handleLogout}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
