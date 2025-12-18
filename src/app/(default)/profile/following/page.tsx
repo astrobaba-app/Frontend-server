@@ -1,98 +1,58 @@
 "use client";
-import React, { useState } from "react";
-import ProfileSidebar from "@/components/layout/UserProfileSidebar";
-import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import React from "react";
 import Card from "@/components/atoms/Card";
 import Heading from "@/components/atoms/Heading";
 import { Heart } from "lucide-react";
-import { IoIosMore } from "react-icons/io";
-import { RxCross2 } from "react-icons/rx";
 
 export default function FollowingPage() {
-  const { user, logout } = useAuth();
-  const router = useRouter();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  const handleLogout = async () => {
-    await logout();
-    router.push('/');
-  };
-
   return (
-    <div className="min-h-screen py-6 sm:py-8 bg-gray-50 relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Mobile header with menu button */}
-        <div className="flex items-center justify-between mb-4 lg:hidden">
-          <button
-            type="button"
-            onClick={() => setIsSidebarOpen(true)}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-            aria-label="Open menu"
-          >
-            <IoIosMore className="w-6 h-6 text-gray-800" />
-          </button>
-          <span className="w-6" aria-hidden="true" />
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-[300px_1fr] lg:gap-8 items-start">
-          {/* Sidebar - Desktop view */}
-          <div className="hidden lg:block">
-            <ProfileSidebar
-              userName={user?.fullName || "User"}
-              userEmail={user?.email || "Not provided"}
-              onLogout={handleLogout}
-            />
-          </div>
-
-          {/* Main Content */}
-          <Card padding="lg">
-            <div className="text-center py-16 sm:py-20">
-              <Heart className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-6 text-[#FFD700]" fill="#FFD700" />
-              <Heading level={2} className="mb-4">
-                My Following
-              </Heading>
-              <p className="text-gray-600 text-base sm:text-lg mb-6 sm:mb-8">Coming Soon!</p>
-              <p className="text-gray-500 max-w-md mx-auto text-sm sm:text-base">
-                Follow your favorite astrologers and get notified when they're online.
-                This feature will help you stay connected with the experts you trust.
-              </p>
-            </div>
-          </Card>
-        </div>
-      </div>
-
-      {/* Mobile sidebar overlay */}
-      {isSidebarOpen && (
-        <div className="fixed inset-0 z-40 flex lg:hidden">
-          <div
-            className="flex-1 bg-black/40"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-          <div className="w-80 max-w-full bg-transparent h-full flex flex-col">
-            <div className="bg-white shadow-xl h-full p-4 border-l border-[#FFD700] flex flex-col transition-transform duration-300 transform translate-x-0">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Menu</h2>
-                <button
-                  type="button"
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                  aria-label="Close menu"
-                >
-                  <RxCross2 className="w-5 h-5 text-gray-700" />
-                </button>
-              </div>
-              <div className="overflow-y-auto">
-                <ProfileSidebar
-                  userName={user?.fullName || "User"}
-                  userEmail={user?.email || "Not provided"}
-                  onLogout={handleLogout}
+    <div className="w-full pb-12 transition-all duration-500">
+       <Heading 
+              level={2} 
+              className="mb-4 text-2xl sm:text-4xl font-black text-gray-900  tracking-tighter"
+            >
+              My Following
+            </Heading>
+      
+      <main className="w-full animate-in fade-in zoom-in-95 duration-700">
+        <Card 
+          padding="none" 
+          className="overflow-hidden border-none shadow-2xl shadow-gray-200/40 rounded-[2rem] sm:rounded-[3rem]"
+        >
+          <div className="bg-white text-center py-16 px-6 sm:py-24 sm:px-10">
+            
+            {/* Animated Icon Section */}
+            <div className="relative inline-block mb-8">
+              <div className="absolute inset-0 bg-yellow-200 blur-3xl opacity-30 animate-pulse"></div>
+              <div className="relative z-10 bg-yellow-50 p-6 rounded-full">
+                <Heart 
+                  className="w-16 h-16 sm:w-20 sm:h-20 mx-auto text-[#F0DF20]" 
+                  fill="#F0DF20" 
                 />
               </div>
             </div>
+            
+           
+            
+            <div className=" flex justify-center  mb-8">
+              <span className="text-[#a19514] font-bold text-[10px] sm:text-xs uppercase tracking-widest italic">
+                Coming Soon!
+              </span>
+            </div>
+
+            <p className="text-gray-500 max-w-sm mx-auto text-sm sm:text-lg leading-relaxed">
+              Stay tuned! You will soon be able to follow your favorite astrologers and get notified when they're online.
+            </p>
+            
+            {/* Decorative Dots */}
+            <div className="mt-12 flex justify-center gap-2">
+              <div className="h-1.5 w-1.5 bg-yellow-400 rounded-full"></div>
+              <div className="h-1.5 w-8 bg-gray-100 rounded-full"></div>
+              <div className="h-1.5 w-1.5 bg-yellow-400 rounded-full"></div>
+            </div>
           </div>
-        </div>
-      )}
+        </Card>
+      </main>
     </div>
   );
 }

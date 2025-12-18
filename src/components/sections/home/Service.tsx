@@ -9,7 +9,7 @@ const FeatureServiceSection: React.FC = () => {
     <section className="w-full px-4 md:px-8 lg:px-56 py-8 sm:py-12 md:py-16 lg:py-24 font-sans">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-8 sm:mb-12 md:mb-16 max-w-2xl mx-auto">
-          <p style={{color:colors.darkGray}} className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight">
+          <p style={{color:colors.darkGray}} className="text-3xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight">
             Explore Our Services
           </p>
           <p style={{color: colors.gray}} className="text-sm sm:text-base mt-3 sm:mt-4 px-2 sm:px-4">

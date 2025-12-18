@@ -61,7 +61,7 @@ const PopularQuestions: React.FC = () => {
       ></div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <p style={{color:colors.darkGray}} className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-center mb-8 sm:mb-12 md:mb-16">
+        <p style={{color:colors.darkGray}} className="text-3xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-center mb-8 sm:mb-12 md:mb-16">
           Popular Questions
         </p>
 

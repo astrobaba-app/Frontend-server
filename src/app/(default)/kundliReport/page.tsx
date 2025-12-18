@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { getKundli, KundliResponse } from "@/store/api/kundli";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,9 +24,7 @@ export default function KundliReportPage() {
   const { showToast, toastProps, hideToast } = useToast();
 
   const kundliId = searchParams.get("id");
-  const [kundliData, setKundliData] = useState<KundliResponse["kundli"] | null>(
-    null
-  );
+  const [kundliData, setKundliData] = useState<KundliResponse["kundli"] | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("Basic");
   const [astrologers, setAstrologers] = useState<ApiAstrologer[]>([]);
@@ -44,20 +42,16 @@ export default function KundliReportPage() {
 
   useEffect(() => {
     if (!authLoading && !isLoggedIn) {
-      router.push(
-        `/auth/login?redirect=/kundliReport${kundliId ? `?id=${kundliId}` : ""}`
-      );
+      router.push(`/auth/login?redirect=/kundliReport${kundliId ? `?id=${kundliId}` : ""}`);
     }
   }, [authLoading, isLoggedIn, router, kundliId]);
 
   useEffect(() => {
     const fetchKundliData = async () => {
       if (!isLoggedIn || !kundliId) return;
-
       try {
         setLoading(true);
         const response = await getKundli(kundliId);
-
         if (response.success && response.kundli) {
           setKundliData(response.kundli);
         }
@@ -79,9 +73,7 @@ export default function KundliReportPage() {
       try {
         setAstrologersLoading(true);
         const response = await getAllAstrologers();
-
         if (response.success && response.astrologers) {
-          // Get only first 3 astrologers
           setAstrologers(response.astrologers.slice(0, 3));
         }
       } catch (error: any) {
@@ -90,46 +82,26 @@ export default function KundliReportPage() {
         setAstrologersLoading(false);
       }
     };
-
     fetchAstrologers();
   }, []);
 
-  if (authLoading) {
-    return <KundliReportSkeleton />;
-  }
-
-  if (!isLoggedIn) {
-    return null;
-  }
-
-  if (loading) {
-    return <KundliReportSkeleton />;
-  }
+  if (authLoading || loading) return <KundliReportSkeleton />;
+  if (!isLoggedIn) return null;
 
   if (!kundliData || !kundliData.userRequest) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Kundli Not Found
-          </h2>
-          <Link
-            href="/profile/kundli"
-            className="text-blue-600 hover:underline"
-          >
-            Go back to Kundli page
-          </Link>
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">Kundli Not Found</h2>
+          <Link href="/profile/kundli" className="text-blue-600 hover:underline">Go back to Kundli page</Link>
         </div>
       </div>
     );
   }
 
+  // --- Logic Helpers ---
   const getValue = (data: any, defaultValue: string | number | null = "--") => {
-    if (
-      data === null ||
-      data === undefined ||
-      (typeof data === "string" && data.trim() === "")
-    ) {
+    if (data === null || data === undefined || (typeof data === "string" && data.trim() === "")) {
       return defaultValue;
     }
     return data;
@@ -138,8 +110,6 @@ export default function KundliReportPage() {
   const getPlanetaryValue = (planetName: string, field: string) => {
     const planetary = kundliData.planetary as any;
     if (!planetary) return getValue(undefined);
-
-    // Support both keyed object and array formats
     const byKey = planetary[planetName];
     const byArray = Array.isArray(planetary)
       ? planetary.find((p: any) => p?.name === planetName || p?.planet === planetName)
@@ -152,7 +122,6 @@ export default function KundliReportPage() {
     router.push(`/astrologer/${astrologerId}?mode=chat`);
   };
 
-  // Map API astrologer data to AstrologerCard component format
   const mapAstrologerData = (astrologer: ApiAstrologer) => ({
     photo: astrologer.photo,
     name: astrologer.fullName,
@@ -167,19 +136,15 @@ export default function KundliReportPage() {
     waitTime: 2,
   });
 
-  const luckyInfo = [
-    { label: "Ascendant", value: getPlanetaryValue("Ascendant", "sign") },
-    { label: "Moon Sign", value: getPlanetaryValue("Moon", "sign") },
-    { label: "Sun Sign", value: getPlanetaryValue("Sun", "sign") },
-  ];
-
   return (
-    <div className="py-10 min-h-screen bg-gray-50">
-      <p className="text-center mb-10 font-bold text-3xl">Your Kundli Report</p>
+    <div className="py-6 md:py-10 min-h-screen bg-gray-50">
+      <h1 className="text-center mb-6 md:mb-10 font-bold text-2xl md:text-3xl px-4 text-gray-900">
+        Your Kundli Report
+      </h1>
 
-      {/* Tabs */}
-      <div className="max-w-6xl mx-auto px-4 mb-6">
-        <div className="flex border border-gray-300 rounded-lg overflow-hidden bg-white">
+      {/* Tabs Container - Scrollable on Mobile */}
+      <div className="max-w-6xl mx-auto  px-4 mb-6">
+        <div className="flex border border-gray-300 rounded-lg bg-white overflow-x-auto no-scrollbar shadow-sm">
           {tabs.map((tab, index) => {
             const isActive = activeTab === tab;
             return (
@@ -187,17 +152,9 @@ export default function KundliReportPage() {
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`
-                  flex-1 py-3 text-sm cursor-pointer font-semibold whitespace-nowrap text-center transition-colors duration-150
-                  ${
-                    isActive
-                      ? "bg-[#FFD900] text-gray-900 shadow-inner"
-                      : "text-gray-700 bg-white hover:bg-gray-50"
-                  }
-                  ${
-                    index > 0 && !isActive && activeTab !== tabs[index - 1]
-                      ? "border-l border-gray-300"
-                      : ""
-                  }
+                  flex-1 py-3 px-5 text-sm cursor-pointer font-semibold whitespace-nowrap text-center transition-all
+                  ${isActive ? "bg-[#FFD900] text-gray-900" : "text-gray-600 bg-white hover:bg-gray-50"}
+                  ${index > 0 && !isActive && activeTab !== tabs[index - 1] ? "border-l border-gray-200" : ""}
                 `}
               >
                 {tab}
@@ -207,63 +164,57 @@ export default function KundliReportPage() {
         </div>
       </div>
 
-      {/* Tab Content */}
-      <div className=" mx-auto py-8">
-        {activeTab === "Basic" && <BasicTab kundliData={{ success: true, kundli: kundliData }} />}
-        {activeTab === "Kundli" && <KundliTab kundliData={kundliData} />}
-        {activeTab === "Charts" && <ChartsTab kundliData={kundliData} />}
-        {activeTab === "Dasha" && <DashaTab kundliData={kundliData} />}
-        {activeTab === "KP" && <KPTab kundliData={kundliData} />}
-        {activeTab === "Ashtakvarga" && (
-          <AshtakvargaTab kundliData={kundliData} />
-        )}
-        {activeTab === "Free Report" && (
-          <FreeReportTab kundliData={kundliData} />
-        )}
-      </div>
-           <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 max-w-6xl mx-auto">
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-gray-900">Talk with Astrologer</h2>
-          <Link href="/astrologer?mode=chat" className="text-blue-600 hover:underline text-sm">
-            View more
-          </Link>
-        </div>
-        <div className="p-6">
-          {astrologersLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="bg-gray-200 h-40 rounded-lg"></div>
-                </div>
-              ))}
-            </div>
-          ) : astrologers.length === 0 ? (
-            <div className="text-center py-8 text-gray-600">
-              No astrologers available at the moment
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {astrologers.map((astrologer) => (
-                <div
-                  key={astrologer.id}
-                  onClick={() => handleAstrologerClick(astrologer.id)}
-                  className="cursor-pointer"
-                >
-                  <AstrologerCard astrologer={mapAstrologerData(astrologer)} />
-                </div>
-              ))}
-            </div>
-          )}
+      {/* Tab Content - Responsive Margins */}
+      <div className="max-w-6xl mx-auto px-4 py-4 md:py-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-8">
+          {activeTab === "Basic" && <BasicTab kundliData={{ success: true, kundli: kundliData }} />}
+          {activeTab === "Kundli" && <KundliTab kundliData={kundliData} />}
+          {activeTab === "Charts" && <ChartsTab kundliData={kundliData} />}
+          {activeTab === "Dasha" && <DashaTab kundliData={kundliData} />}
+          {activeTab === "KP" && <KPTab kundliData={kundliData} />}
+          {activeTab === "Ashtakvarga" && <AshtakvargaTab kundliData={kundliData} />}
+          {activeTab === "Free Report" && <FreeReportTab kundliData={kundliData} />}
         </div>
       </div>
-            
-      {/* Toast Notification */}
+
+      {/* Astrologer Section - Fixed Overflow with Responsive Grids */}
+      <div className="max-w-6xl mx-auto px-4 mb-10">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+            <h2 className="text-lg font-bold text-gray-900">Talk with Astrologer</h2>
+            <Link href="/astrologer?mode=chat" className="text-blue-600 hover:underline text-sm font-medium">
+              View more
+            </Link>
+          </div>
+          
+          <div className="p-5">
+            {astrologersLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="animate-pulse bg-gray-100 h-48 rounded-lg" />
+                ))}
+              </div>
+            ) : astrologers.length === 0 ? (
+              <div className="text-center py-10 text-gray-500">No astrologers available</div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {astrologers.map((astrologer) => (
+                  <div
+                    key={astrologer.id}
+                    onClick={() => handleAstrologerClick(astrologer.id)}
+                    className="cursor-pointer transform transition-transform hover:scale-[1.01]"
+                  >
+                    <AstrologerCard astrologer={mapAstrologerData(astrologer)} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {toastProps.isVisible && (
-        <Toast
-          message={toastProps.message}
-          type={toastProps.type}
-          onClose={hideToast}
-        />
+        <Toast message={toastProps.message} type={toastProps.type} onClose={hideToast} />
       )}
     </div>
   );

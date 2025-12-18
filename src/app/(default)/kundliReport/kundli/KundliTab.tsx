@@ -154,13 +154,13 @@ const KundliTab: React.FC<KundliTabProps> = ({ kundliData }) => {
   const ascendantSignNum = ascendantSignName ? SIGN_NAME_TO_NUM[ascendantSignName] : undefined;
 
   return (
-    <div className="max-w-6xl mx-auto px-4">
+    <div className="max-w-6xl mx-auto md:px-4">
       {/* Chart Style Toggle */}
       <div className="flex justify-center mb-6">
         <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white">
           <button
             onClick={() => setChartStyle("north")}
-            className={`px-8 py-2 font-semibold text-sm ${
+            className={`px-4 md:px-8 py-2 font-semibold text-sm ${
               chartStyle === "north"
                 ? "bg-[#FFD900] text-gray-900"
                 : "bg-white text-gray-700 hover:bg-gray-50"
@@ -170,7 +170,7 @@ const KundliTab: React.FC<KundliTabProps> = ({ kundliData }) => {
           </button>
           <button
             onClick={() => setChartStyle("south")}
-            className={`px-8 py-2 font-semibold text-sm border-l border-gray-300 ${
+            className={`px-4 md:px-8 py-2 font-semibold text-sm border-l border-gray-300 ${
               chartStyle === "south"
                 ? "bg-[#FFD900] text-gray-900"
                 : "bg-white text-gray-700 hover:bg-gray-50"
@@ -224,7 +224,7 @@ const KundliTab: React.FC<KundliTabProps> = ({ kundliData }) => {
 
       {/* Planets Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-2 md:px-6 py-4 border-b border-gray-200">
           <h2 className="text-xl font-bold text-gray-900">Planets</h2>
         </div>
         {planetaryArray.length > 0 ? (

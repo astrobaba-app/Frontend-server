@@ -1,384 +1,147 @@
-'use client';
-import React, { useState, useEffect } from 'react';
-import ProfileSidebar from '@/components/layout/UserProfileSidebar';
-import { useRouter } from 'next/navigation';
-import Card from '@/components/atoms/Card';
-import Heading from '@/components/atoms/Heading';
-import Input from '@/components/atoms/Input';
-import Select from '@/components/atoms/Select';
-import Button from '@/components/atoms/Button';
-import { useAuth } from '@/contexts/AuthContext';
-import { getProfile, updateProfile } from '@/store/api/auth/profile';
-import LoginToast from '@/components/client/LoginToast';
-import Toast from '@/components/atoms/Toast';
-import { useToast } from '@/hooks/useToast';
-import { IoIosMore } from "react-icons/io";
-import { RxCross2 } from "react-icons/rx";
-
+"use client";
+import React, { useState, useEffect } from "react";
+import Card from "@/components/atoms/Card";
+import Heading from "@/components/atoms/Heading";
+import Input from "@/components/atoms/Input";
+import Select from "@/components/atoms/Select";
+import Button from "@/components/atoms/Button";
+import { getProfile, updateProfile } from "@/store/api/auth/profile";
+import { useToast } from "@/hooks/useToast";
+import Toast from "@/components/atoms/Toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function MyProfilePage() {
-  const router = useRouter();
-  const { user, isLoggedIn, loading, logout } = useAuth();
-  const [profileLoading, setProfileLoading] = useState(true);
+  const { user, isLoggedIn } = useAuth();
   const { showToast, toastProps, hideToast } = useToast();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
+
   const [formData, setFormData] = useState({
-    name: '',
-    gender: '',
-    day: '',
-    month: '',
-    year: '',
-    hour: '',
-    minute: '',
-    second: '',
-    birthPlace: '',
-    address: '',
-    city: '',
-    state: '',
-    country: '',
-    pincode: '',
+    name: "", gender: "", day: "", month: "", year: "",
+    hour: "", minute: "", second: "00", birthPlace: "",
+    address: "", city: "", state: "", country: "", pincode: "",
   });
 
-  // Redirect if not logged in
-  useEffect(() => {
-    if (!loading && !isLoggedIn) {
-      router.push('/auth/login?redirect=/profile');
-    }
-  }, [loading, isLoggedIn, router]);
-
-  // Fetch profile data from backend
   useEffect(() => {
     const fetchProfile = async () => {
       if (!isLoggedIn) return;
-      
       try {
-        setProfileLoading(true);
         const response = await getProfile();
-        
         if (response.success && response.user) {
-          const profileData = response.user;
-          
-          // Parse date of birth (YYYY-MM-DD or null)
-          let day = '', month = '', year = '';
-          if (profileData.dateOfbirth) {
-            const dateObj = new Date(profileData.dateOfbirth);
-            day = dateObj.getDate().toString().padStart(2, '0');
-            month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-            year = dateObj.getFullYear().toString();
+          const p = response.user;
+          const dateObj = p.dateOfbirth ? new Date(p.dateOfbirth) : null;
+          let hour = "", minute = "";
+          if (p.timeOfbirth) {
+            const parts = p.timeOfbirth.split(":");
+            hour = parts[0] || "";
+            minute = parts[1] || "";
           }
 
-          // Parse time of birth (HH:MM or null)
-          let hour = '', minute = '', second = '00';
-          if (profileData.timeOfbirth) {
-            const timeParts = profileData.timeOfbirth.split(':');
-            hour = timeParts[0] || '';
-            minute = timeParts[1] || '';
-          }
-
-          setFormData({
-            name: profileData.fullName || '',
-            gender: profileData.gender || '',
-            day,
-            month,
-            year,
-            hour,
-            minute,
-            second,
-            birthPlace: profileData.placeOfBirth || '',
-            address: '',
-            city: '',
-            state: '',
-            country: '',
-            pincode: '',
-          });
+          setFormData((prev) => ({
+            ...prev,
+            name: p.fullName || "",
+            gender: p.gender || "",
+            day: dateObj ? dateObj.getDate().toString().padStart(2, "0") : "",
+            month: dateObj ? (dateObj.getMonth() + 1).toString().padStart(2, "0") : "",
+            year: dateObj ? dateObj.getFullYear().toString() : "",
+            hour, minute,
+            birthPlace: p.placeOfBirth || "",
+          }));
         }
-      } catch (error: any) {
-        console.error('Failed to fetch profile:', error);
-        showToast(error?.response?.data?.message || 'Failed to load profile data', 'error');
-      } finally {
-        setProfileLoading(false);
+      } catch (error) {
+        showToast("Failed to load profile", "error");
       }
     };
-
-    if (isLoggedIn && !loading) {
-      fetchProfile();
-    }
-  }, [isLoggedIn, loading]);
-
-  const handleLogout = async () => {
-    await logout();
-    router.push('/auth/login');
-  };
-
-  // Don't render if not logged in
-  if (!user && !loading) return null;
+    fetchProfile();
+  }, [isLoggedIn]);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     try {
+      const dateOfbirth = `${formData.year}-${formData.month}-${formData.day}`;
+      const timeOfbirth = `${formData.hour}:${formData.minute}`;
       
-      let dateOfbirth = null;
-      if (formData.day && formData.month && formData.year) {
-        dateOfbirth = `${formData.year}-${formData.month.padStart(2, '0')}-${formData.day.padStart(2, '0')}`;
-      }
+      const response = await updateProfile({
+        fullName: formData.name,
+        gender: formData.gender,
+        dateOfbirth,
+        timeOfbirth,
+        placeOfBirth: formData.birthPlace,
+      });
 
-      // Construct time string (HH:MM) if hour and minute are filled
-      let timeOfbirth = null;
-      if (formData.hour && formData.minute) {
-        timeOfbirth = `${formData.hour.padStart(2, '0')}:${formData.minute.padStart(2, '0')}`;
-      }
-
-      const updateData = {
-        fullName: formData.name || undefined,
-        gender: formData.gender || undefined,
-        dateOfbirth: dateOfbirth || undefined,
-        timeOfbirth: timeOfbirth || undefined,
-        placeOfBirth: formData.birthPlace || undefined,
-      };
-
-      const response = await updateProfile(updateData);
-      
-      if (response.success) {
-        showToast('Profile updated successfully!', 'success');
-      }
-    } catch (error: any) {
-      console.error('Failed to update profile:', error);
-      showToast(error?.response?.data?.message || 'Failed to update profile', 'error');
+      if (response.success) showToast("Profile updated successfully!", "success");
+    } catch (error) {
+      showToast("Update failed", "error");
     }
   };
 
   return (
-    <div className="min-h-screen py-6 sm:py-8 relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Mobile header with menu button */}
-        <div className="flex items-center justify-between mb-4 lg:hidden">
-          <button
-            type="button"
-            onClick={() => setIsSidebarOpen(true)}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-            aria-label="Open menu"
-          >
-            <IoIosMore className="w-6 h-6 text-gray-800" />
-          </button>
-          <span className="w-6" aria-hidden="true" />
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-[300px_1fr] lg:gap-8 items-start">
-          {/* Sidebar - Desktop view */}
-          <div className="hidden lg:block">
-            <ProfileSidebar
-              userName={user?.fullName || 'User'}
-              userEmail={user?.email || 'Not provided'}
-              onLogout={handleLogout}
-            />
+    <div className="animate-in fade-in duration-500">
+      <Card padding="lg" className="shadow-sm border-gray-100">
+        <Heading level={2} className="text-xl sm:text-2xl mb-6">Personal Details</Heading>
+        
+        <form onSubmit={handleUpdate} className="space-y-4">
+          {/* Basic Info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <Input label="Full Name" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+            <Select label="Gender" required value={formData.gender} onChange={(e) => setFormData({ ...formData, gender: e.target.value })}>
+              <option value="">Select Gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </Select>
           </div>
 
-          <Card padding="lg">
-              <Heading level={2} className="mb-6">Personal Details</Heading>
+          <hr className="border-gray-100" />
 
-              <form onSubmit={handleUpdate} className="space-y-6">
-              {/* Name and Gender */}
-              <div className="grid md:grid-cols-2 gap-4">
-                <Input
-                  label="Name"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="John Doe"
-                />
-                <Select
-                  label="Gender"
-                  required
-                  value={formData.gender}
-                  onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                >
-                  <option value="">Select Gender</option>
-                  <option>Male</option>
-                  <option>Female</option>
-                  <option>Other</option>
-                </Select>
-              </div>
+          {/* Birth Details */}
+          <div className="space-y-4">
+            <Heading level={3} className="text-lg font-semibold text-gray-800">Birth Date & Time</Heading>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <Select label="Day" required value={formData.day} onChange={(e) => setFormData({ ...formData, day: e.target.value })}>
+                {Array.from({ length: 31 }, (_, i) => (i + 1).toString().padStart(2, "0")).map(d => <option key={d} value={d}>{d}</option>)}
+              </Select>
+              <Select label="Month" required value={formData.month} onChange={(e) => setFormData({ ...formData, month: e.target.value })}>
+                {["01","02","03","04","05","06","07","08","09","10","11","12"].map(m => <option key={m} value={m}>{m}</option>)}
+              </Select>
+              <Select label="Year" required className="col-span-2 sm:col-span-1" value={formData.year} onChange={(e) => setFormData({ ...formData, year: e.target.value })}>
+                {Array.from({ length: 100 }, (_, i) => 2025 - i).map(y => <option key={y} value={y}>{y}</option>)}
+              </Select>
+            </div>
 
-              {/* Birth Details */}
-              <div>
-                <Heading level={3} className="mb-4">Birth Details</Heading>
-                <div className="grid md:grid-cols-3 gap-4">
-                  <Select
-                    label="Day"
-                    required
-                    value={formData.day}
-                    onChange={(e) => setFormData({ ...formData, day: e.target.value })}
-                  >
-                    {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-                      <option key={day} value={day}>
-                        {day}
-                      </option>
-                    ))}
-                  </Select>
-                  <Select
-                    label="Month"
-                    required
-                    value={formData.month}
-                    onChange={(e) => setFormData({ ...formData, month: e.target.value })}
-                  >
-                    {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map((month) => (
-                      <option key={month} value={month}>
-                        {month}
-                      </option>
-                    ))}
-                  </Select>
-                  <Select
-                    label="Year"
-                    required
-                    value={formData.year}
-                    onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                  >
-                    {Array.from({ length: 100 }, (_, i) => 2024 - i).map((year) => (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              </div>
+            <div className="grid grid-cols-3 gap-3">
+              <Select label="Hour" required value={formData.hour} onChange={(e) => setFormData({ ...formData, hour: e.target.value })}>
+                {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map(h => <option key={h} value={h}>{h}</option>)}
+              </Select>
+              <Select label="Mins" required value={formData.minute} onChange={(e) => setFormData({ ...formData, minute: e.target.value })}>
+                {Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, "0")).map(m => <option key={m} value={m}>{m}</option>)}
+              </Select>
+              <Select label="Secs" required value={formData.second} onChange={(e) => setFormData({ ...formData, second: e.target.value })}>
+                {Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, "0")).map(s => <option key={s} value={s}>{s}</option>)}
+              </Select>
+            </div>
 
-              {/* Birth Time */}
-              <div className="grid md:grid-cols-3 gap-4">
-                <Select
-                  label="Hour"
-                  required
-                  value={formData.hour}
-                  onChange={(e) => setFormData({ ...formData, hour: e.target.value })}
-                >
-                  {Array.from({ length: 24 }, (_, i) => i).map((hour) => (
-                    <option key={hour} value={hour}>
-                      {hour.toString().padStart(2, '0')}
-                    </option>
-                  ))}
-                </Select>
-                <Select
-                  label="Minutes"
-                  required
-                  value={formData.minute}
-                  onChange={(e) => setFormData({ ...formData, minute: e.target.value })}
-                >
-                  {Array.from({ length: 60 }, (_, i) => i).map((min) => (
-                    <option key={min} value={min}>
-                      {min.toString().padStart(2, '0')}
-                    </option>
-                  ))}
-                </Select>
-                <Select
-                  label="Second"
-                  required
-                  value={formData.second}
-                  onChange={(e) => setFormData({ ...formData, second: e.target.value })}
-                >
-                  {Array.from({ length: 60 }, (_, i) => i).map((sec) => (
-                    <option key={sec} value={sec}>
-                      {sec.toString().padStart(2, '0')}
-                    </option>
-                  ))}
-                </Select>
-              </div>
+            <Input label="Birth Place" required value={formData.birthPlace} onChange={(e) => setFormData({ ...formData, birthPlace: e.target.value })} placeholder="City, State" />
+          </div>
 
-              <Input
-                label="Birth Place"
-                required
-                value={formData.birthPlace}
-                onChange={(e) => setFormData({ ...formData, birthPlace: e.target.value })}
-                placeholder="Howrah, West Bengal"
-              />
+          <hr className="border-gray-100" />
 
-              {/* Current Address */}
-              <div>
-                <Heading level={3} className="mb-4">Currente Address</Heading>
-                <Input
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="IIEST Shibpur"
-                  className="mb-4"
-                />
-                <div className="grid md:grid-cols-2 gap-4">
-                  <Input
-                    label="City"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    placeholder="Howrah"
-                  />
-                  <Input
-                    label="State"
-                    value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    placeholder="West Bengal"
-                  />
-                  <Input
-                    label="Country"
-                    value={formData.country}
-                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                    placeholder='India'
-                  />
-                  <Input
-                    label="Pincode"
-                    value={formData.pincode}
-                    onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
-                    placeholder='711103'
-                  />
-                </div>
-              </div>
-
-              {/* Submit Button */}
-              <Button type="submit" fullWidth size="lg">
-                Update Profile
-              </Button>
-            </form>
-          </Card>
-        </div>
-      </div>
-
-      {/* Mobile sidebar overlay */}
-      {isSidebarOpen && (
-        <div className="fixed inset-0 z-40 flex lg:hidden">
-          <div
-            className="flex-1 bg-black/40"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-          <div className="w-80 max-w-full bg-transparent h-full flex flex-col">
-            <div className="bg-white shadow-xl h-full p-4 border-l border-[#FFD700] flex flex-col transition-transform duration-300 transform translate-x-0">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Menu</h2>
-                <button
-                  type="button"
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                  aria-label="Close menu"
-                >
-                  <RxCross2 className="w-5 h-5 text-gray-700" />
-                </button>
-              </div>
-              <div className="overflow-y-auto">
-                <ProfileSidebar
-                  userName={user?.fullName || 'User'}
-                  userEmail={user?.email || 'Not provided'}
-                  onLogout={handleLogout}
-                />
-              </div>
+          {/* Current Address */}
+          <div className="space-y-4">
+            <Heading level={3} className="text-lg font-semibold text-gray-800">Current Address</Heading>
+            <Input label="Street Address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="House no, Street" />
+            <div className="grid grid-cols-2 gap-4">
+              <Input label="City" value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
+              <Input label="State" value={formData.state} onChange={(e) => setFormData({ ...formData, state: e.target.value })} />
+              <Input label="Country" value={formData.country} onChange={(e) => setFormData({ ...formData, country: e.target.value })} />
+              <Input label="Pincode" value={formData.pincode} onChange={(e) => setFormData({ ...formData, pincode: e.target.value })} />
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Toast Notification */}
-      {toastProps.isVisible && (
-        <Toast
-          message={toastProps.message}
-          type={toastProps.type}
-          onClose={hideToast}
-        />
-      )}
-      <LoginToast/>
+          <Button type="submit" fullWidth size="lg" variant="custom" customColors={{ backgroundColor: "#facd05", textColor: "#111827" }} className="rounded-xl font-black text-lg py-4">
+            Update Profile
+          </Button>
+        </form>
+      </Card>
+      {toastProps.isVisible && <Toast message={toastProps.message} type={toastProps.type} onClose={hideToast} />}
     </div>
   );
 }

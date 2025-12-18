@@ -114,7 +114,7 @@ const AshtakvargaTab: React.FC<AshtakvargaTabProps> = ({ kundliData }) => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6">
+    <div className="max-w-6xl mx-auto md:px-4 py-6">
       {/* Header Section */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-3">Ashtakvarga Chart</h2>

@@ -33,6 +33,12 @@ export const LIVE_ASTROLOGERS: LiveAstrologer[] = [
     imageSrc: '/images/astrologer_ravi.png',
     link: '/astrologer/ravi',
   },
+  {
+    id: 5,
+    name: 'Ravi Dutt',
+    imageSrc: '/images/astrologer_ravi.png',
+    link: '/astrologer/ravi',
+  },
 ];
 
 

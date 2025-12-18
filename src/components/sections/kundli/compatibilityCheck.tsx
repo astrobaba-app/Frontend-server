@@ -50,16 +50,16 @@ const CompatibilityCheck: React.FC = () => {
     <div className="p-8" style={{ backgroundColor }}>
       {/* Header Section */}
       <div className="text-center mb-8">
-        <p className="text-3xl font-bold text-gray-800 tracking-wide">
+        <p className="md:text-3xl text-lg font-bold text-gray-800 tracking-wide">
           CHECK COMPATIBILITY WITH OTHER SIGNS
         </p>
-        <p className="text-sm text-gray-600 mt-1">
+        <p className="md:text-sm text-xs text-gray-600 mt-1">
           Check your relationship compatibility
         </p>
       </div>
 
       {/* Compatibility Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-y-8 gap-x-4 max-w-4xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-y-8 gap-x-4 max-w-4xl mx-auto">
         {compatibilityData.map((pair) => (
           <div key={pair.label} className="flex flex-col items-center">
             

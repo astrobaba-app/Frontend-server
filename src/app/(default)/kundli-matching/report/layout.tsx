@@ -1,3 +1,4 @@
+import { AstrologerCardSkeleton } from "@/components/skeletons";
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -113,7 +114,11 @@ export default function ReportLayout({ children }: { children: React.ReactNode }
                   <AstrologerCard key={index} astrologer={astrologer} mode="chat" />
                 ))
               ) : (
-                <p style={{ color: colors.gray }}>Loading astrologers...</p>
+                  <>
+                    {Array.from({ length: 3 }).map((_, idx) => (
+                      <AstrologerCardSkeleton key={idx} />
+                    ))}
+                  </>
               )}
             </div>
           </div>

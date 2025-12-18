@@ -22,7 +22,7 @@ export default function ProductsPage() {
 
   // UI state
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeType, setActiveType] = useState<"virtual" | "physical" | "">("");
+  const [activeType, setActiveType] = useState<"digital" | "physical" | "">("");
 
   useEffect(() => {
     fetchProducts();
@@ -64,14 +64,14 @@ export default function ProductsPage() {
         {/* Tabs */}
         <div className="flex gap-2">
           <button
-            onClick={() => setActiveType("virtual")}
+            onClick={() => setActiveType("digital")}
             className={`px-5 py-2 rounded-full font-medium border ${
-              activeType === "virtual"
+              activeType === "digital"
                 ? "bg-yellow-400 border-yellow-400 text-black"
                 : "bg-white border-gray-300 text-gray-700"
             }`}
           >
-            Virtual Product
+            Digital Product
           </button>
 
           <button
@@ -118,6 +118,7 @@ export default function ProductsPage() {
                   images={product.images}
                   averageRating={product.averageRating}
                   totalReviews={product.totalReviews}
+                  stock={product.stock}
                 />
               ))}
         </div>

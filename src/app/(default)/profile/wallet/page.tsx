@@ -1,8 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import ProfileSidebar from "@/components/layout/UserProfileSidebar";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
 import Card from "@/components/atoms/Card";
 import Heading from "@/components/atoms/Heading";
 import {
@@ -14,7 +12,6 @@ import {
   ArrowDownRight,
   RefreshCw,
   Calendar,
-  CreditCard,
 } from "lucide-react";
 import RechargeModal from "@/components/wallet/RechargeModal";
 import PaymentModal from "@/components/wallet/PaymentModal";
@@ -27,14 +24,11 @@ import {
   WalletBalance,
   WalletTransaction,
 } from "@/utils/wallet";
-import { IoIosMore } from "react-icons/io";
-import { RxCross2 } from "react-icons/rx";
 
 export default function WalletPage() {
-  const { user, logout } = useAuth();
-  const router = useRouter();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { user } = useAuth();
 
+  // State management
   const [balance, setBalance] = useState<WalletBalance | null>(null);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,10 +36,10 @@ export default function WalletPage() {
   const [rechargeModalOpen, setRechargeModalOpen] = useState(false);
   const [paymentModal, setPaymentModal] = useState<{
     isOpen: boolean;
-    type: 'success' | 'failure';
+    type: "success" | "failure";
     amount?: number;
     message?: string;
-  }>({ isOpen: false, type: 'success' });
+  }>({ isOpen: false, type: "success" });
 
   const [pagination, setPagination] = useState({
     page: 1,
@@ -54,31 +48,14 @@ export default function WalletPage() {
     totalPages: 0,
   });
 
-  const handleLogout = async () => {
-    await logout();
-    router.push("/");
-  };
-
   const fetchWalletData = async () => {
     try {
       setLoading(true);
       const balanceData = await getWalletBalance();
-          {/* Mobile header with menu button */}
-          <div className="flex items-center justify-between mb-4 lg:hidden">
-            <button
-              type="button"
-              onClick={() => setIsSidebarOpen(true)}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-              aria-label="Open menu"
-            >
-              <IoIosMore className="w-6 h-6 text-gray-800" />
-            </button>
-            <span className="w-6" aria-hidden="true" />
-          </div>
-
+      console.log("Wallet balance data:", balanceData);
       setBalance(balanceData);
     } catch (error) {
-      console.error('Failed to fetch wallet balance:', error);
+      console.error("Failed to fetch wallet balance:", error);
     } finally {
       setLoading(false);
     }
@@ -96,7 +73,7 @@ export default function WalletPage() {
         totalPages: data.pagination.totalPages,
       });
     } catch (error) {
-      console.error('Failed to fetch transactions:', error);
+      console.error("Failed to fetch transactions:", error);
     } finally {
       setTransactionsLoading(false);
     }
@@ -108,46 +85,13 @@ export default function WalletPage() {
   }, []);
 
   const handleRechargeSuccess = async () => {
-
-      {/* Mobile sidebar overlay */}
-      {isSidebarOpen && (
-        <div className="fixed inset-0 z-40 flex lg:hidden">
-          <div
-            className="flex-1 bg-black/40"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-          <div className="w-80 max-w-full bg-transparent h-full flex flex-col">
-            <div className="bg-white shadow-xl h-full p-4 border-l border-[#FFD700] flex flex-col transition-transform duration-300 transform translate-x-0">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Menu</h2>
-                <button
-                  type="button"
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                  aria-label="Close menu"
-                >
-                  <RxCross2 className="w-5 h-5 text-gray-700" />
-                </button>
-              </div>
-              <div className="overflow-y-auto">
-                <ProfileSidebar
-                  userName={user?.fullName || "User"}
-                  userEmail={user?.email || "Not provided"}
-                  onLogout={handleLogout}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
     setPaymentModal({
       isOpen: true,
-      type: 'success',
-      message: 'Wallet recharged successfully!',
+      type: "success",
+      message: "Wallet recharged successfully!",
     });
     await fetchWalletData();
-    await fetchTransactions();
+    await fetchTransactions(1);
   };
 
   const handlePageChange = (newPage: number) => {
@@ -157,235 +101,204 @@ export default function WalletPage() {
   };
 
   return (
-    <div className="min-h-screen py-6 sm:py-8 bg-gray-50 relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Mobile header with menu button */}
-        <div className="flex items-center justify-between mb-4 lg:hidden">
-          <button
-            type="button"
-            onClick={() => setIsSidebarOpen(true)}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-            aria-label="Open menu"
-          >
-            <IoIosMore className="w-6 h-6 text-gray-800" />
-          </button>
-          <span className="w-6" aria-hidden="true" />
+    <div className="animate-in fade-in duration-500 space-y-6 pb-10  sm:px-0">
+      {/* HEADER & ACTION - Stacked on mobile */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div>
+          <Heading level={1} className="text-xl sm:text-2xl font-bold text-gray-900">
+            Wallet Dashboard
+          </Heading>
+          <p className="text-gray-500 text-xs sm:text-sm mt-1">
+            Manage your funds and track spending
+          </p>
+        </div>
+        <button
+          onClick={() => setRechargeModalOpen(true)}
+          className="flex items-center justify-center gap-2 bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-3 px-6 rounded-xl transition-all shadow-md active:scale-95 w-full sm:w-auto"
+        >
+          <Plus className="w-5 h-5" />
+          Recharge Wallet
+        </button>
+      </div>
+
+      {/* BALANCE OVERVIEW CARDS - 1 col on mobile, 3 on desktop */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="p-6 bg-white-900 border-none rounded-xl shadow-sm relative overflow-hidden group">
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-yellow-400/20 rounded-lg">
+                <Wallet className="w-5 h-5 text-yellow-400" />
+              </div>
+              <span className="text-gray-900 text-ms font-bold uppercase tracking-widest">
+                Available Balance
+              </span>
+            </div>
+            <div className="text-3xl font-bold text-black">
+              {loading ? (
+                <span>Loading...</span>
+              ) : balance ? (
+                <span>₹{balance.balance.toLocaleString('en-IN')}</span>
+              ) : (
+                <span>₹0</span>
+              )}
+            </div>
+          </div>
+          <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
+            <Wallet className="w-32 h-32 text-white" />
+          </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[300px_1fr] lg:gap-8 items-start">
-          {/* Sidebar - Desktop view */}
-          <div className="hidden lg:block">
-            <ProfileSidebar
-              userName={user?.fullName || "User"}
-              userEmail={user?.email || "Not provided"}
-              onLogout={handleLogout}
-            />
-          </div>
+        {/* Small stats cards - 2 cols on mobile for better space usage */}
+        <div className="grid grid-cols-2 md:grid-cols-1 gap-4 md:contents">
+          <Card className="p-4 sm:p-6 bg-white border-gray-100 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+            <div className="p-2 sm:p-3 bg-green-50 rounded-xl">
+              <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
+            </div>
+            <div>
+              <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Credits</p>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">
+                {loading ? "Loading..." : balance ? `₹${balance.totalRecharge.toLocaleString('en-IN')}` : "₹0"}
+              </h3>
+            </div>
+          </Card>
 
-          {/* Main Content */}
-          <div className="space-y-6">
-            {/* Wallet Balance Card */}
-            <Card padding="lg">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-[#FFD700] bg-opacity-20 rounded-full flex items-center justify-center">
-                    <Wallet className="w-8 h-8 text-[#FFD700]" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">
-                      Current Balance
-                    </p>
-                    {loading ? (
-                      <div className="h-8 w-32 bg-gray-200 animate-pulse rounded"></div>
-                    ) : (
-                      <h2 className="text-3xl font-bold text-gray-900">
-                        {formatAmount(balance?.balance || 0)}
-                      </h2>
-                    )}
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setRechargeModalOpen(true)}
-                  className="flex items-center gap-2 bg-[#FFD700] text-gray-900 px-6 py-3 rounded-lg font-semibold hover:bg-[#FFD700] hover:bg-opacity-90 transition-all"
-                >
-                  <Plus className="w-5 h-5" />
-                  Recharge Wallet
-                </button>
-              </div>
-
-              {/* Stats */}
-              {!loading && balance && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-6 border-t">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center">
-                      <TrendingUp className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Total Recharged</p>
-                      <p className="text-lg font-semibold text-gray-900">
-                        {formatAmount(balance.totalRecharge)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center">
-                      <TrendingDown className="w-5 h-5 text-red-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Total Spent</p>
-                      <p className="text-lg font-semibold text-gray-900">
-                        {formatAmount(balance.totalSpent)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </Card>
-
-            {/* Transaction History */}
-            <Card padding="lg">
-              <div className="flex items-center justify-between mb-6">
-                <Heading level={3}>Transaction History</Heading>
-                <button
-                  onClick={() => fetchTransactions(pagination.page)}
-                  disabled={transactionsLoading}
-                  className="flex items-center gap-2 text-[#FFD700] hover:text-[#FFD700] hover:opacity-80 transition-all"
-                >
-                  <RefreshCw
-                    className={`w-5 h-5 ${
-                      transactionsLoading ? 'animate-spin' : ''
-                    }`}
-                  />
-                  <span className="text-sm font-medium">Refresh</span>
-                </button>
-              </div>
-
-              {transactionsLoading ? (
-                <div className="space-y-4">
-                  {[...Array(5)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-20 bg-gray-200 animate-pulse rounded-lg"
-                    ></div>
-                  ))}
-                </div>
-              ) : transactions.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CreditCard className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <p className="text-gray-600">No transactions yet</p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    Your transaction history will appear here
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-3">
-                    {transactions.map((transaction) => (
-                      <div
-                        key={transaction.id}
-                        className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div
-                            className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                              transaction.type === 'credit'
-                                ? 'bg-green-50'
-                                : 'bg-red-50'
-                            }`}
-                          >
-                            {transaction.type === 'credit' ? (
-                              <ArrowDownRight className="w-5 h-5 text-green-600" />
-                            ) : (
-                              <ArrowUpRight className="w-5 h-5 text-red-600" />
-                            )}
-                          </div>
-
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {transaction.description || 'Transaction'}
-                            </p>
-                            <div className="flex items-center gap-3 mt-1">
-                              <p className="text-sm text-gray-500 flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                {formatDate(transaction.createdAt)}
-                              </p>
-                              <span
-                                className={`text-xs px-2 py-1 rounded-full ${getStatusColor(
-                                  transaction.status
-                                )}`}
-                              >
-                                {transaction.status}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="text-right">
-                          <p
-                            className={`text-lg font-semibold ${
-                              transaction.type === 'credit'
-                                ? 'text-green-600'
-                                : 'text-red-600'
-                            }`}
-                          >
-                            {transaction.type === 'credit' ? '+' : '-'}
-                            {formatAmount(transaction.amount)}
-                          </p>
-                          {transaction.paymentMethod && (
-                            <p className="text-xs text-gray-500 mt-1 capitalize">
-                              {transaction.paymentMethod}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Pagination */}
-                  {pagination.totalPages > 1 && (
-                    <div className="flex items-center justify-between mt-6 pt-6 border-t">
-                      <p className="text-sm text-gray-600">
-                        Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-                        {Math.min(
-                          pagination.page * pagination.limit,
-                          pagination.total
-                        )}{' '}
-                        of {pagination.total} transactions
-                      </p>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handlePageChange(pagination.page - 1)}
-                          disabled={pagination.page === 1}
-                          className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Previous
-                        </button>
-                        <span className="text-sm text-gray-600">
-                          Page {pagination.page} of {pagination.totalPages}
-                        </span>
-                        <button
-                          onClick={() => handlePageChange(pagination.page + 1)}
-                          disabled={pagination.page === pagination.totalPages}
-                          className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Next
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </Card>
-          </div>
+          <Card className="p-4 sm:p-6 bg-white border-gray-100 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+            <div className="p-2 sm:p-3 bg-red-50 rounded-xl">
+              <TrendingDown className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
+            </div>
+            <div>
+              <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Debits</p>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">
+                {loading ? "Loading..." : balance ? `₹${balance.totalSpent.toLocaleString('en-IN')}` : "₹0"}
+              </h3>
+            </div>
+          </Card>
         </div>
       </div>
 
-      {/* Modals */}
+      {/* TRANSACTION HISTORY */}
+      <Card className="border-gray-100 overflow-hidden bg-white">
+        <div className=" border-b border-gray-50 flex items-center justify-between">
+          <p className="font-bold text-md text-gray-900 flex items-center gap-2">
+            Transactions
+            {transactionsLoading && <RefreshCw className="w-4 h-4 animate-spin text-yellow-500" />}
+          </p>
+          <button
+            onClick={() => fetchTransactions(1)}
+            className="text-sm font-bold text-yellow-600 hover:text-yellow-700"
+          >
+            Refresh
+          </button>
+        </div>
+
+        {/* Desktop Table - Hidden on small screens */}
+        <div className="hidden md:block overflow-x-auto">
+          {transactionsLoading ? (
+            <div className="p-10 text-center text-sm text-gray-400">Loading transactions...</div>
+          ) : transactions.length === 0 ? (
+            <div className="p-10 text-center text-sm text-gray-400">No transactions found.</div>
+          ) : (
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-gray-50/50 md:text-[14px] text-[10px]  uppercase tracking-tighter text-gray-400 font-bold">
+                  <th className="px-6 py-4">Transaction</th>
+                  <th className="px-6 py-4">Date & Time</th>
+                  <th className="px-6 py-4 text-right">Amount</th>
+                  <th className="px-6 py-4 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {transactions.map((tx) => (
+                <tr key={tx.id} className="hover:bg-gray-50/80 transition-colors group">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${tx.type === "credit" ? "bg-green-50" : "bg-red-50"}`}>
+                        {tx.type === "credit" ? <ArrowDownRight className="w-4 h-4 text-green-600" /> : <ArrowUpRight className="w-4 h-4 text-red-600" />}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-900">{tx.description}</p>
+                        <p className="text-[10px] text-gray-400 font-mono">REF: {tx.id.slice(-8).toUpperCase()}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-xs text-gray-500">
+                    {tx.createdAt ? formatDate(tx.createdAt) : "N/A"}
+                  </td>
+                  <td className={`px-6 py-4 text-right font-bold text-sm ${tx.type === "credit" ? "text-green-600" : "text-gray-900"}`}>
+                    {tx.type === "credit" ? "+" : "-"}{formatAmount(tx.amount)}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${getStatusColor(tx.status)}`}>
+                      {tx.status}
+                    </span>
+                  </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Mobile List View - Visible only on small screens */}
+        <div className="md:hidden divide-y divide-gray-50">
+          {transactionsLoading ? (
+             <div className="p-6 text-center text-sm text-gray-400">Loading transactions...</div>
+          ) : transactions.length === 0 ? (
+            <div className="p-10 text-center text-sm text-gray-400">No transactions found.</div>
+          ) : (
+            transactions.map((tx) => (
+              <div key={tx.id} className="p-4 active:bg-gray-50 transition-colors">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex gap-3">
+                    <div className={`p-2 h-fit rounded-lg ${tx.type === "credit" ? "bg-green-50" : "bg-red-50"}`}>
+                      {tx.type === "credit" ? <ArrowDownRight className="w-4 h-4 text-green-600" /> : <ArrowUpRight className="w-4 h-4 text-red-600" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-900 leading-tight">{tx.description}</p>
+                      <p className="text-[10px] text-gray-400 mt-1">{tx.createdAt ? formatDate(tx.createdAt) : "N/A"}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-sm font-bold ${tx.type === "credit" ? "text-green-600" : "text-gray-900"}`}>
+                      {tx.type === "credit" ? "+" : "-"}{formatAmount(tx.amount)}
+                    </p>
+                    <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[8px] font-black uppercase border ${getStatusColor(tx.status)}`}>
+                      {tx.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* PAGINATION - Improved for touch targets */}
+        {pagination.totalPages > 1 && (
+          <div className="px-4 py-4 bg-gray-50/30 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-100">
+            <span className="text-xs font-medium text-gray-500 order-2 sm:order-1">
+              Page {pagination.page} of {pagination.totalPages}
+            </span>
+            <div className="flex gap-2 w-full sm:w-auto order-1 sm:order-2">
+              <button
+                disabled={pagination.page === 1}
+                onClick={() => handlePageChange(pagination.page - 1)}
+                className="flex-1 sm:flex-none px-6 py-2.5 text-xs font-bold bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-30"
+              >
+                Prev
+              </button>
+              <button
+                disabled={pagination.page === pagination.totalPages}
+                onClick={() => handlePageChange(pagination.page + 1)}
+                className="flex-1 sm:flex-none px-6 py-2.5 text-xs font-bold bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-30"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* MODALS remain the same, ensure they are responsive internally */}
       <RechargeModal
         isOpen={rechargeModalOpen}
         onClose={() => setRechargeModalOpen(false)}

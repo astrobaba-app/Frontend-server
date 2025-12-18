@@ -205,7 +205,7 @@ const DashaTable: React.FC<DashaTableProps> = ({ dashaData }) => {
       </div>
 
       {/* Dasha Table */}
-      <div className="overflow-x-auto">
+      <div className="text-[13px] md:text-base overflow-x-auto">
         <table className="w-full border-collapse">
           <thead className="bg-orange-100">
             <tr>

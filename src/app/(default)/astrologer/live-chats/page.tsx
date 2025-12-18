@@ -869,7 +869,7 @@ export default function LiveChatsPage() {
                             }`}
                           >
                             {repliedTo && (
-                              <div className="mb-1 px-2 py-1 text-[11px] rounded bg-black/5 text-gray-700">
+                              <div className="mb-1 px-2 py-1 text-[11px] rounded bg-black text-gray-700">
                                 <span className="font-semibold mr-1">
                                   Replying to {repliedTo.senderType === "astrologer" ? "You" : selectedUser?.name || "User"}
                                 </span>
@@ -1104,7 +1104,7 @@ export default function LiveChatsPage() {
 
       {/* Incoming Call Modal */}
       {incomingCall && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-white/30 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
             <div className="text-center">
               <FiPhone className="w-16 h-16 mx-auto mb-4 text-green-500 animate-pulse" />

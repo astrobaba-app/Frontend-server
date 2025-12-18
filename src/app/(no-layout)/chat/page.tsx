@@ -128,10 +128,23 @@ const ChatPage = () => {
 
   const astrologerPricePerMinute = useMemo(() => {
     // Treat 0, null, undefined as invalid - use fallback
-    const sessionPrice = selectedSession?.pricePerMinute;
-    const astrologerPrice = selectedSession?.astrologer?.pricePerMinute;
-    const price = (sessionPrice && sessionPrice > 0) ? sessionPrice : 
-                  (astrologerPrice && astrologerPrice > 0) ? astrologerPrice : 10;
+    const sessionPriceRaw = selectedSession?.pricePerMinute as any;
+    const sessionPrice =
+      sessionPriceRaw !== undefined && sessionPriceRaw !== null
+        ? Number(sessionPriceRaw)
+        : undefined;
+
+    const astrologerPriceRaw = (selectedSession?.astrologer as any)?.pricePerMinute;
+    const astrologerPrice =
+      astrologerPriceRaw !== undefined && astrologerPriceRaw !== null
+        ? Number(astrologerPriceRaw)
+        : undefined;
+
+    const price = sessionPrice && sessionPrice > 0
+      ? sessionPrice
+      : astrologerPrice && astrologerPrice > 0
+      ? astrologerPrice
+      : 10;
     console.log('=== PRICE DEBUG ===');
     console.log('selectedSession.pricePerMinute:', sessionPrice);
     console.log('selectedSession.astrologer?.pricePerMinute:', astrologerPrice);
@@ -150,7 +163,7 @@ const ChatPage = () => {
     hasSufficientBalance,
     pricePerMinute,
   } = useAstrologerChatWallet({
-    userId: user?.id,
+    userId: user?.id ? String(user.id) : undefined,
     astrologerPricePerMinute,
     onInsufficientBalance: () => {
       setShowInsufficientBalanceModal(true);
@@ -865,7 +878,7 @@ const ChatPage = () => {
               </button>
               {astrologerInfo && (
                 <div className="hidden md:flex flex-row items-center gap-2 min-w-0">
-                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-white">
+                  <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white">
                     <img
                       src={astrologerInfo.photo}
                       alt={astrologerInfo.name}
@@ -977,7 +990,7 @@ const ChatPage = () => {
             <div className="flex flex-col items-center justify-center h-full text-center">
               <div className="mb-8">
                 <Image
-                  src="/images/shooting-stars.png"
+                  src="/images/logo.png"
                   alt="Shooting Stars"
                   width={60}
                   height={60}
@@ -1196,7 +1209,7 @@ const ChatPage = () => {
             <button
               type="button"
               onClick={handleAttachClick}
-              className="p-3 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
+              className="p-3 rounded-full hover:bg-gray-100 transition-colors shrink-0"
               aria-label="Attach image"
             >
               <FiPaperclip className="w-5 h-5 text-gray-600" />
@@ -1261,7 +1274,7 @@ const ChatPage = () => {
 
       {/* Insufficient Balance Modal */}
       {showInsufficientBalanceModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-white/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div
             className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-in"
             onClick={(e) => e.stopPropagation()}

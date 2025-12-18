@@ -573,7 +573,7 @@ const CheckoutPage = () => {
                 size="md"
                 onClick={handleContinueToPayment}
                 disabled={processing}
-                className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-3 rounded-lg font-bold hover:shadow-lg transition-shadow"
+                className="bg-linear-to-r from-yellow-500 to-orange-500 text-white py-3 rounded-lg font-bold hover:shadow-lg transition-shadow"
               >
                 Continue to Payment
               </Button>
@@ -634,8 +634,8 @@ const CheckoutPage = () => {
 
       {/* Payment Modal */}
       {showPaymentModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
+        <div className="fixed inset-0 border-2  bg-white/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white border border-gray-500 rounded-lg max-w-md w-full p-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Choose Payment Method</h2>
 
             {error && (
@@ -714,8 +714,8 @@ const CheckoutPage = () => {
 
       {/* Success Modal */}
       {showSuccessModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-8 text-center">
+        <div className="fixed inset-0 bg-white/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white border-gray-400 rounded-lg max-w-md w-full p-8 text-center">
             <div className="text-6xl mb-4">✅</div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
               Order Placed Successfully!
@@ -729,7 +729,7 @@ const CheckoutPage = () => {
                 href="/profile/orders"
                 variant="custom"
                 size="md"
-                className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold"
+                className="bg-linear-to-r from-yellow-500 to-orange-500 text-white font-bold"
               >
                 View My Orders
               </Button>

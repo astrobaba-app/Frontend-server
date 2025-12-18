@@ -384,7 +384,7 @@ const DashaTab: React.FC<DashaTabProps> = ({ kundliData }) => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4">
+    <div className="max-w-6xl mx-auto md:px-4">
       {/* Dasha Type Toggle */}
       <div className="flex justify-center mb-6">
         <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden bg-white">

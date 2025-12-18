@@ -18,7 +18,7 @@ const Hero: React.FC = () => {
     >
       <div className="max-w-7xl mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center">
         <div className="flex flex-col space-y-4 sm:space-y-6">
-          <p className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tighter">
+          <p className="text-3xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tighter">
             Get Instant Answer to your
             <span style={{ color: colors.primeYellow }}>
               {" "}
@@ -95,15 +95,15 @@ const Hero: React.FC = () => {
           />
 
           <div
-            className="absolute cursor-pointer py-1.5 sm:py-2 pl-1.5 sm:pl-2 pr-3 sm:pr-4 bg-white rounded-lg sm:rounded-xl shadow-xl items-center text-xs sm:text-sm font-semibold text-gray-900 
-            transition duration-300 ease-in-out hover:-translate-y-2 flex"
+            className="hidden md:flex absolute cursor-pointer py-1.5 sm:py-2 pl-1.5 sm:pl-2 pr-3 sm:pr-4 bg-white rounded-lg sm:rounded-xl shadow-xl items-center text-xs sm:text-sm font-semibold text-gray-900 
+            transition duration-300 ease-in-out hover:-translate-y-2 "
             style={{
               bottom: "-5%",
               left: "5%",
               transform: "translate(-50%, 0)",
             }}
           >
-            <div style={{background:colors.primeYellow}} className="rounded-full p-1.5 sm:p-2 flex items-center justify-center mr-1.5 sm:mr-2 shadow-md">
+            <div style={{background:colors.primeYellow}} className=" rounded-full p-1.5 sm:p-2  items-center justify-center mr-1.5 sm:mr-2 shadow-md">
               <FaPhoneAlt className="text-white text-sm sm:text-lg" />
             </div>
             <div>

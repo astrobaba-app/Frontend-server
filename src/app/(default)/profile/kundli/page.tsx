@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import ProfileSidebar from "@/components/layout/UserProfileSidebar";
-import StepIndicator from '@/components/userprofile/StepIndicator';
+import StepIndicator from "@/components/userprofile/StepIndicator";
 import { useRouter } from "next/navigation";
 import Card from "@/components/atoms/Card";
 import Heading from "@/components/atoms/Heading";
@@ -17,15 +16,13 @@ import api from "@/store/api";
 import { getProfile } from "@/store/api/auth/profile";
 import { KundliCardSkeleton } from "@/components/skeletons/KundliCardSkeleton";
 import { ProfileSkeleton } from "@/components/skeletons/ProfileSkeleton";
-import { Loader2 } from "lucide-react";
-import { IoIosMore } from "react-icons/io";
-import { RxCross2 } from "react-icons/rx";
+import { Loader2, ArrowLeft, Plus } from "lucide-react";
 
 export default function FreeKundliPage() {
   const router = useRouter();
-  const { user, isLoggedIn, loading, logout } = useAuth();
+  const { user, isLoggedIn, loading } = useAuth();
   const { showToast, toastProps, hideToast } = useToast();
-  
+
   const [showForm, setShowForm] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [fetchFromProfile, setFetchFromProfile] = useState(false);
@@ -33,45 +30,44 @@ export default function FreeKundliPage() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [profileFetching, setProfileFetching] = useState(false);
-  
+
   const [formData, setFormData] = useState({
-    fullName: '',
-    gender: 'Male',
-    dateOfbirth: '',
-    timeOfbirth: '',
-    placeOfBirth: '',
-    latitude: '',
-    longitude: '',
+    fullName: "",
+    gender: "Male",
+    dateOfbirth: "",
+    timeOfbirth: "",
+    placeOfBirth: "",
+    latitude: "",
+    longitude: "",
   });
 
-  const [placeSuggestions, setPlaceSuggestions] = useState<{
-    description: string;
-    placeId: string;
-  }[]>([]);
+  const [placeSuggestions, setPlaceSuggestions] = useState<
+    {
+      description: string;
+      placeId: string;
+    }[]
+  >([]);
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(false);
   const [placesError, setPlacesError] = useState<string | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !isLoggedIn) {
-      router.push('/auth/login?redirect=/profile/kundli');
+      router.push("/auth/login?redirect=/profile/kundli");
     }
   }, [loading, isLoggedIn, router]);
 
   useEffect(() => {
     const fetchKundliHistory = async () => {
       if (!isLoggedIn) return;
-      
       try {
         setHistoryLoading(true);
         const response = await getAllKundlis();
-        
         if (response.success && response.userRequests) {
           setKundliHistory(response.userRequests);
         }
       } catch (error: any) {
-        console.error('Failed to fetch kundli history:', error);
-        showToast(error?.message || 'Failed to load kundli history', 'error');
+        console.error("Failed to fetch kundli history:", error);
+        showToast(error?.message || "Failed to load kundli history", "error");
       } finally {
         setHistoryLoading(false);
       }
@@ -82,33 +78,23 @@ export default function FreeKundliPage() {
     }
   }, [isLoggedIn, loading]);
 
-  const handleLogout = async () => {
-    await logout();
-    router.push("/");
-  };
-
   const handleFetchFromProfile = async () => {
     try {
       setProfileFetching(true);
       const response = await getProfile();
-      
       if (response.success && response.user) {
         const profileUser = response.user;
-        
         setFormData({
-          fullName: profileUser.fullName || '',
-          gender: profileUser.gender || 'Male',
-          dateOfbirth: profileUser.dateOfbirth || '',
-          timeOfbirth: profileUser.timeOfbirth || '',
-          placeOfBirth: profileUser.placeOfBirth || '',
-          latitude: '',
-          longitude: '',
+          fullName: profileUser.fullName || "",
+          gender: profileUser.gender || "Male",
+          dateOfbirth: profileUser.dateOfbirth || "",
+          timeOfbirth: profileUser.timeOfbirth || "",
+          placeOfBirth: profileUser.placeOfBirth || "",
+          latitude: "",
+          longitude: "",
         });
-        
         setFetchFromProfile(true);
         setShowForm(true);
-        
-        // Jump to first empty field or last step if all filled
         if (!profileUser.fullName) setCurrentStep(1);
         else if (!profileUser.gender) setCurrentStep(2);
         else if (!profileUser.dateOfbirth) setCurrentStep(3);
@@ -116,503 +102,391 @@ export default function FreeKundliPage() {
         else setCurrentStep(5);
       }
     } catch (error: any) {
-      console.error('Failed to fetch profile:', error);
-      showToast('Failed to load profile data', 'error');
+      console.error("Failed to fetch profile:", error);
+      showToast("Failed to load profile data", "error");
     } finally {
       setProfileFetching(false);
     }
   };
 
-  const handleNext = () => {
-    if (currentStep < 5) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
+  const handleNext = () => currentStep < 5 && setCurrentStep(currentStep + 1);
+  const handleBack = () => currentStep > 1 && setCurrentStep(currentStep - 1);
 
   const handleGenerate = async () => {
-    if (!formData.fullName || !formData.gender || !formData.dateOfbirth || 
-        !formData.timeOfbirth || !formData.placeOfBirth) {
-      showToast('Please fill in all required fields', 'error');
-      return;
-    }
-
-    // User must select a location suggestion so that latitude/longitude are set
-    if (!formData.latitude || !formData.longitude) {
-      showToast('Please select a valid birth place from suggestions', 'error');
+    if (
+      !formData.fullName ||
+      !formData.gender ||
+      !formData.dateOfbirth ||
+      !formData.timeOfbirth ||
+      !formData.placeOfBirth ||
+      !formData.latitude
+    ) {
+      showToast(
+        "Please fill in all required fields and select a valid location",
+        "error"
+      );
       return;
     }
 
     try {
       setSubmitting(true);
-      
       const requestData = {
-        fullName: formData.fullName,
-        gender: formData.gender,
-        dateOfbirth: formData.dateOfbirth,
-        timeOfbirth: formData.timeOfbirth,
-        placeOfBirth: formData.placeOfBirth,
+        ...formData,
         latitude: Number(formData.latitude),
         longitude: Number(formData.longitude),
       };
 
-      console.log('Sending kundli request:', requestData);
-      
       const response = await createKundli(requestData);
 
       if (response.success) {
-        showToast('Kundli generated successfully!', 'success');
+        showToast("Kundli generated successfully!", "success");
         setShowForm(false);
         setCurrentStep(1);
         setFetchFromProfile(false);
         setFormData({
-          fullName: '',
-          gender: 'Male',
-          dateOfbirth: '',
-          timeOfbirth: '',
-          placeOfBirth: '',
-          latitude: '',
-          longitude: '',
+          fullName: "",
+          gender: "Male",
+          dateOfbirth: "",
+          timeOfbirth: "",
+          placeOfBirth: "",
+          latitude: "",
+          longitude: "",
         });
-        
-        // Refresh kundli history
+
         const historyResponse = await getAllKundlis();
-        if (historyResponse.success && historyResponse.userRequests) {
+        if (historyResponse.success)
           setKundliHistory(historyResponse.userRequests);
-        }
-        
-        // Redirect to kundli report
+
         setTimeout(() => {
           router.push(`/kundliReport?id=${response.kundli.requestId}`);
         }, 1500);
       }
     } catch (error: any) {
-      console.error('Failed to create kundli:', error);
-      const errorMessage = error?.message || error?.response?.data?.message || 'Failed to generate Kundli';
-      showToast(errorMessage, 'error');
+      showToast(error?.message || "Failed to generate Kundli", "error");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleViewKundli = (id: string) => {
-    router.push(`/kundliReport?id=${id}`);
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
-  // Fetch location suggestions for Indian cities via backend proxy (avoids CORS)
   const fetchPlaceSuggestions = async (query: string) => {
     if (!query || query.trim().length < 2) {
       setPlaceSuggestions([]);
       return;
     }
-
     try {
       setIsLoadingPlaces(true);
-      setPlacesError(null);
-      const res = await api.get('/maps/autocomplete', {
+      const res = await api.get("/maps/autocomplete", {
         params: { input: query.trim() },
       });
-
       const data = res.data;
-      if (data.status !== 'OK') {
-        console.warn('Places API returned non-OK status:', data.status, data.error_message);
-        setPlaceSuggestions([]);
-        return;
-      }
-
-      const suggestions = (data.predictions || []).map((p: any) => {
-        const terms = p.terms || [];
-        const city = terms[0]?.value || '';
-        const state = terms[1]?.value || '';
-        const country = terms[terms.length - 1]?.value || '';
-        const description = [city, state, country].filter(Boolean).join(', ');
-        return {
-          description: description || p.description,
+      if (data.status === "OK") {
+        const suggestions = data.predictions.map((p: any) => ({
+          description: p.description,
           placeId: p.place_id,
-        };
-      });
-
-      setPlaceSuggestions(suggestions);
-    } catch (error: any) {
-      console.error('Error fetching place suggestions:', error);
-      setPlacesError(error?.message || 'Failed to fetch place suggestions');
+        }));
+        setPlaceSuggestions(suggestions);
+      }
+    } catch (error) {
       setPlaceSuggestions([]);
     } finally {
       setIsLoadingPlaces(false);
     }
   };
 
-  // When user selects a suggestion, update placeOfBirth and fetch lat/lng via backend proxy
-  const handleSelectPlaceSuggestion = async (placeId: string, description: string) => {
+  const handleSelectPlaceSuggestion = async (
+    placeId: string,
+    description: string
+  ) => {
     try {
       setIsLoadingPlaces(true);
-      setPlacesError(null);
-      const res = await api.get('/maps/details', {
-        params: { placeId },
-      });
-
-      const data = res.data;
-      const location = data.result?.geometry?.location;
-      if (!location) {
-        throw new Error('Location details not available for selected place');
+      const res = await api.get("/maps/details", { params: { placeId } });
+      const location = res.data.result?.geometry?.location;
+      if (location) {
+        setFormData((prev) => ({
+          ...prev,
+          placeOfBirth: description,
+          latitude: String(location.lat),
+          longitude: String(location.lng),
+        }));
       }
-
-      setFormData(prev => ({
-        ...prev,
-        placeOfBirth: description,
-        latitude: String(location.lat),
-        longitude: String(location.lng),
-      }));
-
       setPlaceSuggestions([]);
-    } catch (error: any) {
-      console.error('Error fetching place details:', error);
-      setPlacesError(error?.message || 'Failed to fetch place details');
+    } catch (error) {
+      showToast("Failed to fetch place details", "error");
     } finally {
       setIsLoadingPlaces(false);
     }
   };
 
-  if (loading) {
+  if (loading)
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid lg:grid-cols-[300px_1fr] gap-8">
-            <ProfileSkeleton />
-          </div>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="animate-spin text-yellow-500" />
       </div>
     );
-  }
-
   if (!isLoggedIn) return null;
 
-  const renderStepContent = () => {
-    switch (currentStep) {
-      case 1:
-        return (
-          <div className="space-y-6">
-            <div className="text-center mb-8">
-              <Heading level={2} align="center" className="mb-2">Hey There !</Heading>
-              <Heading level={3} align="center">What is your name ?</Heading>
-            </div>
-            <Input
-              label="Full Name"
-              required
-              value={formData.fullName}
-              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-              placeholder="John Doe"
-            />
+ const renderStepContent = () => {
+  // Shared responsive spacing class
+  const stackClass = "space-y-6 sm:space-y-8";
+
+  switch (currentStep) {
+    case 1:
+      return (
+        <div className={stackClass}>
+          <div className="text-center">
+            <Heading level={2} className="text-2xl sm:text-3xl font-bold mb-2">
+              Hey There!
+            </Heading>
+            <Heading level={3} className="text-gray-600 text-base sm:text-lg">
+              What is your name?
+            </Heading>
+          </div>
+          <Input
+            label="Full Name"
+            required
+            value={formData.fullName}
+            onChange={(e) =>
+              setFormData({ ...formData, fullName: e.target.value })
+            }
+            placeholder="John Doe"
+          />
+          <Button
+            onClick={handleNext}
+            disabled={!formData.fullName}
+            fullWidth
+            size="lg"
+            className="h-12 sm:h-14 text-lg"
+          >
+            Next
+          </Button>
+        </div>
+      );
+
+    case 2:
+      return (
+        <div className={stackClass}>
+          <div className="text-center">
+            <Heading level={3} className="text-xl sm:text-2xl">
+              What is your Gender?
+            </Heading>
+          </div>
+          <Select
+            label="Gender"
+            required
+            value={formData.gender}
+            onChange={(e) =>
+              setFormData({ ...formData, gender: e.target.value })
+            }
+          >
+            <option value="">Select Gender</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </Select>
+          {/* Grid stays 2 cols, but gap is smaller on mobile */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <Button
+              onClick={handleBack}
+              variant="secondary"
+              fullWidth
+              size="lg"
+            >
+              Back
+            </Button>
+            <Button onClick={handleNext} fullWidth size="lg">
+              Next
+            </Button>
+          </div>
+        </div>
+      );
+
+    case 3:
+    case 4:
+      const isStep3 = currentStep === 3;
+      return (
+        <div className={stackClass}>
+          <div className="text-center">
+            <Heading level={3} className="text-xl sm:text-2xl">
+              {isStep3 ? "Enter your Birth Date" : "Enter your Birth Time"}
+            </Heading>
+          </div>
+          <Input
+            label={isStep3 ? "Date of Birth" : "Birth Time"}
+            type={isStep3 ? "date" : "time"}
+            required
+            value={isStep3 ? formData.dateOfbirth : formData.timeOfbirth}
+            onChange={(e) =>
+              setFormData({ 
+                ...formData, 
+                [isStep3 ? "dateOfbirth" : "timeOfbirth"]: e.target.value 
+              })
+            }
+          />
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <Button onClick={handleBack} variant="secondary" fullWidth size="lg">
+              Back
+            </Button>
             <Button
               onClick={handleNext}
-              disabled={!formData.fullName}
+              disabled={isStep3 ? !formData.dateOfbirth : !formData.timeOfbirth}
               fullWidth
               size="lg"
             >
               Next
             </Button>
           </div>
-        );
+        </div>
+      );
 
-      case 2:
-        return (
-          <div className="space-y-6">
-            <div className="text-center mb-8">
-              <Heading level={3} align="center">What is your Gender ?</Heading>
-            </div>
-            <Select
-              label="Gender"
+    case 5:
+      return (
+        <div className={stackClass}>
+          <div className="text-center">
+            <Heading level={3} className="text-xl sm:text-2xl">
+              What is your Birth Place?
+            </Heading>
+          </div>
+          <div className="relative">
+            <Input
+              label="Birth Place"
               required
-              value={formData.gender}
-              onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+              value={formData.placeOfBirth}
+              onChange={(e) => {
+                setFormData({
+                  ...formData,
+                  placeOfBirth: e.target.value,
+                  latitude: "",
+                  longitude: "",
+                });
+                fetchPlaceSuggestions(e.target.value);
+              }}
+              placeholder="Mumbai, India"
+            />
+            {placeSuggestions.length > 0 && (
+              <div className="absolute z-50 w-full mt-1 bg-white border rounded-xl shadow-xl max-h-48 sm:max-h-60 overflow-auto">
+                {placeSuggestions.map((s) => (
+                  <button
+                    key={s.placeId}
+                    type="button"
+                    onClick={() => handleSelectPlaceSuggestion(s.placeId, s.description)}
+                    className="w-full text-left px-4 py-3 text-sm hover:bg-indigo-50 border-b last:border-0 transition-colors"
+                  >
+                    {s.description}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <Button onClick={handleBack} variant="secondary" fullWidth size="lg">
+              Back
+            </Button>
+            <Button
+              onClick={handleGenerate}
+              disabled={!formData.latitude || submitting}
+              fullWidth
+              size="lg"
             >
-              <option value="">Select Gender</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Other">Other</option>
-            </Select>
-            <div className="grid grid-cols-2 gap-4">
-              <Button onClick={handleBack} variant="secondary" fullWidth size="lg">
-                Back
-              </Button>
-              <Button onClick={handleNext} fullWidth size="lg">
-                Next
-              </Button>
-            </div>
-          </div>
-        );
-
-      case 3:
-        return (
-          <div className="space-y-6">
-            <div className="text-center mb-8">
-              <Heading level={3} align="center">Enter your Birth Date ?</Heading>
-            </div>
-            <Input
-              label="Date of Birth"
-              type="date"
-              required
-              value={formData.dateOfbirth}
-              onChange={(e) => setFormData({ ...formData, dateOfbirth: e.target.value })}
-              placeholder="YYYY-MM-DD"
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <Button onClick={handleBack} variant="secondary" fullWidth size="lg">
-                Previous
-              </Button>
-              <Button onClick={handleNext} disabled={!formData.dateOfbirth} fullWidth size="lg">
-                Next
-              </Button>
-            </div>
-          </div>
-        );
-
-      case 4:
-        return (
-          <div className="space-y-6">
-            <div className="text-center mb-8">
-              <Heading level={3} align="center">Enter your Birth Time ?</Heading>
-            </div>
-            <Input
-              label="Birth Time"
-              type="time"
-              required
-              value={formData.timeOfbirth}
-              onChange={(e) => setFormData({ ...formData, timeOfbirth: e.target.value })}
-              placeholder="HH:MM"
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <Button onClick={handleBack} variant="secondary" fullWidth size="lg">
-                Previous
-              </Button>
-              <Button onClick={handleNext} disabled={!formData.timeOfbirth} fullWidth size="lg">
-                Next
-              </Button>
-            </div>
-          </div>
-        );
-
-      case 5:
-        return (
-          <div className="space-y-6">
-            <div className="text-center mb-8">
-              <Heading level={3} align="center">What is your Birth Place ?</Heading>
-            </div>
-            <div>
-              <Input
-                label="Birth Place"
-                required
-                value={formData.placeOfBirth}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setFormData({ ...formData, placeOfBirth: value, latitude: '', longitude: '' });
-                  fetchPlaceSuggestions(value);
-                }}
-                placeholder="Mumbai, Maharashtra, India"
-              />
-              {placesError && (
-                <p className="mt-1 text-sm text-red-500">{placesError}</p>
+              {submitting ? (
+                <Loader2 className="animate-spin mx-auto" size={20} />
+              ) : (
+                "Generate"
               )}
-              {isLoadingPlaces && (
-                <p className="mt-1 text-sm text-gray-500">Searching places...</p>
-              )}
-              {!isLoadingPlaces && placeSuggestions.length > 0 && (
-                <div className="mt-2 border rounded-md bg-white max-h-48 overflow-y-auto shadow-sm">
-                  {placeSuggestions.map((s) => (
-                    <button
-                      key={s.placeId}
-                      type="button"
-                      onClick={() => handleSelectPlaceSuggestion(s.placeId, s.description)}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
-                    >
-                      {s.description}
-                    </button>
+            </Button>
+          </div>
+        </div>
+      );
+
+    default:
+      return null;
+  }
+};
+
+  return (
+    <div className=" bg-gray-50 pb-20">
+      <main className="max-w-4xl mx-auto">
+        {!showForm ? (
+          <div className="space-y-8">
+            <div className="text-center space-y-2">
+              <h2 className="text-lg md:text-2xl font-black text-gray-900 ">
+                Janam Kundli
+              </h2>
+              <p className="text-sm md:text-base text-gray-500 font-medium">
+                Get your instant and accurate Vedic birth chart
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4 sm:px-0">
+              <Button
+                onClick={() => setShowForm(true)}
+                className="rounded-xl text-xs md:text-sm py-2 md:py-3 h-auto" // Smaller text and padding on mobile
+                variant="primary"
+              >
+                <Plus className="w-4 h-4 mr-2" /> Create New Kundli
+              </Button>
+
+              <Button
+                onClick={handleFetchFromProfile}
+                variant="secondary"
+                className="rounded-xl text-xs md:text-sm py-2 md:py-3 h-auto" // Matching size
+                disabled={profileFetching}
+              >
+                {profileFetching ? (
+                  <Loader2 className="animate-spin w-4 h-4 mr-2" />
+                ) : (
+                  "Use My Profile Details"
+                )}
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest px-2">
+                Recently Generated
+              </h3>
+              {historyLoading ? (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[1, 2, 3].map((i) => (
+                    <KundliCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : kundliHistory.length === 0 ? (
+                <div className="bg-white border-2 border-dashed border-gray-200 rounded-3xl p-12 text-center">
+                  <p className="text-gray-400 font-bold">
+                    No saved Kundlis found.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {kundliHistory.map((kundli) => (
+                    <KundliCard
+                      key={kundli.id}
+                      name={kundli.fullName}
+                      dob={new Date(kundli.dateOfbirth).toLocaleDateString()}
+                      birthPlace={kundli.placeOfBirth}
+                      onClick={() =>
+                        router.push(`/kundliReport?id=${kundli.id}`)
+                      }
+                    />
                   ))}
                 </div>
               )}
-              {formData.placeOfBirth && !formData.latitude && !formData.longitude && (
-                <p className="mt-1 text-xs text-gray-500">
-                  Please select a place from the suggestions so we can detect its exact location.
-                </p>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <Button onClick={handleBack} variant="secondary" fullWidth size="lg">
-                Previous
-              </Button>
-              <Button
-                onClick={handleGenerate}
-                disabled={!formData.placeOfBirth || !formData.latitude || !formData.longitude || submitting}
-                fullWidth
-                size="lg"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  'Generate'
-                )}
-              </Button>
             </div>
           </div>
-        );
-
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <div className="min-h-screen py-6 sm:py-8 bg-gray-50 relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Mobile header with menu button */}
-        <div className="flex items-center justify-between mb-4 lg:hidden">
-          <button
-            type="button"
-            onClick={() => setIsSidebarOpen(true)}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-            aria-label="Open menu"
-          >
-            <IoIosMore className="w-6 h-6 text-gray-800" />
-          </button>
-          <span className="w-6" aria-hidden="true" />
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-[300px_1fr] lg:gap-8 items-start">
-          {/* Sidebar - Desktop view */}
-          <div className="hidden lg:block">
-            <ProfileSidebar
-              userName={user?.fullName || "User"}
-              userEmail={user?.email || "Not provided"}
-              onLogout={handleLogout}
-            />
-          </div>
-
-          {/* Main Content */}
-          <div className="space-y-6">
-            {!showForm ? (
-              <>
-                {/* Header Section */}
-                <Card padding="lg">
-                  <Heading level={2} align="center" className="mb-2">
-                    Free Kundli Online
-                  </Heading>
-                  <p className="text-gray-600 text-center mb-6">
-                    Get instant & accurate, Janam Kundli
-                  </p>
-
-                  <div className="flex gap-4 justify-center">
-                    <Button onClick={() => setShowForm(true)} disabled={profileFetching}>
-                      + Create New Kundli
-                    </Button>
-                    <Button onClick={handleFetchFromProfile} disabled={profileFetching}>
-                      {profileFetching ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Loading...
-                        </>
-                      ) : (
-                        'Fetch From Profile'
-                      )}
-                    </Button>
-                  </div>
-                </Card>
-
-                {/* Saved Kundlis Grid */}
-                {historyLoading ? (
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {[1, 2].map((i) => (
-                      <KundliCardSkeleton key={i} />
-                    ))}
-                  </div>
-                ) : kundliHistory.length === 0 ? (
-                  <Card padding="lg">
-                    <div className="text-center py-12">
-                      <p className="text-gray-600 mb-4">No Kundli generated yet</p>
-                      <Button onClick={() => setShowForm(true)}>Create Your First Kundli</Button>
-                    </div>
-                  </Card>
-                ) : (
-                  <div className="grid md:grid-cols-3 gap-6">
-                    {kundliHistory.map((kundli) => (
-                      <KundliCard
-                        key={kundli.id}
-                        name={kundli.fullName}
-                        dob={formatDate(kundli.dateOfbirth)}
-                        birthPlace={kundli.placeOfBirth}
-                        onClick={() => handleViewKundli(kundli.id)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <Card padding="lg" className="max-w-2xl mx-auto">
-                <Heading level={2} align="center" className="mb-2">
-                  Free Kundli Online
-                </Heading>
-                <p className="text-gray-600 text-center mb-8">
-                  Get instant & accurate, Janam Kundli
-                </p>
-
-                <StepIndicator currentStep={currentStep} totalSteps={5} />
-
-                {renderStepContent()}
-              </Card>
-            )}
-          </div>
+        ) : (
+         
+  <div className="max-w-4xl mx-auto"> {/* Reduced max-width for better form readability */}
+    <Card className="rounded-lg sm:rounded-xl shadow-sm border-0 overflow-hidden bg-white">
+      <div className="p-5 sm:p-10">
+        <StepIndicator currentStep={currentStep} totalSteps={5} />
+        
+        <div className="mt-8">
+          {renderStepContent()}
         </div>
       </div>
+    </Card>
+</div>
+        )}
+      </main>
 
-      {/* Mobile sidebar overlay */}
-      {isSidebarOpen && (
-        <div className="fixed inset-0 z-40 flex lg:hidden">
-          <div
-            className="flex-1 bg-black/40"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-          <div className="w-80 max-w-full bg-transparent h-full flex flex-col">
-            <div className="bg-white shadow-xl h-full p-4 border-l border-[#FFD700] flex flex-col transition-transform duration-300 transform translate-x-0">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Menu</h2>
-                <button
-                  type="button"
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                  aria-label="Close menu"
-                >
-                  <RxCross2 className="w-5 h-5 text-gray-700" />
-                </button>
-              </div>
-              <div className="overflow-y-auto">
-                <ProfileSidebar
-                  userName={user?.fullName || "User"}
-                  userEmail={user?.email || "Not provided"}
-                  onLogout={handleLogout}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Toast Notification */}
       {toastProps.isVisible && (
         <Toast
           message={toastProps.message}

@@ -212,7 +212,7 @@ export default function AgoraCall({ callSession, onCallEnd }: AgoraCallProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-900 z-50 flex flex-col">
+    <div className="fixed inset-0 bg-white/30 backdrop-blur-sm z-50 flex flex-col">
       {/* Call Header */}
       <div className="bg-gray-800 text-white p-4 flex items-center justify-between">
         <div>
@@ -226,7 +226,7 @@ export default function AgoraCall({ callSession, onCallEnd }: AgoraCallProps) {
       </div>
 
       {/* Video Container */}
-      <div className="flex-1 relative bg-black">
+      <div className="flex-1 relative bg-white/30 backdrop-blur-sm">
         {/* Remote Video (Full Screen) */}
         <div ref={remoteVideoRef} className="absolute inset-0 bg-gray-800" />
 
@@ -239,7 +239,7 @@ export default function AgoraCall({ callSession, onCallEnd }: AgoraCallProps) {
 
         {/* Connecting Overlay */}
         {isConnecting && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="absolute inset-0 flex items-center justify-center bg-white/30 backdrop-blur-sm">
             <div className="text-white text-center">
               <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-white mx-auto mb-4"></div>
               <p>Connecting to call...</p>

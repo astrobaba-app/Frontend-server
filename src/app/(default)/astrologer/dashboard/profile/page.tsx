@@ -152,10 +152,10 @@ export default function AstrologerProfilePage() {
   };
 
   return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+    <div className="px-4 py-0 sm:px-6 lg:px-8 lg:py-0">
       <div className="max-w-4xl mx-auto">
         <h1
-          className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8"
+          className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2"
           style={{ color: colors.black }}
         >
           Personal Details

@@ -51,7 +51,15 @@ const getFixedValue = (
 
 const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
   const { kundli } = kundliData;
-  const { basicDetails, planetary, personality, panchang, remedies, userRequest, horoscope } = kundli || {};
+  const {
+    basicDetails,
+    planetary,
+    personality,
+    panchang,
+    remedies,
+    userRequest,
+    horoscope,
+  } = kundli || {};
 
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "--";
@@ -121,21 +129,23 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
     return getValue(fromBasic || fromPersonality);
   };
 
-  const getSignLordFromSign = (sign: string | null | undefined): string | null => {
+  const getSignLordFromSign = (
+    sign: string | null | undefined
+  ): string | null => {
     if (!sign) return null;
     const map: Record<string, string> = {
-      "Aries": "Mars",
-      "Taurus": "Venus",
-      "Gemini": "Mercury",
-      "Cancer": "Moon",
-      "Leo": "Sun",
-      "Virgo": "Mercury",
-      "Libra": "Venus",
-      "Scorpio": "Mars",
-      "Sagittarius": "Jupiter",
-      "Capricorn": "Saturn",
-      "Aquarius": "Saturn",
-      "Pisces": "Jupiter",
+      Aries: "Mars",
+      Taurus: "Venus",
+      Gemini: "Mercury",
+      Cancer: "Moon",
+      Leo: "Sun",
+      Virgo: "Mercury",
+      Libra: "Venus",
+      Scorpio: "Mars",
+      Sagittarius: "Jupiter",
+      Capricorn: "Saturn",
+      Aquarius: "Saturn",
+      Pisces: "Jupiter",
     };
     return map[sign] || null;
   };
@@ -165,7 +175,11 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
     { label: "Nakshatra", value: getNakshatraName() },
     { label: "Ascendant", value: getAscendantSign(), isGrey: true },
     { label: "Sign", value: getPlanetaryValue("Moon", "sign") },
-    { label: "Ayanamsha", value: getFixedValue((basicDetails as any)?.ayanamsha, 2), isGrey: true },
+    {
+      label: "Ayanamsha",
+      value: getFixedValue((basicDetails as any)?.ayanamsha, 2),
+      isGrey: true,
+    },
   ];
 
   const kundliDetailsLeft: DisplayField[] = [
@@ -175,7 +189,12 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
     { label: "Tatva", value: getBasicDetailValue("tatva"), isGrey: true },
     { label: "Paya", value: getBasicDetailValue("paya") },
     { label: "Varna", value: getBasicDetailValue("varna"), isGrey: true },
-    { label: "Sign Lord", value: getValue(getSignLordFromSign(getPlanetaryValue("Moon", "sign") as string)) },
+    {
+      label: "Sign Lord",
+      value: getValue(
+        getSignLordFromSign(getPlanetaryValue("Moon", "sign") as string)
+      ),
+    },
     { label: "Yoni", value: getBasicDetailValue("yoni"), isGrey: true },
   ];
 
@@ -192,24 +211,48 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
 
   const favourableDetailsleft: DisplayField[] = [
     { label: "Name", value: getValue(userRequest?.fullName) },
-    { label: "Destiny Number", value: getNumerologyValue("destinyNumber"), isGrey: true },
+    {
+      label: "Destiny Number",
+      value: getNumerologyValue("destinyNumber"),
+      isGrey: true,
+    },
     { label: "Evil Number", value: getNumerologyValue("evilNumber") },
     { label: "Lucky Day", value: getNumerologyValue("luckyDay"), isGrey: true },
     { label: "Lucky Mantra", value: getNumerologyValue("luckyMantra") },
-    { label: "Lucky Stone", value: getNumerologyValue("luckyStone"), isGrey: true },
+    {
+      label: "Lucky Stone",
+      value: getNumerologyValue("luckyStone"),
+      isGrey: true,
+    },
     { label: "Friendly Number", value: getNumerologyValue("friendlyNumber") },
-    { label: "Radical Number", value: getNumerologyValue("radicalNumber"), isGrey: true },
+    {
+      label: "Radical Number",
+      value: getNumerologyValue("radicalNumber"),
+      isGrey: true,
+    },
   ];
 
   const favourableDetailsright: DisplayField[] = [
     { label: "Date", value: birthDate },
-    { label: "Name Number", value: getNumerologyValue("nameNumber"), isGrey: true },
+    {
+      label: "Name Number",
+      value: getNumerologyValue("nameNumber"),
+      isGrey: true,
+    },
     { label: "Lucky Color", value: getNumerologyValue("luckyColor") },
     { label: "Lucky God", value: getNumerologyValue("luckyGod"), isGrey: true },
     { label: "Lucky Metal", value: getNumerologyValue("luckyMetal") },
-    { label: "Lucky Substone", value: getNumerologyValue("luckySubstone"), isGrey: true },
+    {
+      label: "Lucky Substone",
+      value: getNumerologyValue("luckySubstone"),
+      isGrey: true,
+    },
     { label: "Neutral Number", value: getNumerologyValue("neutralNumber") },
-    { label: "Radical Ruler", value: getNumerologyValue("radicalRuler"), isGrey: true },
+    {
+      label: "Radical Ruler",
+      value: getNumerologyValue("radicalRuler"),
+      isGrey: true,
+    },
   ];
 
   const luckyInfo = [
@@ -234,28 +277,93 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
 
   return (
     <>
-      <div className="py-6">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="flex justify-center gap-8">
-            {luckyInfo.map((item, index) => (
-              <div key={index} className="text-center">
+      <div className="py-0 md:py-2 bg-gradient-to-b from-transparent to-gray-50/50">
+        <div className="max-w-6xl mx-auto ">
+          {/* Heading for context */}
+          <p className="text-center text-xs md:text-lg font-bold text-amber-600 uppercase tracking-[0.2em] mb-6 md:mb-8">
+            Your Cosmic Lucky Factors
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-8">
+            {luckyInfo.map((item, index) => {
+              // Define theme colors based on the item type
+              const themes = [
+                {
+                  bg: "from-amber-400 to-orange-500",
+                  shadow: "shadow-orange-200",
+                  icon: "✨",
+                },
+                {
+                  bg: "from-rose-500 to-red-600",
+                  shadow: "shadow-red-200",
+                  icon: "🎨",
+                },
+                {
+                  bg: "from-indigo-500 to-blue-600",
+                  shadow: "shadow-blue-200",
+                  icon: "💎",
+                },
+              ];
+              const theme = themes[index % 3];
+
+              return (
                 <div
-                  className={`w-16 h-16 rounded-lg flex items-center justify-center text-2xl font-bold text-white mb-2 mx-auto ${
-                    index % 3 === 0 ? "bg-[#FDB022]" : index % 3 === 1 ? "bg-red-500 text-sm" : "bg-[#FDB022] text-sm"
-                  }`}
+                  key={index}
+                  className="group relative bg-white rounded-2xl p-5 md:p-6 shadow-sm border border-gray-100 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 flex flex-row sm:flex-col items-center gap-4 sm:text-center"
                 >
-                  <p>{item.value ?? "--"}</p>
+                  {/* The "Medallion" Value Box */}
+                  <div
+                    className={`w-14 h-14 md:w-20 md:h-20 shrink-0 rounded-2xl flex items-center justify-center text-white shadow-lg ${theme.shadow} bg-gradient-to-br ${theme.bg} transition-transform group-hover:rotate-6`}
+                  >
+                    <div className="flex flex-col items-center">
+                      <span className="text-xs opacity-80 hidden md:block mb-1">
+                        {theme.icon}
+                      </span>
+                      <p
+                        className={`font-bold leading-tight ${
+                          item.value && item.value.length > 8
+                            ? "text-xs"
+                            : "text-lg md:text-2xl"
+                        }`}
+                      >
+                        {item.value ?? "--"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Labels */}
+                  <div className="flex flex-col sm:items-center min-w-0">
+                    <p className="text-sm md:text-base font-bold text-gray-900 mb-0.5">
+                      {item.label}
+                    </p>
+                    <p className="text-[10px] md:text-xs font-medium text-gray-400 uppercase tracking-widest">
+                      Favourable {item.label.split(" ")[1] || "Factor"}
+                    </p>
+                  </div>
+
+                  {/* Decorative background element for premium feel */}
+                  <div className="absolute top-2 right-2 opacity-[0.03] pointer-events-none group-hover:opacity-[0.07] transition-opacity">
+                    <svg
+                      width="40"
+                      height="40"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path d="M12 .5l2.426 7.465h7.847l-6.348 4.614 2.426 7.465-6.351-4.613-6.351 4.613 2.426-7.465-6.348-4.614h7.847z" />
+                    </svg>
+                  </div>
                 </div>
-                <p className="text-sm font-semibold text-gray-900">{item.label}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 max-w-6xl mx-auto">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Basic Details</h2>
+          <h2 className="text-lg md:text-xl font-bold text-gray-900">
+            Basic Details
+          </h2>
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -265,10 +373,16 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
                   {basicDetailsLeft.map((item, index) => (
                     <tr
                       key={index}
-                      className={`${item.isGrey ? "bg-gray-100" : ""} border-b border-gray-300 last:border-b-0`}
+                      className={`${
+                        item.isGrey ? "bg-gray-100" : ""
+                      } border-b border-gray-300 last:border-b-0`}
                     >
-                      <td className="py-2.5 px-4 font-normal text-gray-900 w-1/2">{item.label}</td>
-                      <td className="py-2.5 px-4 font-semibold text-gray-900 text-right">{item.value ?? "--"}</td>
+                      <td className="py-2.5 px-4 font-normal text-sm md:text-base text-gray-900 w-1/2">
+                        {item.label}
+                      </td>
+                      <td className="py-2.5 px-4 font-semibold text-sm md:text-base text-gray-900 text-right">
+                        {item.value ?? "--"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -280,10 +394,16 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
                   {basicDetailsRight.map((item, index) => (
                     <tr
                       key={index}
-                      className={`${item.isGrey ? "bg-gray-100" : ""} border-b border-gray-300 last:border-b-0`}
+                      className={`${
+                        item.isGrey ? "bg-gray-100" : ""
+                      } border-b border-gray-300 last:border-b-0`}
                     >
-                      <td className="py-2.5 px-4 font-normal text-gray-900 w-1/2">{item.label}</td>
-                      <td className="py-2.5 px-4 font-semibold text-gray-900 text-right">{item.value ?? "--"}</td>
+                      <td className="py-2.5 px-4 font-normal text-sm md:text-base text-gray-900 w-1/2">
+                        {item.label}
+                      </td>
+                      <td className="py-2.5 px-4 font-semibold text-sm md:text-base text-gray-900 text-right">
+                        {item.value ?? "--"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -295,7 +415,9 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 max-w-6xl mx-auto">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Kundli Details</h2>
+          <h2 className="md:text-xl text-lg font-bold text-gray-900">
+            Kundli Details
+          </h2>
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -305,10 +427,16 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
                   {kundliDetailsLeft.map((item, index) => (
                     <tr
                       key={index}
-                      className={`${item.isGrey ? "bg-gray-100" : ""} border-b border-gray-300 last:border-b-0`}
+                      className={`${
+                        item.isGrey ? "bg-gray-100" : ""
+                      } border-b border-gray-300 last:border-b-0`}
                     >
-                      <td className="py-2.5 px-4 font-normal text-gray-900 w-1/2">{item.label}</td>
-                      <td className="py-2.5 px-4 font-semibold text-gray-900 text-right">{item.value ?? "--"}</td>
+                      <td className="py-2.5 px-4 font-normal text-sm md:text-base text-gray-900 w-1/2">
+                        {item.label}
+                      </td>
+                      <td className="py-2.5 px-4 font-semibold text-sm md:text-base text-gray-900 text-right">
+                        {item.value ?? "--"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -320,10 +448,16 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
                   {kundliDetailsRight.map((item, index) => (
                     <tr
                       key={index}
-                      className={`${item.isGrey ? "bg-gray-100" : ""} border-b border-gray-300 last:border-b-0`}
+                      className={`${
+                        item.isGrey ? "bg-gray-100" : ""
+                      } border-b border-gray-300 last:border-b-0`}
                     >
-                      <td className="py-2.5 px-4 font-normal text-gray-900 w-1/2">{item.label}</td>
-                      <td className="py-2.5 px-4 font-semibold text-gray-900 text-right">{item.value ?? "--"}</td>
+                      <td className="py-2.5 px-4 font-normal text-sm md:text-base text-gray-900 w-1/2">
+                        {item.label}
+                      </td>
+                      <td className="py-2.5 px-4 font-semibold text-sm md:text-base text-gray-900 text-right">
+                        {item.value ?? "--"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -335,7 +469,9 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 max-w-6xl mx-auto">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Favourable</h2>
+          <h2 className="md:text-xl text-lg font-bold text-gray-900">
+            Favourable
+          </h2>
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -345,10 +481,16 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
                   {favourableDetailsleft.map((item, index) => (
                     <tr
                       key={index}
-                      className={`${item.isGrey ? "bg-gray-100" : ""} border-b border-gray-300 last:border-b-0`}
+                      className={`${
+                        item.isGrey ? "bg-gray-100" : ""
+                      } border-b border-gray-300 last:border-b-0`}
                     >
-                      <td className="py-2.5 px-4 font-normal text-gray-900 w-1/2">{item.label}</td>
-                      <td className="py-2.5 px-4 font-semibold text-gray-900 text-right">{item.value ?? "--"}</td>
+                      <td className="py-2.5 px-4 font-normal text-sm md:text-base text-gray-900 w-1/2">
+                        {item.label}
+                      </td>
+                      <td className="py-2.5 px-4 font-semibold text-sm md:text-base text-gray-900 text-right">
+                        {item.value ?? "--"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -360,10 +502,16 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
                   {favourableDetailsright.map((item, index) => (
                     <tr
                       key={index}
-                      className={`${item.isGrey ? "bg-gray-100" : ""} border-b border-gray-300 last:border-b-0`}
+                      className={`${
+                        item.isGrey ? "bg-gray-100" : ""
+                      } border-b border-gray-300 last:border-b-0`}
                     >
-                      <td className="py-2.5 px-4 font-normal text-gray-900 w-1/2">{item.label}</td>
-                      <td className="py-2.5 px-4 font-semibold text-gray-900 text-right">{item.value ?? "--"}</td>
+                      <td className="py-2.5 px-4 font-normal text-sm md:text-base text-gray-900 w-1/2">
+                        {item.label}
+                      </td>
+                      <td className="py-2.5 px-4 font-semibold text-sm md:text-base text-gray-900 text-right">
+                        {item.value ?? "--"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

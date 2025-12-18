@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import ProfileSidebar from "@/components/layout/UserProfileSidebar";
 import { colors } from "@/utils/colors";
-import { Star } from "lucide-react";
+import { Star, ArrowLeft, MessageSquare, Trash2, Edit3 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import {
@@ -18,12 +17,11 @@ import ReviewModal from "@/components/modals/ReviewModal";
 import DeleteReviewModal from "@/components/modals/DeleteReviewModal";
 import UserReviewSkeleton from "@/components/skeletons/UserReviewSkeleton";
 import Image from "next/image";
-import { IoIosMore } from "react-icons/io";
-import { RxCross2 } from "react-icons/rx";
 
 export default function MyReviewsPage() {
   const router = useRouter();
-  const { user, isLoggedIn, loading, logout } = useAuth();
+  const { user, isLoggedIn, loading } = useAuth();
+
   const [review, setReview] = useState<UserReview | null>(null);
   const [reviewLoading, setReviewLoading] = useState(true);
   const [selectedReview, setSelectedReview] = useState<UserReview | null>(null);
@@ -33,9 +31,7 @@ export default function MyReviewsPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast, showToast, hideToast } = useToast();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Redirect if not logged in
   useEffect(() => {
     if (!loading && !isLoggedIn) {
       router.push("/auth/login?redirect=/profile/reviews");
@@ -54,18 +50,14 @@ export default function MyReviewsPage() {
       const response = await getMyReview();
       if (response.success && response.review) {
         setReview(response.review);
+      } else {
+        setReview(null);
       }
-    } catch (error: any) {
-      // Silently handle errors - no toast for fetch
-      console.log("No review found or error fetching review");
+    } catch (error) {
+      setReview(null);
     } finally {
       setReviewLoading(false);
     }
-  };
-
-  const handleCardClick = (reviewData: UserReview) => {
-    setSelectedReview(reviewData);
-    setReviewModalOpen(true);
   };
 
   const handleUpdateReview = async (
@@ -75,28 +67,24 @@ export default function MyReviewsPage() {
   ) => {
     try {
       setIsUpdating(true);
-      const response = await updateReview(reviewId, { rating, review: reviewText });
+      const response = await updateReview(reviewId, {
+        rating,
+        review: reviewText,
+      });
       if (response.success) {
         showToast("Review updated successfully", "success");
         setReviewModalOpen(false);
-        fetchReview();
+        await fetchReview();
       }
     } catch (error: any) {
-      showToast(error.message || "Failed to update review", "error");
+      showToast(error?.message || "Failed to update review", "error");
     } finally {
       setIsUpdating(false);
     }
   };
 
-  const handleDeleteClick = (reviewId: string) => {
-    setReviewToDelete(reviewId);
-    setReviewModalOpen(false);
-    setDeleteModalOpen(true);
-  };
-
   const handleDeleteConfirm = async () => {
     if (!reviewToDelete) return;
-
     try {
       setIsDeleting(true);
       const response = await deleteReview(reviewToDelete);
@@ -107,241 +95,147 @@ export default function MyReviewsPage() {
         setReview(null);
       }
     } catch (error: any) {
-      showToast(error.message || "Failed to delete review", "error");
+      showToast(error?.message || "Failed to delete review", "error");
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const renderStars = (rating: number) => {
-    return (
-      <div className="flex gap-0.5">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            className="w-4 h-4"
-            fill={star <= rating ? colors.primeYellow : "none"}
-            stroke={star <= rating ? colors.primeYellow : colors.gray}
-          />
-        ))}
-      </div>
-    );
-  };
+  const renderStars = (rating: number) => (
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Star
+          key={star}
+          className="w-3.5 h-3.5 sm:w-4 h-4"
+          fill={star <= rating ? colors.primeYellow : "none"}
+          stroke={star <= rating ? colors.primeYellow : colors.gray}
+        />
+      ))}
+    </div>
+  );
 
-  const renderContent = () => {
-    if (loading || reviewLoading) {
-      return (
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-6 lg:grid-cols-[300px_1fr] lg:gap-8 items-start">
-            <div className="hidden lg:block">
-              <ProfileSidebar
-                userName={user?.fullName || "User"}
-                userEmail={user?.email || ""}
-                onLogout={logout}
-              />
+  return (
+    <div className=" bg-gray-50 pb-12">
+      <main className="max-w-4xl mx-auto px-4 pt-6">
+        {loading || reviewLoading ? (
+          <UserReviewSkeleton />
+        ) : !review ? (
+          /* Empty State */
+          <div className="bg-white rounded-md p-10 text-center shadow-sm border border-gray-100 mt-4">
+            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <MessageSquare className="w-10 h-10 text-gray-300" />
             </div>
-            <div className="bg-transparent lg:bg-white lg:rounded-xl lg:shadow-none">
-              <h1
-                className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-8"
-                style={{ color: colors.black }}
-              >
-                My Reviews
-              </h1>
-              <UserReviewSkeleton />
-            </div>
+            <h2 className="text-xl font-black text-gray-900 uppercase mb-2">
+              No Reviews Found
+            </h2>
+            <p className="text-sm text-gray-500 font-medium max-w-xs mx-auto">
+              You haven't shared your experience with our astrologers yet.
+            </p>
           </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-[300px_1fr] lg:gap-8 items-start">
-          {/* Sidebar - Desktop view */}
-          <div className="hidden lg:block">
-            <ProfileSidebar
-              userName={user?.fullName || "User"}
-              userEmail={user?.email || ""}
-              onLogout={logout}
-            />
+        ) : (
+          /* Review Card */
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-5 sm:p-8">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="relative w-14 h-14 rounded-2xl overflow-hidden bg-gray-100 shrink-0 border border-gray-50">
+                    {review.astrologer?.photo ? (
+                      <Image
+                        src={review.astrologer.photo}
+                        alt=""
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-yellow-400 flex items-center justify-center text-white font-bold text-xl shadow-inner">
+            {review.astrologer?.fullName.charAt(0).toUpperCase()}
           </div>
-
-          {/* Main Content */}
-          <div className="lg:w-full">
-              <h1
-                className="text-3xl font-bold mb-8"
-                style={{ color: colors.black }}
-              >
-                My Reviews
-              </h1>
-
-              {!review ? (
-                <div className="bg-white rounded-2xl shadow-md p-12 text-center">
-                  <Star
-                    className="w-24 h-24 mx-auto mb-4"
-                    style={{ color: colors.gray }}
-                  />
-                  <h2
-                    className="text-2xl font-bold mb-2"
-                    style={{ color: colors.black }}
-                  >
-                    No Reviews Yet
-                  </h2>
-                  <p style={{ color: colors.gray }}>
-                    You haven't written any reviews yet.
-                  </p>
-                </div>
-              ) : (
-              </div>
-            </div>
-          </div>
-        );
-      };
-
-      return (
-        <>
-          <div className="min-h-screen py-6 sm:py-8 bg-gray-50 relative">
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-              {/* Mobile header with menu button */}
-              <div className="flex items-center justify-between mb-4 lg:hidden">
-                <button
-                  type="button"
-                  onClick={() => setIsSidebarOpen(true)}
-                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                  aria-label="Open menu"
-                >
-                  <IoIosMore className="w-6 h-6 text-gray-800" />
-                </button>
-                <span className="w-6" aria-hidden="true" />
-              </div>
-
-              {renderContent()}
-            </div>
-          </div>
-
-          {/* Mobile sidebar overlay */}
-          {isSidebarOpen && (
-            <div className="fixed inset-0 z-40 flex lg:hidden">
-              <div
-                className="flex-1 bg-black/40"
-                onClick={() => setIsSidebarOpen(false)}
-              />
-              <div className="w-80 max-w-full bg-transparent h-full flex flex-col">
-                <div className="bg-white shadow-xl h-full p-4 border-l border-[#FFD700] flex flex-col transition-transform duration-300 transform translate-x-0">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold">Menu</h2>
-                    <button
-                      type="button"
-                      onClick={() => setIsSidebarOpen(false)}
-                      className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                      aria-label="Close menu"
-                    >
-                      <RxCross2 className="w-5 h-5 text-gray-700" />
-                    </button>
+                    )}
                   </div>
-                  <div className="overflow-y-auto">
-                    <ProfileSidebar
-                      userName={user?.fullName || "User"}
-                      userEmail={user?.email || ""}
-                      onLogout={logout}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Modals */}
-                    <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 shrink-0">
-                      {review.astrologer?.photo ? (
-                        <Image
-                          src={review.astrologer.photo}
-                          alt={review.astrologer.fullName}
-                          width={64}
-                          height={64}
-                          className="object-cover w-full h-full"
-                        />
-                      ) : (
-                        <div
-                          className="w-full h-full flex items-center justify-center text-2xl font-bold"
-                          style={{ color: colors.gray }}
-                        >
-                          {review.astrologer?.fullName?.charAt(0) || "A"}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <h3
-                        className="text-lg font-bold"
-                        style={{ color: colors.black }}
-                      >
-                        {review.astrologer?.fullName || "Astrologer"}
-                      </h3>
-                      <p className="text-sm" style={{ color: colors.gray }}>
-                        Reviewed on{" "}
-                        {new Date(review.createdAt).toLocaleDateString("en-US", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </p>
-                    </div>
-                    {renderStars(review.rating)}
-                  </div>
-
-                  {/* Review Text */}
-                  <p
-                    className="text-base leading-relaxed mb-4"
-                    style={{ color: colors.darkGray }}
-                  >
-                    {review.review}
-                  </p>
-
-                  {/* Astrologer Reply */}
-                  {review.reply && (
-                    <div
-                      className="rounded-lg p-4"
-                      style={{ backgroundColor: colors.offYellow }}
-                    >
-                      <p
-                        className="text-sm font-semibold mb-1"
-                        style={{ color: colors.black }}
-                      >
-                        Astrologer's Reply:
-                      </p>
-                      <p className="text-sm" style={{ color: colors.darkGray }}>
-                        {review.reply}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Edit Indicator */}
-                  {review.isEdited && (
-                    <p
-                      className="text-xs mt-3"
-                      style={{ color: colors.gray }}
-                    >
-                      (Edited)
+                  <div>
+                    <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight">
+                      {review.astrologer?.fullName}
+                    </h3>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase mt-0.5">
+                      {new Date(review.createdAt).toLocaleDateString("en-US", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
                     </p>
+                  </div>
+                </div>
+                <div className="bg-yellow-50 px-3 py-1.5 rounded-xl w-fit">
+                  {renderStars(review.rating)}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="relative">
+                  <p className="text-sm leading-relaxed text-gray-600 font-medium italic">
+                    "{review.review}"
+                  </p>
+                  {review.isEdited && (
+                    <span className="text-[10px] font-bold text-gray-400 uppercase mt-2 block">
+                      Edited
+                    </span>
                   )}
                 </div>
-              )}
+
+                {review.reply && (
+                  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                    <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-2">
+                      Astrologer's Response
+                    </p>
+                    <p className="text-xs leading-relaxed text-gray-500 font-medium">
+                      {review.reply}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="mt-8 pt-6 border-t border-gray-50 flex gap-3">
+                <button
+                  onClick={() => {
+                    setSelectedReview(review);
+                    setReviewModalOpen(true);
+                  }}
+                  className="flex-1 cursor-pointer flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-red-400 text-white text-[11px] md:text-[14px] font-black uppercase tracking-widest hover:bg-red-600 transition-colors"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  Edit
+                </button>
+                <button
+                  onClick={() => {
+                    setReviewToDelete(review.id);
+                    setDeleteModalOpen(true);
+                  }}
+                  className="flex-1 cursor-pointer flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-red-50 text-red-600 text-[11px] md:text-[14px] font-black uppercase tracking-widest hover:bg-red-50 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        )}
+      </main>
 
-      {/* Review Modal */}
+      {/* Modals & Toasts */}
       <ReviewModal
         isOpen={reviewModalOpen}
         onClose={() => setReviewModalOpen(false)}
         review={selectedReview}
         onUpdate={handleUpdateReview}
-        onDelete={handleDeleteClick}
+        onDelete={(id) => {
+          setReviewToDelete(id);
+          setReviewModalOpen(false);
+          setDeleteModalOpen(true);
+        }}
         isUpdating={isUpdating}
       />
 
-      {/* Delete Confirmation Modal */}
       <DeleteReviewModal
         isOpen={deleteModalOpen}
         onClose={() => {
@@ -352,10 +246,9 @@ export default function MyReviewsPage() {
         isLoading={isDeleting}
       />
 
-      {/* Toast Notification
-      {toast && (
+      {toast.show && (
         <Toast message={toast.message} type={toast.type} onClose={hideToast} />
-      )} */}
-    </>
+      )}
+    </div>
   );
 }

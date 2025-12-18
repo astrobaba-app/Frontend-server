@@ -8,7 +8,7 @@ import { colors } from "@/utils/colors";
 const Testimonials = () => {
   return (
     <section className="py-8 sm:py-12 md:py-16 bg-[#fafafa]">
-      <p className="text-center text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold mb-6 sm:mb-8 md:mb-10 px-4">
+      <p className="text-center text-3xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold mb-6 sm:mb-8 md:mb-10 px-4">
         Testimonials
       </p>
       <div className="max-w-6xl mx-auto px-4 sm:px-6">

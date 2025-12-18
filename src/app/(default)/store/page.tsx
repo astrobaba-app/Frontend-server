@@ -41,7 +41,7 @@ export default function StorePage() {
       setError(null);
       const data = await getAllProducts({
         page: 1,
-        limit: 3,
+        limit: 4,
         sortBy: "createdAt",
         sortOrder: "DESC",
       });
@@ -96,6 +96,7 @@ export default function StorePage() {
                 images={product.images}
                 averageRating={product.averageRating}
                 totalReviews={product.totalReviews}
+                stock={product.stock}
               />
             ))
           ) : (

@@ -19,8 +19,8 @@ const TodaysHoroscopeCard: React.FC<TodaysHoroscopeCardProps> = ({
       href={`/horoscope/${signSlug}`}
       className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:border-[#F0DF20] group"
     >
-      <div className="flex items-start gap-4">
-        <div className="shrink-0 w-16 h-16 flex items-center justify-center bg-yellow-50 rounded-lg">
+      <div className="flex items-start  gap-2 md:gap-4">
+        <div className="hidden md:flex  shrink-0 w-16 h-16 items-center justify-center bg-yellow-50 rounded-lg">
           <span className="text-4xl">⭐</span>
         </div>
         <div className="flex-1">

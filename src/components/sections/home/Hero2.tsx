@@ -20,8 +20,8 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ icon: Icon, title, descriptio
       <Icon className="w-6 h-6 text-white" />
     </div>
     <div>
-      <p style={{ color: colors.darkGray }} className="text-lg font-semibold">{title}</p>
-      <p style={{ color: colors.gray }} className="text-sm">{description}</p>
+      <p style={{ color: colors.darkGray }} className="text-md sm:text-lg font-semibold">{title}</p>
+      <p style={{ color: colors.gray }} className="text-xs sm:text-sm">{description}</p>
     </div>
   </div>
 )
@@ -44,16 +44,16 @@ const Hero2: React.FC = () => {
           </div>
 
           <div className="w-full lg:w-1/2">
-            <div style={{ background: colors.primeYellow }} className="inline-block text-white font-semibold py-1 px-3 sm:px-4 rounded-full mb-3 sm:mb-4 shadow-md text-xs sm:text-sm">
+            <div style={{ background: colors.primeYellow }} className="inline-block text-white font-semibold py-1 px-3 sm:px-4 rounded-full mb-3 sm:mb-4 shadow-md text-sm sm:text-md">
               <Lightbulb className="inline text-white w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
               AI-Powered Insights
             </div>
 
-            <p style={{ color: colors.darkGray }} className="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-2 sm:mb-3 leading-tight">
+            <p style={{ color: colors.darkGray }} className="text-3xl sm:text-3xl md:text-4xl font-extrabold mb-2 sm:mb-3 leading-tight">
               Meet Our 24/7 AI Astrologer
             </p>
 
-            <p style={{ color: colors.gray }} className="mb-4 sm:mb-5 max-w-md text-xs sm:text-sm">
+            <p style={{ color: colors.gray }} className="mb-4 sm:mb-5 max-w-md text-sm sm:text-sm">
               Get instant astrological guidance anytime with AI-powered astrologers. Each AI expert specializes in different domains—from Vedic astrology to tarot reading, love advice to career guidance.
             </p>
 
@@ -78,12 +78,12 @@ const Hero2: React.FC = () => {
               />
             </div>
 
-            <Link href="/aichat">
+           
               <Button
                 href="/aichat"
                 variant="custom"
                 size="md"
-                className="shadow-xl"
+                className="shadow-xl text-sm sm:text-base"
                 customColors={{
                   backgroundColor: colors.primeYellow,
                   textColor: colors.white,
@@ -95,7 +95,7 @@ const Hero2: React.FC = () => {
               >
                 Try AI Astrologer Now
               </Button>
-            </Link>
+            
           </div>
         </div>
       </div>

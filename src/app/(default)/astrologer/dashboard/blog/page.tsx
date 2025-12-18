@@ -130,7 +130,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-xl">
+    <div className="max-w-4xl px-6 mx-auto bg-white rounded-lg shadow-xl">
       {toast && (
         <Toast
           message={toast.message}
@@ -204,7 +204,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
           </div>
         </label>
 
-        <div className="flex justify-end space-x-4">
+        <div className="flex justify-end mb-4 space-x-4">
           {/* Cancel Button (Using Button component) */}
 
           <Button
@@ -368,7 +368,7 @@ export default function AstrologerBlogPage() {
     // Display Blog Cards
 
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {blogs.map((blog) => (
           <div key={blog.id || blog._id} className="relative group">
             <div onClick={() => handleBlogClick(blog)} className="cursor-pointer">
@@ -437,7 +437,7 @@ export default function AstrologerBlogPage() {
   };
 
   return (
-    <div className="p-8">
+    <div className="px-8">
       {toast.show && (
         <Toast
           message={toast.message}

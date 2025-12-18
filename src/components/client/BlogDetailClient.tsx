@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { FiArrowLeft, FiHeart, FiEye, FiCalendar } from 'react-icons/fi';
 import { Blog, toggleBlogLike } from '@/store/api/general/blog';
@@ -73,13 +72,10 @@ export default function BlogDetailClient({ blog: initialBlog }: BlogDetailClient
         <article className="bg-white rounded-2xl shadow-lg overflow-hidden">
           {/* Featured Image */}
           <div className="relative h-[300px] sm:h-[400px] md:h-[500px] w-full">
-            <Image
+            <img
               src={blog.image}
               alt={blog.title}
-              fill
-              className="object-cover"
-              priority
-              sizes="(max-width: 1024px) 100vw, 1024px"
+              className="w-full h-full object-cover"
             />
           </div>
 
@@ -90,15 +86,14 @@ export default function BlogDetailClient({ blog: initialBlog }: BlogDetailClient
               <div className="flex items-center gap-4">
                 {blog.astrologer?.photo ? (
                   <div className="relative w-14 h-14 rounded-full overflow-hidden ring-2 ring-yellow-200">
-                    <Image
+                    <img
                       src={blog.astrologer.photo}
                       alt={blog.astrologer.fullName}
-                      fill
-                      className="object-cover"
+                      className="w-full h-full object-cover"
                     />
                   </div>
                 ) : (
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-yellow-200 to-yellow-300 flex items-center justify-center ring-2 ring-yellow-200">
+                  <div className="w-14 h-14 rounded-full bg-linear-to-br from-yellow-200 to-yellow-300 flex items-center justify-center ring-2 ring-yellow-200">
                     <span className="text-2xl font-bold text-gray-700">
                       {blog.astrologer?.fullName?.charAt(0) || 'A'}
                     </span>
@@ -176,7 +171,7 @@ export default function BlogDetailClient({ blog: initialBlog }: BlogDetailClient
 
             {/* Call to Action */}
             <div className="mt-12 pt-8 border-t border-gray-200">
-              <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-8 text-center">
+              <div className="bg-linear-to-br from-yellow-50 to-orange-50 rounded-2xl p-8 text-center">
                 <h3 className="text-2xl font-bold mb-3" style={{ color: colors.darkGray }}>
                   Want Personalized Guidance?
                 </h3>

@@ -6,7 +6,7 @@ import { FiDollarSign } from "react-icons/fi";
 
 export default function AstrologerEarningPage() {
   return (
-    <div className="p-8">
+    <div className="px-8">
       <div className="max-w-6xl">
         <h1 className="text-3xl font-bold mb-8" style={{ color: colors.black }}>
           My Earning

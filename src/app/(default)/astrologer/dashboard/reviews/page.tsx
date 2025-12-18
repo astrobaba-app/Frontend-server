@@ -158,7 +158,7 @@ export default function AstrologerReviewsPage() {
 
   return (
     <>
-      <div className="p-8">
+      <div className="px-8">
         <div className="max-w-6xl">
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold" style={{ color: colors.black }}>

@@ -35,17 +35,8 @@ export const BlogDetailsModal: React.FC<BlogDetailsModalProps> = ({
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
           <h2 className="text-2xl font-bold text-gray-900">Blog Details</h2>
           <div className="flex items-center gap-2">
-            {/* Edit Button */}
-            <button
-              onClick={() => {
-                onEdit(blog);
-                onClose();
-              }}
-              className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-              title="Edit Blog"
-            >
-              <FiEdit2 className="w-5 h-5" />
-            </button>
+           
+            
             
             {/* Delete Button */}
             <button
@@ -118,16 +109,7 @@ export const BlogDetailsModal: React.FC<BlogDetailsModalProps> = ({
 
           {/* Footer Actions */}
           <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end gap-3">
-            <Button
-              onClick={() => {
-                onEdit(blog);
-                onClose();
-              }}
-              variant="outline"
-              icon={<FiEdit2 className="w-4 h-4" />}
-            >
-              Edit Blog
-            </Button>
+           
             <Button
               onClick={onClose}
               variant="secondary"

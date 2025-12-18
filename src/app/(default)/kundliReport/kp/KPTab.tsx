@@ -27,38 +27,75 @@ interface CuspData {
 
 const KPTab: React.FC<KPTabProps> = ({ kundliData }) => {
   const getValue = (value: any) => {
-    if (value === null || value === undefined || value === "" || value === "--") return "--";
+    if (value === null || value === undefined || value === "" || value === "--")
+      return "--";
     return value;
   };
 
   // Helper function to get sign lord
   const getSignLord = (sign: string): string => {
     const signLords: Record<string, string> = {
-      'Aries': 'Mars', 'Taurus': 'Venus', 'Gemini': 'Mercury', 'Cancer': 'Moon',
-      'Leo': 'Sun', 'Virgo': 'Mercury', 'Libra': 'Venus', 'Scorpio': 'Mars',
-      'Sagittarius': 'Jupiter', 'Capricorn': 'Saturn', 'Aquarius': 'Saturn', 'Pisces': 'Jupiter'
+      Aries: "Mars",
+      Taurus: "Venus",
+      Gemini: "Mercury",
+      Cancer: "Moon",
+      Leo: "Sun",
+      Virgo: "Mercury",
+      Libra: "Venus",
+      Scorpio: "Mars",
+      Sagittarius: "Jupiter",
+      Capricorn: "Saturn",
+      Aquarius: "Saturn",
+      Pisces: "Jupiter",
     };
-    return signLords[sign] || '--';
+    return signLords[sign] || "--";
   };
 
   // Helper function to get nakshatra lord
   const getNakshatraLord = (nakshatra: string): string => {
     const nakshatraLords: Record<string, string> = {
-      'Ashwini': 'Ketu', 'Bharani': 'Venus', 'Krittika': 'Sun', 'Rohini': 'Moon',
-      'Mrigashira': 'Mars', 'Ardra': 'Rahu', 'Punarvasu': 'Jupiter', 'Pushya': 'Saturn',
-      'Ashlesha': 'Mercury', 'Magha': 'Ketu', 'Purva Phalguni': 'Venus', 'Uttara Phalguni': 'Sun',
-      'Hasta': 'Moon', 'Chitra': 'Mars', 'Swati': 'Rahu', 'Vishakha': 'Jupiter',
-      'Anuradha': 'Saturn', 'Jyeshtha': 'Mercury', 'Mula': 'Ketu', 'Purva Ashadha': 'Venus',
-      'Uttara Ashadha': 'Sun', 'Shravana': 'Moon', 'Dhanishta': 'Mars', 'Shatabhisha': 'Rahu',
-      'Purva Bhadrapada': 'Jupiter', 'Uttara Bhadrapada': 'Saturn', 'Revati': 'Mercury'
+      Ashwini: "Ketu",
+      Bharani: "Venus",
+      Krittika: "Sun",
+      Rohini: "Moon",
+      Mrigashira: "Mars",
+      Ardra: "Rahu",
+      Punarvasu: "Jupiter",
+      Pushya: "Saturn",
+      Ashlesha: "Mercury",
+      Magha: "Ketu",
+      "Purva Phalguni": "Venus",
+      "Uttara Phalguni": "Sun",
+      Hasta: "Moon",
+      Chitra: "Mars",
+      Swati: "Rahu",
+      Vishakha: "Jupiter",
+      Anuradha: "Saturn",
+      Jyeshtha: "Mercury",
+      Mula: "Ketu",
+      "Purva Ashadha": "Venus",
+      "Uttara Ashadha": "Sun",
+      Shravana: "Moon",
+      Dhanishta: "Mars",
+      Shatabhisha: "Rahu",
+      "Purva Bhadrapada": "Jupiter",
+      "Uttara Bhadrapada": "Saturn",
+      Revati: "Mercury",
     };
-    return nakshatraLords[nakshatra] || '--';
+    return nakshatraLords[nakshatra] || "--";
   };
 
   // KP star-lord and sub-lord helpers (mirroring astro-engine kp_system)
   const KP_NAKSHATRA_LORDS: string[] = [
-    'Ketu', 'Venus', 'Sun', 'Moon', 'Mars',
-    'Rahu', 'Jupiter', 'Saturn', 'Mercury',
+    "Ketu",
+    "Venus",
+    "Sun",
+    "Moon",
+    "Mars",
+    "Rahu",
+    "Jupiter",
+    "Saturn",
+    "Mercury",
   ];
 
   const KP_SUB_LORD_PERIODS: Record<string, number> = {
@@ -77,7 +114,7 @@ const KPTab: React.FC<KPTabProps> = ({ kundliData }) => {
 
   const getKPStarLord = (longitude: number): string => {
     const nakshatraNum = Math.floor((longitude % 360) / 13.333333333333334);
-    return KP_NAKSHATRA_LORDS[nakshatraNum % 9] || '--';
+    return KP_NAKSHATRA_LORDS[nakshatraNum % 9] || "--";
   };
 
   const getKPSubLord = (longitude: number): string => {
@@ -103,12 +140,16 @@ const KPTab: React.FC<KPTabProps> = ({ kundliData }) => {
       cumulative += lordProportion;
     }
 
-    return KP_NAKSHATRA_LORDS[startLordIndex] || '--';
+    return KP_NAKSHATRA_LORDS[startLordIndex] || "--";
   };
 
   // Helper function to calculate house from longitude
-  const getHouseFromLongitude = (planetLongitude: number, ascendantLongitude: number): number => {
-    let house = Math.floor((planetLongitude - ascendantLongitude + 360) % 360 / 30) + 1;
+  const getHouseFromLongitude = (
+    planetLongitude: number,
+    ascendantLongitude: number
+  ): number => {
+    let house =
+      Math.floor(((planetLongitude - ascendantLongitude + 360) % 360) / 30) + 1;
     if (house > 12) house -= 12;
     if (house < 1) house += 12;
     return house;
@@ -117,20 +158,21 @@ const KPTab: React.FC<KPTabProps> = ({ kundliData }) => {
   // Get KP data from planetary information
   const getPlanetKPData = (): PlanetKPData[] => {
     const planetary = kundliData?.planetary || {};
-    const ascendantLongitude = kundliData?.basicDetails?.ascendant?.longitude || 0;
-    
-    if (typeof planetary !== 'object' || Array.isArray(planetary)) {
+    const ascendantLongitude =
+      kundliData?.basicDetails?.ascendant?.longitude || 0;
+
+    if (typeof planetary !== "object" || Array.isArray(planetary)) {
       return [];
     }
-    
+
     return Object.values(planetary).map((planet: any) => {
       const longitude = planet.longitude || 0;
       const house = getHouseFromLongitude(longitude, ascendantLongitude);
       return {
-        name: planet.planet || '--',
+        name: planet.planet || "--",
         cusp: house,
-        sign: planet.sign || '--',
-        signLord: getSignLord(planet.sign || ''),
+        sign: planet.sign || "--",
+        signLord: getSignLord(planet.sign || ""),
         starLord: getKPStarLord(longitude),
         subLord: getKPSubLord(longitude),
       };
@@ -139,36 +181,70 @@ const KPTab: React.FC<KPTabProps> = ({ kundliData }) => {
 
   // Helper function to get sign from longitude
   const getSignFromLongitude = (longitude: number): string => {
-    const signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 
-                   'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
+    const signs = [
+      "Aries",
+      "Taurus",
+      "Gemini",
+      "Cancer",
+      "Leo",
+      "Virgo",
+      "Libra",
+      "Scorpio",
+      "Sagittarius",
+      "Capricorn",
+      "Aquarius",
+      "Pisces",
+    ];
     const signIndex = Math.floor(longitude / 30) % 12;
-    return signs[signIndex] || '--';
+    return signs[signIndex] || "--";
   };
 
   // Helper function to get nakshatra from longitude
   const getNakshatraFromLongitude = (longitude: number): string => {
     const nakshatras = [
-      'Ashwini', 'Bharani', 'Krittika', 'Rohini', 'Mrigashira', 'Ardra', 'Punarvasu', 
-      'Pushya', 'Ashlesha', 'Magha', 'Purva Phalguni', 'Uttara Phalguni', 'Hasta', 
-      'Chitra', 'Swati', 'Vishakha', 'Anuradha', 'Jyeshtha', 'Mula', 'Purva Ashadha', 
-      'Uttara Ashadha', 'Shravana', 'Dhanishta', 'Shatabhisha', 'Purva Bhadrapada', 
-      'Uttara Bhadrapada', 'Revati'
+      "Ashwini",
+      "Bharani",
+      "Krittika",
+      "Rohini",
+      "Mrigashira",
+      "Ardra",
+      "Punarvasu",
+      "Pushya",
+      "Ashlesha",
+      "Magha",
+      "Purva Phalguni",
+      "Uttara Phalguni",
+      "Hasta",
+      "Chitra",
+      "Swati",
+      "Vishakha",
+      "Anuradha",
+      "Jyeshtha",
+      "Mula",
+      "Purva Ashadha",
+      "Uttara Ashadha",
+      "Shravana",
+      "Dhanishta",
+      "Shatabhisha",
+      "Purva Bhadrapada",
+      "Uttara Bhadrapada",
+      "Revati",
     ];
     const nakshatraIndex = Math.floor(longitude / 13.333333) % 27;
-    return nakshatras[nakshatraIndex] || '--';
+    return nakshatras[nakshatraIndex] || "--";
   };
 
   // Generate Cusp data from house cusps
   const getCuspData = (): CuspData[] => {
     const houses = (kundliData as any)?.astroDetails?.houses;
     const cusps: CuspData[] = [];
-    
+
     if (houses && houses.cusps && Array.isArray(houses.cusps)) {
       for (let i = 0; i < 12; i++) {
         const cuspLongitude = houses.cusps[i] || 0;
         const sign = getSignFromLongitude(cuspLongitude);
         const nakshatra = getNakshatraFromLongitude(cuspLongitude);
-        
+
         cusps.push({
           cusp: i + 1,
           degree: cuspLongitude,
@@ -184,14 +260,14 @@ const KPTab: React.FC<KPTabProps> = ({ kundliData }) => {
         cusps.push({
           cusp: i,
           degree: 0,
-          sign: '--',
-          signLord: '--',
-          starLord: '--',
-          subLord: '--',
+          sign: "--",
+          signLord: "--",
+          starLord: "--",
+          subLord: "--",
         });
       }
     }
-    
+
     return cusps;
   };
 
@@ -199,28 +275,33 @@ const KPTab: React.FC<KPTabProps> = ({ kundliData }) => {
   const getDayLord = (): string => {
     const weekday = kundliData?.panchang?.weekday;
     const dayLords: Record<string, string> = {
-      'Sunday': 'Sun', 'Monday': 'Moon', 'Tuesday': 'Mars', 'Wednesday': 'Mercury',
-      'Thursday': 'Jupiter', 'Friday': 'Venus', 'Saturday': 'Saturn'
+      Sunday: "Sun",
+      Monday: "Moon",
+      Tuesday: "Mars",
+      Wednesday: "Mercury",
+      Thursday: "Jupiter",
+      Friday: "Venus",
+      Saturday: "Saturn",
     };
-    return weekday ? (dayLords[weekday] || '--') : '--';
+    return weekday ? dayLords[weekday] || "--" : "--";
   };
 
   // Get ruling planets data
   const getRulingPlanets = () => {
     const planetary = kundliData?.planetary || {};
     const ascendant = kundliData?.basicDetails?.ascendant;
-    
+
     // Get Moon data
     const moonData = (planetary as any)?.Moon;
-    const moonSign = moonData?.sign || '--';
+    const moonSign = moonData?.sign || "--";
     const moonLongitude = moonData?.longitude || 0;
-    const moonNakshatra = moonData?.nakshatra || '--';
-    
+    const moonNakshatra = moonData?.nakshatra || "--";
+
     // Get Ascendant data
-    const ascSign = ascendant?.sign || '--';
+    const ascSign = ascendant?.sign || "--";
     const ascLongitude = ascendant?.longitude || 0;
     const ascNakshatra = getNakshatraFromLongitude(ascLongitude);
-    
+
     return {
       signLord: {
         mo: getSignLord(moonSign),
@@ -243,13 +324,16 @@ const KPTab: React.FC<KPTabProps> = ({ kundliData }) => {
   const rulingPlanets = getRulingPlanets();
 
   return (
-    <div className="max-w-6xl mx-auto px-4">
+    <div className="max-w-6xl mx-auto px-2 md:px-4">
       {/* Bhav Chalit Chart and Ruling Planets */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         {/* Bhav Chalit Chart */}
         <div>
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Bhav Chalit Chart</h3>
-          <BhavChalitChart 
+          <h3 className="text-lg font-bold text-gray-900 mb-4">
+            Bhav Chalit Chart
+          </h3>
+
+          <BhavChalitChart
             planets={kundliData?.planetary}
             cusps={(kundliData as any)?.astroDetails?.houses?.cusps}
             ascendantLongitude={kundliData?.basicDetails?.ascendant?.longitude}
@@ -257,61 +341,128 @@ const KPTab: React.FC<KPTabProps> = ({ kundliData }) => {
         </div>
 
         {/* Ruling Planets */}
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Ruling Planets</h3>
-          <div className="bg-white rounded-lg border border-gray-300">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-yellow-50">
-                  <th className="border border-gray-300 px-4 py-2.5 text-center text-sm font-semibold text-gray-700 w-1/4">
-                    Planet
-                  </th>
-                  <th className="border border-gray-300 px-4 py-2.5 text-center text-sm font-semibold text-gray-700 w-1/4">
-                    Sign Lord
-                  </th>
-                  <th className="border border-gray-300 px-4 py-2.5 text-center text-sm font-semibold text-gray-700 w-1/4">
-                    Star Lord
-                  </th>
-                  <th className="border border-gray-300 px-4 py-2.5 text-center text-sm font-semibold text-gray-700 w-1/4">
-                    Sub Lord
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="bg-white">
-                  <td className="border border-gray-300 px-4 py-2.5 text-center text-sm font-semibold text-gray-800">
-                    Mo
-                  </td>
-                  <td className="border border-gray-300 px-4 py-2.5 text-center text-sm text-gray-800">
-                    {getValue(rulingPlanets.signLord.mo) || ' -- '}
-                  </td>
-                  <td className="border border-gray-300 px-4 py-2.5 text-center text-sm text-gray-800">
-                    {getValue(rulingPlanets.starLord.mo) || ' -- '}
-                  </td>
-                  <td className="border border-gray-300 px-4 py-2.5 text-center text-sm text-gray-800">
-                    {getValue(rulingPlanets.subLord.mo) || ' -- '}
-                  </td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="border border-gray-300 px-4 py-2.5 text-center text-sm font-semibold text-gray-800">
-                    Asc
-                  </td>
-                  <td className="border border-gray-300 px-4 py-2.5 text-center text-sm text-gray-800">
-                    {getValue(rulingPlanets.signLord.asc) || ' -- '}
-                  </td>
-                  <td className="border border-gray-300 px-4 py-2.5 text-center text-sm text-gray-800">
-                    {getValue(rulingPlanets.starLord.asc) || ' -- '}
-                  </td>
-                  <td className="border border-gray-300 px-4 py-2.5 text-center text-sm text-gray-800">
-                    {getValue(rulingPlanets.subLord.asc) || ' -- '}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <div className="border-t border-gray-300 p-3 bg-white">
-              <div className="flex justify-between items-center px-4">
-                <span className="text-sm font-semibold text-gray-700">Day Lord</span>
-                <span className="text-sm text-gray-800">{getValue(rulingPlanets.dayLord) || ' -- '}</span>
+        <div className="w-full">
+          <h3 className="text-lg font-bold text-gray-900 mb-4 border-l-4 border-yellow-400 pl-3">
+            Ruling Planets
+          </h3>
+
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            {/* Table View: Hidden on Mobile (hidden), shown on Tablet/PC (md:block) */}
+            <div className="hidden md:block">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-yellow-50/50">
+                    <th className="border-b border-gray-200 px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-600">
+                      Planet
+                    </th>
+                    <th className="border-b border-gray-200 px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-600">
+                      Sign Lord
+                    </th>
+                    <th className="border-b border-gray-200 px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-600">
+                      Star Lord
+                    </th>
+                    <th className="border-b border-gray-200 px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-600">
+                      Sub Lord
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {[
+                    {
+                      label: "Mo",
+                      sign: rulingPlanets.signLord.mo,
+                      star: rulingPlanets.starLord.mo,
+                      sub: rulingPlanets.subLord.mo,
+                    },
+                    {
+                      label: "Asc",
+                      sign: rulingPlanets.signLord.asc,
+                      star: rulingPlanets.starLord.asc,
+                      sub: rulingPlanets.subLord.asc,
+                    },
+                  ].map((row, idx) => (
+                    <tr
+                      key={idx}
+                      className="hover:bg-gray-50/50 transition-colors"
+                    >
+                      <td className="px-4 py-3 text-center text-sm font-bold text-gray-900 bg-gray-50/30">
+                        {row.label}
+                      </td>
+                      <td className="px-4 py-3 text-center text-sm text-gray-700">
+                        {getValue(row.sign) || "--"}
+                      </td>
+                      <td className="px-4 py-3 text-center text-sm text-gray-700">
+                        {getValue(row.star) || "--"}
+                      </td>
+                      <td className="px-4 py-3 text-center text-sm text-gray-700">
+                        {getValue(row.sub) || "--"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Card View: Shown on Mobile (block), hidden on Tablet/PC (md:hidden) */}
+            <div className="block md:hidden divide-y divide-gray-100">
+              {[
+                {
+                  label: "Moon (Mo)",
+                  sign: rulingPlanets.signLord.mo,
+                  star: rulingPlanets.starLord.mo,
+                  sub: rulingPlanets.subLord.mo,
+                },
+                {
+                  label: "Ascendant (Asc)",
+                  sign: rulingPlanets.signLord.asc,
+                  star: rulingPlanets.starLord.asc,
+                  sub: rulingPlanets.subLord.asc,
+                },
+              ].map((item, idx) => (
+                <div key={idx} className="p-4">
+                  <div className="text-sm font-bold text-yellow-700 mb-3 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-yellow-400"></div>
+                    {item.label}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <div className="text-[10px] uppercase text-gray-400 font-bold mb-1">
+                        Sign Lord
+                      </div>
+                      <div className="text-sm font-medium text-gray-800 bg-gray-50 rounded py-1">
+                        {getValue(item.sign) || "--"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase text-gray-400 font-bold mb-1">
+                        Star Lord
+                      </div>
+                      <div className="text-sm font-medium text-gray-800 bg-gray-50 rounded py-1">
+                        {getValue(item.star) || "--"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase text-gray-400 font-bold mb-1">
+                        Sub Lord
+                      </div>
+                      <div className="text-sm font-medium text-gray-800 bg-gray-50 rounded py-1">
+                        {getValue(item.sub) || "--"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Common Footer (Day Lord) */}
+            <div className="bg-gray-50/80 p-4 border-t border-gray-200">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-bold text-gray-700 uppercase tracking-tight">
+                  Day Lord
+                </span>
+                <span className="px-3 py-1 bg-white border border-yellow-200 rounded-full text-sm font-semibold text-yellow-700 shadow-sm">
+                  {getValue(rulingPlanets.dayLord) || "--"}
+                </span>
               </div>
             </div>
           </div>
@@ -320,7 +471,7 @@ const KPTab: React.FC<KPTabProps> = ({ kundliData }) => {
 
       {/* Planets Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-3 md:px-6 py-4 border-b border-gray-200">
           <h2 className="text-xl font-bold text-gray-900">Planets</h2>
         </div>
         <div className="overflow-x-auto">
@@ -411,7 +562,7 @@ const KPTab: React.FC<KPTabProps> = ({ kundliData }) => {
                     {cusp.cusp}
                   </td>
                   <td className="border border-gray-300 px-3 py-2 text-center text-sm text-gray-800">
-                    {cusp.degree > 0 ? `${cusp.degree.toFixed(2)}°` : '--'}
+                    {cusp.degree > 0 ? `${cusp.degree.toFixed(2)}°` : "--"}
                   </td>
                   <td className="border border-gray-300 px-3 py-2 text-center text-sm text-gray-800">
                     {getValue(cusp.sign)}
