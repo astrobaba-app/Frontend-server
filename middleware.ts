@@ -30,7 +30,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // Get tokens from cookies (backend sets 'token' for both user and astrologer)
-  const token = request.cookies.get('token')?.value;
+  const token = request.cookies.get('token_middleware')?.value;
   const hasToken = !!token;
 
   // Check if the current route is protected for users
