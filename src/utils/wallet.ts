@@ -2,7 +2,7 @@
  * Wallet utility functions for Razorpay integration and wallet management
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6001/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export interface WalletBalance {
   balance: number;
