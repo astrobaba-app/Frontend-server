@@ -241,7 +241,7 @@ export default function RechargeModal({
           </div>
 
           {/* Coupon Code */}
-          <div>
+          {/* <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Coupon Code (Optional)
             </label>
@@ -259,7 +259,7 @@ export default function RechargeModal({
                 disabled={loading}
               />
             </div>
-          </div>
+          </div> */}
 
           {/* Error Message */}
           {error && (
@@ -271,7 +271,7 @@ export default function RechargeModal({
           {/* Info */}
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-800">
-              💡 Your wallet will be credited instantly after successful payment
+               Your wallet will be credited instantly after successful payment
             </p>
           </div>
         </div>

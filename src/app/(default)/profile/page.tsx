@@ -56,8 +56,24 @@ export default function MyProfilePage() {
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const dateOfbirth = `${formData.year}-${formData.month}-${formData.day}`;
-      const timeOfbirth = `${formData.hour}:${formData.minute}`;
+      // Validate and construct date of birth
+      let dateOfbirth: string | undefined;
+      if (formData.year && formData.month && formData.day) {
+        const dateStr = `${formData.year}-${formData.month}-${formData.day}`;
+        const dateObj = new Date(dateStr);
+        if (!isNaN(dateObj.getTime())) {
+          dateOfbirth = dateStr;
+        } else {
+          showToast("Invalid date of birth", "error");
+          return;
+        }
+      }
+
+      // Validate and construct time of birth
+      let timeOfbirth: string | undefined;
+      if (formData.hour && formData.minute) {
+        timeOfbirth = `${formData.hour}:${formData.minute}`;
+      }
       
       const response = await updateProfile({
         fullName: formData.name,
