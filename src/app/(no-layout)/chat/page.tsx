@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo,Suspense } from 'react';
 import { Send, ArrowLeft, Phone, ChevronRight, X, MoreVertical, Video, Clock, AlertCircle, Wallet as WalletIcon } from 'lucide-react';
 import { IoChatbubblesSharp } from "react-icons/io5";
 import Image from 'next/image';
@@ -75,7 +75,7 @@ function groupMessagesByDate(messages: ChatMessageDto[]): MessageGroup[] {
   );
 }
 
-const ChatPage = () => {
+function ChatPage() {
   const { isLoggedIn, loading, user } = useAuth();
   const router = useRouter();
   const { showToast, toastProps, hideToast } = useToast();
@@ -1339,4 +1339,10 @@ const ChatPage = () => {
   );
 };
 
-export default ChatPage;
+export default function chat(){
+  return (
+    <Suspense fallback={<div>Loading Chat...</div>}>
+      <ChatPage />
+    </Suspense>
+  );
+}

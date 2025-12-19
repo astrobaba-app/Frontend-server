@@ -11,8 +11,8 @@ import { useToast } from "@/hooks/useToast";
 import { colors } from "@/utils/colors";
 import { registerAstrologer } from "@/store/api/astrologer/auth";
 import { FiUploadCloud } from "react-icons/fi";
-
-export default function AstrologerRegister() {
+import { Suspense } from "react";
+ function AstrologerRegister() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -427,5 +427,13 @@ export default function AstrologerRegister() {
         />
       )}
     </div>
+  );
+}
+
+export default function AstrologerRegisterPage() {
+  return (
+    <Suspense fallback={<div>Loading Astrologers...</div>}>
+      <AstrologerRegister />
+    </Suspense>
   );
 }

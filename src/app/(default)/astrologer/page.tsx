@@ -10,7 +10,7 @@ import { colors } from '@/utils/colors';
 import Link from 'next/link';
 import { useToast } from '@/hooks/useToast';
 import Toast from '@/components/atoms/Toast';
-
+import { Suspense } from 'react';
 const CATEGORIES = [
   { id: 'all', label: 'All', icon: '✨' },
   { id: 'love', label: 'Love', icon: '❤️' },
@@ -67,7 +67,7 @@ interface AstrologersPageContentProps {
   mode: 'chat' | 'call';
 }
 
-export default function AstrologersPage() {
+function AstrologersPage() {
   const searchParams = useSearchParams();
   const mode = (searchParams.get('mode') as 'chat' | 'call') || 'chat';
   const { toast, showToast, hideToast } = useToast();
@@ -241,5 +241,12 @@ export default function AstrologersPage() {
         <Toast message={toast.message} type={toast.type} onClose={hideToast} />
       )}
     </div>
+  );
+}
+export default function AstrologerPage() {
+  return (
+    <Suspense fallback={<div>Loading Astrologers...</div>}>
+      <AstrologersPage />
+    </Suspense>
   );
 }

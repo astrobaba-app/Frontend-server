@@ -540,7 +540,7 @@ export default function HoroscopeDetailPage() {
 
     // 9. Remedies - For all periods (AI Enhanced)
     const remedies = horoscope.remedies;
-    const remedyDetails = [];
+   const remedyDetails: any[] = [];
 
     if (remedies && Array.isArray(remedies) && remedies.length > 0) {
       remedies.forEach((remedy: any) => {

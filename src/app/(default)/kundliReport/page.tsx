@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef,Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { getKundli, KundliResponse } from "@/store/api/kundli";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,7 +17,7 @@ import FreeReportTab from "./freeReport/FreeReportTab";
 import AstrologerCard from "@/components/card/AstrologerCard";
 import { getAllAstrologers, Astrologer as ApiAstrologer } from "@/store/api/general/astrologer";
 
-export default function KundliReportPage() {
+ function KundliReportPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { isLoggedIn, loading: authLoading } = useAuth();
@@ -217,5 +217,13 @@ export default function KundliReportPage() {
         <Toast message={toastProps.message} type={toastProps.type} onClose={hideToast} />
       )}
     </div>
+  );
+}
+
+export default function KundliReport() {
+  return (
+    <Suspense fallback={<div>Loading Kundli Report...</div>}>
+      <KundliReportPage />
+    </Suspense>
   );
 }

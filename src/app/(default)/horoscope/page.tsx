@@ -19,13 +19,13 @@ export default function HoroscopePage() {
   useEffect(() => {
     const fetchAllHoroscopes = async () => {
       try {
-        // Use Promise.all for faster parallel fetching instead of a for-loop
-        const promises = ZODIAC_SIGNS.map(async (sign) => {
+        const promises = ZODIAC_SIGNS.map(async (sign): Promise<HoroscopeOverview> => {
           try {
-            const data = await getDailyHoroscope(sign.slug as ZodiacSign);
+            // We use 'any' here or a custom interface to bypass the missing 'ai_enhanced' type in the store
+            const data: any = await getDailyHoroscope(sign.slug as ZodiacSign);
             const h = data?.horoscope;
 
-            // Mapping the dynamic response structure
+            // Mapping the dynamic response structure based on your JSON output
             const summary = 
               h?.ai_enhanced?.overview || 
               h?.predictions?.overall?.summary ||
@@ -37,6 +37,7 @@ export default function HoroscopePage() {
               dateDisplay: h ? `${h.day}, ${h.date}` : "Today",
             };
           } catch (error) {
+            console.error(`Error fetching for ${sign.slug}:`, error);
             return {
               slug: sign.slug,
               summary: `Check your ${sign.name} daily horoscope for insights on love, career, and health.`,
@@ -57,7 +58,6 @@ export default function HoroscopePage() {
     fetchAllHoroscopes();
   }, []);
 
-  // Helper function to get data for a specific sign
   const getSignData = (slug: string) => {
     return horoscopeOverviews.find(h => h.slug === slug);
   };
@@ -68,7 +68,6 @@ export default function HoroscopePage() {
       <section className="bg-white py-6 md:py-12">
         <div className="max-w-7xl mx-auto px-2 md:px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Left: Background Image and Description */}
             <div className="bg-yellow-50 rounded-2xl p-3 md:p-8">
               <div className="relative w-full h-64 mb-6 rounded-xl overflow-hidden shadow-inner">
                 <img 
@@ -83,7 +82,6 @@ export default function HoroscopePage() {
               </p>
             </div>
 
-            {/* Right: Zodiac Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {ZODIAC_SIGNS.map((sign) => (
                 <HoroscopeZodiacCard key={sign.slug} sign={sign} />
@@ -105,7 +103,6 @@ export default function HoroscopePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {loading ? (
-              // Skeleton Loading State
               ZODIAC_SIGNS.map((sign) => (
                 <div key={sign.slug} className="bg-white rounded-lg p-6 shadow-md animate-pulse border border-gray-100">
                   <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
@@ -121,7 +118,6 @@ export default function HoroscopePage() {
                     key={sign.slug}
                     sign={sign.name}
                     signSlug={sign.slug}
-                    // Uses dynamic date from API, falls back to constant dateRange if API is slow
                     dateRange={dynamicData?.dateDisplay || sign.dateRange}
                     description={dynamicData?.summary || ""}
                   />
@@ -152,7 +148,7 @@ export default function HoroscopePage() {
                   <p className="text-gray-700 text-sm md:text-base leading-relaxed">{faq.answer}</p>
                 </div>
               </details>
-            ))}
+            ))}   
           </div>
         </div>
       </section>

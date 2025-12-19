@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect,Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/atoms";
 import { colors } from "@/utils/colors";
-
-export default function CheckoutSuccessPage() {
+ function CheckoutSuccessPage() {
   const searchParams = useSearchParams();
   const orderNumber = searchParams.get("orderNumber");
 
@@ -108,5 +107,12 @@ export default function CheckoutSuccessPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }
+export default function CheckoutSuccess() {
+  return (
+    <Suspense fallback={<div>Loading Checkout Success...</div>}>
+      <CheckoutSuccessPage />
+    </Suspense>
+  );
+} 

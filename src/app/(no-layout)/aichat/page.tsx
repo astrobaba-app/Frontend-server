@@ -109,7 +109,7 @@ const AIChatPage = () => {
     stopVoiceTimer,
     hasSufficientBalance,
   } = useAIChatWallet({
-    userId: user?.id,
+    userId: user?.id ? String(user.id) : "",
     onInsufficientBalance: () => {
       setShowInsufficientBalanceModal(true);
       showToast("Insufficient balance. Please recharge your wallet.", "error");

@@ -11,8 +11,8 @@ import Toast from "@/components/atoms/Toast";
 import { useToast } from "@/hooks/useToast";
 import { FcGoogle } from "react-icons/fc";
 import { Button } from "@/components/atoms";
-
-export default function LoginPage() {
+import { Suspense } from "react";
+function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login, isLoggedIn } = useAuth();
@@ -321,3 +321,12 @@ export default function LoginPage() {
     </div>
   );
 }
+
+
+export default function Login() {
+  return (
+    <Suspense fallback={<div>Loading Astrologers...</div>}>
+      <LoginPage />
+    </Suspense>
+  );
+} 

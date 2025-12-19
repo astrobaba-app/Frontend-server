@@ -11,8 +11,9 @@ import { colors } from "@/utils/colors";
 import { createKundliMatching, type KundliMatchingRequest } from "@/store/api/kundlimatiching";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import api from "@/store/api";
+import { Suspense } from 'react';
 
-export default function KundliMatchingPage() {
+function KundliMatchingPage() {
   const router = useRouter();
   const { toast, showToast, hideToast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -629,5 +630,12 @@ export default function KundliMatchingPage() {
         <Toast message={toast.message} type={toast.type} onClose={hideToast} />
       )}
     </div>
+  );
+}
+export default function KundliMatching() {
+  return (
+    <Suspense fallback={<div>Loading Astrologers...</div>}>
+      <KundliMatchingPage />
+    </Suspense>
   );
 }

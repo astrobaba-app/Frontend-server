@@ -14,6 +14,7 @@ interface Product {
   productType: string;
   averageRating?: number;
   totalReviews?: number;
+  stock?: number;
 }
 
 export default function ProductsPage() {

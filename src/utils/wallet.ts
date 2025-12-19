@@ -9,6 +9,7 @@ export interface WalletBalance {
   totalRecharge: number;
   totalSpent: number;
   isActive: boolean;
+  totalAdded:number;  
 }
 
 export interface WalletTransaction {
@@ -21,6 +22,7 @@ export interface WalletTransaction {
   balanceBefore: number | null;
   balanceAfter: number | null;
   createdAt: string;
+  date: string;
 }
 
 export interface TransactionHistoryResponse {

@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react'; // Added Suspense
 import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import { ZODIAC_SIGNS, COMPATIBILITY_INTRO } from '@/constants/horoscope';
 
-export default function CompatibilityPage() {
+// 1. Move the logic into a sub-component
+function CompatibilityContent() {
   const searchParams = useSearchParams();
   const sign1Param = searchParams?.get('sign1');
   const sign2Param = searchParams?.get('sign2');
@@ -55,7 +55,7 @@ export default function CompatibilityPage() {
       </section>
 
       {/* Choose Your Sign */}
-      <section className="py-16 bg-[#FCF5CC">
+      <section className="py-16 bg-[#FCF5CC]">
         <div className="max-w-6xl mx-auto px-6">
           <h2 className="text-4xl font-bold text-gray-900 text-center mb-12">Choose Your Sign</h2>
 
@@ -69,7 +69,6 @@ export default function CompatibilityPage() {
                   } else if (!selectedSign2) {
                     setSelectedSign2(sign.slug);
                   } else {
-                    // Reset and start over
                     setSelectedSign1(sign.slug);
                     setSelectedSign2('');
                   }
@@ -96,5 +95,14 @@ export default function CompatibilityPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+// 2. Wrap the component in Suspense for the main export
+export default function CompatibilityPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <CompatibilityContent />
+    </Suspense>
   );
 }

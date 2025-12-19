@@ -25,6 +25,7 @@ export interface KutaDetails {
   male_attracts_female?: boolean;
   female_attracts_male?: boolean;
   count?: number;
+  enhanced_description?: string;
   tara_number?: number;
   male_lord?: string;
   female_lord?: string;
@@ -50,6 +51,11 @@ export interface AshtakootDetails {
   total_points: number;
   max_points: number;
   percentage: number;
+  male_moon_sign?: string;
+  female_moon_sign?: string;
+  male_moon_nakshatra?: string;
+  female_moon_nakshatra?: string;
+  complexity?: string;
   compatibility: string;
   recommendation: string;
   critical_issues: string[];

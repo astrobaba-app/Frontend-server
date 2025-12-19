@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { colors } from "@/utils/colors";
 import { type KundliMatchingData } from "@/store/api/kundlimatiching";
-
-export default function KundliMatchingReportPage() {
+import {Suspense} from 'react';
+function KundliMatchingReportPage() {
   const router = useRouter();
   const [matchingData, setMatchingData] = useState<KundliMatchingData | null>(null);
 
@@ -86,5 +86,14 @@ export default function KundliMatchingReportPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+
+export default function KundliMatchingReport() {
+  return (
+    <Suspense fallback={<div>Loading Astrologers...</div>}>
+      <KundliMatchingReportPage />
+    </Suspense>
   );
 }
