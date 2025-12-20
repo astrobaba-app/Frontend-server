@@ -4,7 +4,7 @@ import { AxiosResponse } from 'axios';
 // --- Interfaces Shared with Auth ---
 
 export interface AstrologerProfile {
-  id: number;
+  id: string;
   fullName: string;
   email: string;
   phoneNumber: string;

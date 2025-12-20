@@ -2,7 +2,7 @@ import api from '../index';
 import { AxiosResponse } from 'axios';
 
 export interface UserProfile {
-  id: number;
+  id: string;
   fullName?: string | null;
   email?: string | null;
   mobile: string;

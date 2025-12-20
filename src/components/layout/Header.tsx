@@ -60,19 +60,33 @@ const Header = () => {
   const [astrologerProfile, setAstrologerProfile] =
     useState<AstrologerProfile | null>(null);
 
-  const [isAstrologer, setIsAstrologer] = useState(false);
+  // Initialize auth state synchronously to prevent flash
+  const [isAstrologer, setIsAstrologer] = useState(() => {
+    if (typeof window !== "undefined") {
+      return !!localStorage.getItem("token_astrologer");
+    }
+    return false;
+  });
 
-  const [role, setRole] = useState<"user" | "astrologer" | null>(null);
+  const [role, setRole] = useState<"user" | "astrologer" | null>(() => {
+    if (typeof window !== "undefined") {
+      const astrologerToken = localStorage.getItem("token_astrologer");
+      const middlewareToken = localStorage.getItem("token_middleware");
+      if (astrologerToken) return "astrologer";
+      if (middlewareToken) return "user";
+    }
+    return null;
+  });
 
   useEffect(() => {
     const checkRoleAndLoadProfile = async () => {
       if (typeof window === "undefined") return;
 
-      const storedRole = localStorage.getItem("auth_role");
+      const astrologerToken = localStorage.getItem("token_astrologer");
+      const middlewareToken = localStorage.getItem("token_middleware");
 
-      setRole((storedRole as "user" | "astrologer") || null);
-
-      if (storedRole === "astrologer") {
+      if (astrologerToken) {
+        setRole("astrologer");
         try {
           const response = await getAstrologerProfile();
 
@@ -86,6 +100,10 @@ const Header = () => {
         } catch (error) {
           console.error("Failed to load astrologer profile:", error);
         }
+      } else if (middlewareToken) {
+        setRole("user");
+      } else {
+        setRole(null);
       }
 
       setAstrologerProfile(null);
@@ -99,12 +117,12 @@ const Header = () => {
 
     window.addEventListener("storage", handleRoleChange);
 
-    window.addEventListener("auth_role_change", handleRoleChange);
+    window.addEventListener("auth_change", handleRoleChange);
 
     return () => {
       window.removeEventListener("storage", handleRoleChange);
 
-      window.removeEventListener("auth_role_change", handleRoleChange);
+      window.removeEventListener("auth_change", handleRoleChange);
     };
   }, []);
 
@@ -187,13 +205,22 @@ const Header = () => {
                 <span className="hidden sm:inline">Profile</span>
               </Link>
             ) : (
-              <Link
-                href="/auth/login"
-                style={{ background: colors.primeYellow, color: colors.black }}
-                className="px-4 py-2 text-xs sm:text-sm font-bold rounded-full shadow-sm hover:brightness-95 transition-all"
-              >
-                Login
-              </Link>
+              <>
+                <Link
+                  href="/auth/login"
+                  style={{ background: colors.primeYellow, color: colors.black }}
+                  className="px-4 py-2 text-xs sm:text-sm font-bold rounded-full shadow-sm hover:brightness-95 transition-all"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/astrologer/signup"
+                  style={{ background: colors.primeRed, color: colors.white }}
+                  className="hidden sm:flex px-4 py-2 text-xs sm:text-sm font-bold rounded-full shadow-sm hover:brightness-95 transition-all"
+                >
+                  Register as Astrologer
+                </Link>
+              </>
             )}
 
             <button
@@ -229,7 +256,7 @@ const Header = () => {
       {/* Improved Mobile Menu Overlay */}
 
       <div
-        className={`fixed inset-0 z-[60] md:hidden transition-all duration-300 ${
+        className={`fixed inset-0 z-60 md:hidden transition-all duration-300 ${
           isOpen ? "visible" : "invisible"
         }`}
       >
@@ -319,6 +346,27 @@ const Header = () => {
               ))}
             </div>
 
+            {/* Auth Section (Mobile) */}
+            {!isSomeoneLoggedIn && (
+              <div className="p-4 space-y-2 border-t border-gray-200">
+                <Link
+                  href="/auth/login"
+                  onClick={() => setIsOpen(false)}
+                  style={{ background: colors.primeYellow, color: colors.black }}
+                  className="block w-full text-center px-4 py-3 text-sm font-bold rounded-full shadow-sm hover:brightness-95 transition-all"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/astrologer/signup"
+                  onClick={() => setIsOpen(false)}
+                  style={{ background: colors.primeRed, color: colors.white }}
+                  className="block w-full text-center px-4 py-3 text-sm font-bold rounded-full shadow-sm hover:brightness-95 transition-all"
+                >
+                  Register as Astrologer
+                </Link>
+              </div>
+            )}
 
            
           </div>

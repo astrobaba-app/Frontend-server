@@ -14,14 +14,14 @@ import {
   Bell,
   Settings,
   LogOut,
+  ChevronRight,
 } from "lucide-react";
 import { IoChatboxEllipsesOutline } from "react-icons/io5";
+
 interface AstrologerSidebarProps {
   profile: AstrologerProfile | null;
   onLogout: () => void;
 }
-
-const ACCENT_YELLOW = "#FFD700";
 
 export default function AstrologerSidebar({
   profile,
@@ -57,7 +57,7 @@ export default function AstrologerSidebar({
     },
     {
       icon: MessageSquare,
-      label: "My Consulations",
+      label: "My Consultations",
       href: "/astrologer/dashboard/consultations",
     },
     {
@@ -78,40 +78,43 @@ export default function AstrologerSidebar({
   ];
 
   return (
-    <div className="bg-white rounded-lg overflow-hidden w-full max-w-xs border border-[#FFD700] h-fit sticky top-4">
+    <div className="bg-white rounded-2xl overflow-hidden w-full border border-gray-100 shadow-sm transition-all duration-300">
       {/* Profile Section */}
-      <div className="bg-white p-6 text-center">
-        <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
-          {profile?.photo ? (
-            <img
-              src={profile.photo}
-              alt={profile.fullName}
-              className="w-full h-full rounded-full object-cover"
-            />
-          ) : (
-            /* Show a neutral pulse loader instead of a dummy icon */
-            <div className="w-full h-full bg-gray-200 animate-pulse" />
-          )}
-        </div>
-
-        {profile ? (
-          <>
-            <h3 className="text-xl font-semibold text-gray-900 mb-1">
-              {profile.fullName}
-            </h3>
-            <p className="text-sm text-gray-600">{profile.email}</p>
-          </>
-        ) : (
-          /* Skeleton text loaders while data is fetching */
-          <div className="flex flex-col items-center gap-2 animate-pulse">
-            <div className="h-5 w-32 bg-gray-200 rounded"></div>
-            <div className="h-4 w-40 bg-gray-100 rounded"></div>
+      <div className="p-6 bg-gradient-to-br from-yellow-50 to-white border-b border-gray-100">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-yellow-400 flex items-center justify-center overflow-hidden shrink-0">
+            {profile?.photo ? (
+              <img
+                src={profile.photo}
+                alt={profile.fullName}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-yellow-400 flex items-center justify-center text-white font-bold text-xl">
+                {profile?.fullName?.charAt(0).toUpperCase() || "A"}
+              </div>
+            )}
           </div>
-        )}
+          <div className="flex-1 min-w-0">
+            {profile ? (
+              <>
+                <p className="text-sm font-bold text-gray-900 truncate">
+                  {profile.fullName}
+                </p>
+                <p className="text-xs text-gray-500 truncate">{profile.email}</p>
+              </>
+            ) : (
+              <div className="flex flex-col gap-2 animate-pulse">
+                <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                <div className="h-3 w-32 bg-gray-100 rounded"></div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Menu Items */}
-      <div className="pt-2 pb-2">
+      <nav className="py-2">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
@@ -120,35 +123,36 @@ export default function AstrologerSidebar({
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-4 px-6 py-4 transition-all border-t border-[#f9f5e0]`}
-              style={{
-                backgroundColor: isActive ? ACCENT_YELLOW : "white",
-                borderBottom: "1px solid #FFD700",
-              }}
+              className={`flex items-center justify-between px-6 py-3.5 transition-all group ${
+                isActive 
+                  ? "bg-yellow-50 border-r-4 border-yellow-500" 
+                  : "hover:bg-gray-50 border-r-4 border-transparent"
+              }`}
             >
-              <Icon className="w-5 h-5" />
-              <span
-                className={`text-base font-medium ${
-                  isActive ? "text-gray-900" : "text-gray-800"
-                }`}
-              >
-                {item.label}
-              </span>
+              <div className="flex items-center gap-4">
+                <Icon className={`w-5 h-5 ${isActive ? "text-yellow-600" : "text-gray-500 group-hover:text-yellow-600"}`} />
+                <span className={`text-sm font-medium ${isActive ? "text-gray-900" : "text-gray-600 group-hover:text-gray-900"}`}>
+                  {item.label}
+                </span>
+              </div>
+              <ChevronRight className={`w-4 h-4 ${isActive ? "text-yellow-600" : "text-gray-300 group-hover:text-yellow-600"}`} />
             </Link>
           );
         })}
-      </div>
 
-      {/* Logout Button */}
-      <div className="p-0">
+        <div className="px-4 mt-2">
+          <div className="border-t border-gray-100 my-2"></div>
+        </div>
+
+        {/* Logout Button */}
         <button
           onClick={onLogout}
-          className="flex items-center gap-4 px-6 py-4 w-full transition-colors bg-white hover:bg-red-50"
+          className="flex items-center gap-4 px-6 py-3.5 w-full transition-colors text-red-500 hover:bg-red-50 group"
         >
-          <LogOut className="w-5 h-5 text-red-600" />
-          <span className="text-base font-medium text-red-600">Logout</span>
+          <LogOut className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+          <span className="text-sm font-semibold">Logout</span>
         </button>
-      </div>
+      </nav>
     </div>
   );
 }

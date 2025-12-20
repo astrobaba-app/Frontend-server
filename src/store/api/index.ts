@@ -9,8 +9,19 @@ const api: AxiosInstance = axios.create({
 
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Backend now relies on HTTP-only cookies for auth.
-    // We no longer attach any tokens from localStorage.
+    // Attach tokens from localStorage
+    if (typeof window !== 'undefined') {
+      const astrologerToken = localStorage.getItem('token_astrologer');
+      const middlewareToken = localStorage.getItem('token_middleware');
+      
+      // Use astrologer token if available, otherwise use middleware token
+      const token = astrologerToken || middlewareToken;
+      
+      if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+      }
+    }
+    
     if (config.data instanceof FormData) {
       delete config.headers["Content-Type"];
     } else {
@@ -29,21 +40,22 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       if (typeof window !== "undefined") {
-        const role = localStorage.getItem("auth_role");
         const currentPath = window.location.pathname;
+        const astrologerToken = localStorage.getItem("token_astrologer");
+        const middlewareToken = localStorage.getItem("token_middleware");
 
-        // Clear role on unauthorized
-        localStorage.removeItem("auth_role");
-
-        if (role === "astrologer") {
-          if (!currentPath.startsWith("/astrologer")) {
-            window.location.href = "/astrologer/login";
-          }
-        } else {
-          if (!currentPath.startsWith("/auth")) {
-            window.location.href = "/auth/login";
-          }
+        // Clear tokens on unauthorized
+        if (astrologerToken) {
+          localStorage.removeItem("token_astrologer");
+          localStorage.removeItem("astrologer_id");
+          window.location.href = "/astrologer/login";
+        } else if (middlewareToken) {
+          localStorage.removeItem("token_middleware");
+          localStorage.removeItem("user_id");
+          window.location.href = "/auth/login";
         }
+        
+        window.dispatchEvent(new Event("auth_change"));
       }
     }
     return Promise.reject(error);

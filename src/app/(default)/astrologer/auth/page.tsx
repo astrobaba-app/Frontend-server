@@ -8,11 +8,12 @@ export default function AstrologerRootPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const role = localStorage.getItem("auth_role");
+      const astrologerToken = localStorage.getItem("token_astrologer");
+      const middlewareToken = localStorage.getItem("token_middleware");
 
-      if (role === "astrologer") {
+      if (astrologerToken) {
         router.replace("/astrologer/dashboard");
-      } else if (role === "user") {
+      } else if (middlewareToken) {
         router.replace("/profile");
       } else {
         router.replace("/astrologer/login");

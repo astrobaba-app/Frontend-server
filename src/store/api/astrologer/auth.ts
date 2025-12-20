@@ -4,7 +4,7 @@ import { AxiosResponse } from 'axios';
 // --- Core Shared Interface ---
 
 export interface AstrologerProfile {
-  id: number;
+  id: string;
   fullName: string;
   email: string;
   phoneNumber: string;
@@ -72,7 +72,7 @@ export interface RegisterResponse {
   message: string;
   astrologer: AstrologerProfile;
   token: string;
-  middlewareToken: string;
+  astrologerToken: string;
 }
 
 export interface LoginRequest {
@@ -85,7 +85,7 @@ export interface LoginResponse {
   message: string;
   astrologer: AstrologerProfile;
   token: string;
-  middlewareToken: string;
+  astrologerToken: string;
 }
 
 export interface LogoutResponse {

@@ -38,13 +38,6 @@ const QUICK_LINKS: LinkItem[] = [
   { name: "Chat with Astrologer", href: "/chat" },
 ];
 
-const ACCOUNTS_LINKS: LinkItem[] = [
-  { name: "Login", href: "/auth/login" },
-  { name: "Register", href: "/auth/login" },
-  { name: "Profile", href: "/profile" },
-  { name: "Register As Astrologer", href: "/astrologer/signup" },
-];
-
 const CONTACT_INFO = {
   address: "IIEST SHIBPUR, Howrah, West Bengal",
   phone: "+91 4567891234",
@@ -145,7 +138,7 @@ const Footer: React.FC = () => {
       className="w-full text-white font-inter border-t border-gray-800"
     >
       <div className="max-w-7xl mx-auto py-10 sm:py-16 px-6 lg:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
           {/* Brand */}
           <div className="col-span-1 sm:col-span-2 lg:col-span-1 flex flex-col items-center sm:items-start text-center sm:text-left">
             <div className="w-full flex flex-col items-center sm:items-start space-y-3">
@@ -194,23 +187,6 @@ const Footer: React.FC = () => {
             </ul>
           </div>
 
-          <div className="space-y-4">
-            <p className="text-sm font-bold uppercase tracking-[0.15em] border-b border-gray-700 pb-2 inline-block">
-              Accounts
-            </p>
-            <ul className="space-y-3">
-              {ACCOUNTS_LINKS.map((link) => (
-                <li key={link.name}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 block"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
 
           {/* Contact */}
           <div className="space-y-4">

@@ -8,7 +8,7 @@ export function useAstrologerAuth() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("astrobaba_token");
+      const token = localStorage.getItem("token_astrologer");
       if (!token) {
         router.push("/astrologer/login");
       }
@@ -17,7 +17,7 @@ export function useAstrologerAuth() {
 
   const isAuthenticated = () => {
     if (typeof window !== "undefined") {
-      return !!localStorage.getItem("astrobaba_token");
+      return !!localStorage.getItem("token_astrologer");
     }
     return false;
   };

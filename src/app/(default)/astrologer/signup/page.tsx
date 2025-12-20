@@ -12,6 +12,7 @@ import {
   sendRegistrationOTP,
   verifyRegistrationOTP,
 } from "@/store/api/astrologer/auth";
+import { ArrowLeft } from "lucide-react";
 
 export default function AstrologerSignup() {
   const router = useRouter();
@@ -21,15 +22,17 @@ export default function AstrologerSignup() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
 
-  // Check if someone is already logged in via role flag
+  // Check if someone is already logged in
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const role = localStorage.getItem("auth_role");
-      if (role === "astrologer") {
+      const astrologerToken = localStorage.getItem("token_astrologer");
+      const middlewareToken = localStorage.getItem("token_middleware");
+      
+      if (astrologerToken) {
         router.push("/astrologer/dashboard");
         return;
       }
-      if (role === "user") {
+      if (middlewareToken) {
         router.push("/profile");
       }
     }
@@ -96,7 +99,7 @@ export default function AstrologerSignup() {
   };
 
   return (
-    <div className="relative flex items-center justify-center p-4">
+    <div className="min-h-screen relative flex items-center justify-center p-4">
       {/* Background Image */}
       <div className="absolute inset-0 -z-10">
         <Image
@@ -111,6 +114,15 @@ export default function AstrologerSignup() {
 
       {/* Signup Card */}
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        {/* Back Button */}
+        <button
+          onClick={() => router.push("/")}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-sm font-medium">Back</span>
+        </button>
+
         <h1
           className="text-3xl font-bold text-center mb-6"
           style={{ color: colors.black }}

@@ -7,6 +7,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
+import { RouteProtection } from "@/components/RouteProtection";
 import { usePathname } from "next/navigation";
 
 const inter = Inter({
@@ -30,8 +31,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
-  const NO_LAYOUT_ROUTES = ['/aichat', '/chat','/astrologer/live-chats'];
-  const shouldHideLayout = NO_LAYOUT_ROUTES.includes(pathname);
+  const NO_LAYOUT_ROUTES = [
+    '/aichat', '/chat', '/astrologer/live-chats', 
+    "/astrologer/signup", "/astrologer/login", "/astrologer/register"
+  ];
+    // Check if current path is in list OR starts with /astrologer/dashboard
+  const shouldHideLayout = NO_LAYOUT_ROUTES.includes(pathname) || pathname.startsWith('/astrologer/dashboard');
 
   return (
     <html lang="en">
@@ -48,11 +53,13 @@ export default function RootLayout({
       >
         <AuthProvider>
           <CartProvider>
-            {!shouldHideLayout && <Header />}
-            
-            {children}
-            {!shouldHideLayout && <Footer />}
-            {/* <ChatButton /> */}
+            <RouteProtection>
+              {!shouldHideLayout && <Header />}
+              
+              {children}
+              {!shouldHideLayout && <Footer />}
+              {/* <ChatButton /> */}
+            </RouteProtection>
           </CartProvider>
         </AuthProvider>
       </body>

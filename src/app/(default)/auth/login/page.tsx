@@ -29,9 +29,15 @@ function LoginPage() {
       return;
     }
     if (typeof window !== "undefined") {
-      const role = localStorage.getItem("auth_role");
-      if (role === "astrologer") {
+      const astrologerToken = localStorage.getItem("token_astrologer");
+      const middlewareToken = localStorage.getItem("token_middleware");
+      
+      if (astrologerToken) {
         router.push("/astrologer/dashboard");
+        return;
+      }
+      if (middlewareToken) {
+        router.push("/profile");
       }
     }
   }, [isLoggedIn, router]);
@@ -85,6 +91,14 @@ function LoginPage() {
     setLoading(true);
     try {
       const response = await verifyOtp(otpString);
+      
+      // Store middlewareToken and user id in localStorage
+      if (typeof window !== "undefined") {
+        localStorage.setItem("token_middleware", response.middlewareToken);
+        localStorage.setItem("user_id", response.user.id.toString());
+        window.dispatchEvent(new Event("auth_change"));
+      }
+      
       login(response.user, response.token, response.middlewareToken);
       sessionStorage.setItem("loginSuccess", "true");
       const redirectPath = searchParams.get("redirect") || "/";

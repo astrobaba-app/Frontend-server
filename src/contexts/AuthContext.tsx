@@ -19,23 +19,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // On mount, rely on cookies to determine if a user session exists.
+  // On mount, check if middlewareToken exists in localStorage
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const profileData = await getProfile();
-        setUser(profileData.user);
         if (typeof window !== 'undefined') {
-          localStorage.setItem('auth_role', 'user');
+          const token = localStorage.getItem('token_middleware');
+          if (token) {
+            const profileData = await getProfile();
+            setUser(profileData.user);
+          }
         }
       } catch (error) {
         console.error('Auth verification failed:', error);
         setUser(null);
         if (typeof window !== 'undefined') {
-          const role = localStorage.getItem('auth_role');
-          if (role === 'user') {
-            localStorage.removeItem('auth_role');
-          }
+          localStorage.removeItem('token_middleware');
+          localStorage.removeItem('user_id');
         }
       } finally {
         setLoading(false);
@@ -45,25 +45,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
   }, []);
 
-  const login = (userData: UserProfile, _token: string, _middlewareToken: string) => {
+  const login = (userData: UserProfile, _token: string, middlewareToken: string) => {
     setUser(userData);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('auth_role', 'user');
-      window.dispatchEvent(new Event('auth_role_change'));
+      localStorage.setItem('token_middleware', middlewareToken);
+      localStorage.setItem('user_id', userData.id.toString());
+      window.dispatchEvent(new Event('auth_change'));
     }
   };
 
   const logout = async () => {
+    setUser(null);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('token_middleware');
+      localStorage.removeItem('user_id');
+      window.dispatchEvent(new Event('auth_change'));
+    }
+    
+    // Call logout API in background (non-blocking)
     try {
       await logoutUser();
     } catch (error) {
       console.error('Logout API error:', error);
-    } finally {
-      setUser(null);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_role');
-        window.dispatchEvent(new Event('auth_role_change'));
-      }
     }
   };
 
@@ -71,10 +74,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const profileData = await getProfile();
       setUser(profileData.user);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('auth_role', 'user');
-        window.dispatchEvent(new Event('auth_role_change'));
-      }
     } catch (error) {
       console.error('Failed to refresh user:', error);
       await logout();

@@ -12,8 +12,8 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
   const router = useRouter();
 
   const handleLogout = async () => {
-    await logout();
-    router.push("/auth/login");
+    logout();
+    window.location.href = "/";
   };
 
   return (

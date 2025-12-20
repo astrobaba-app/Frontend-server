@@ -12,6 +12,7 @@ import { colors } from "@/utils/colors";
 import { registerAstrologer } from "@/store/api/astrologer/auth";
 import { FiUploadCloud } from "react-icons/fi";
 import { Suspense } from "react";
+import { ArrowLeft } from "lucide-react";
  function AstrologerRegister() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -37,15 +38,17 @@ import { Suspense } from "react";
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  // Check if someone is already logged in via role flag
+  // Check if someone is already logged in
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const role = localStorage.getItem('auth_role');
-      if (role === 'astrologer') {
+      const astrologerToken = localStorage.getItem('token_astrologer');
+      const middlewareToken = localStorage.getItem('token_middleware');
+      
+      if (astrologerToken) {
         router.push('/astrologer/dashboard');
         return;
       }
-      if (role === 'user') {
+      if (middlewareToken) {
         router.push('/profile');
         return;
       }
@@ -169,6 +172,15 @@ import { Suspense } from "react";
       <div className="max-w-4xl mx-auto">
 
         <div className="bg-white rounded-2xl shadow-lg p-8">
+          {/* Back Button */}
+          <button
+            onClick={() => router.push("/")}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="text-sm font-medium">Back</span>
+          </button>
+
           <h1
             className="text-3xl font-bold text-center mb-8"
             style={{ color: colors.black }}

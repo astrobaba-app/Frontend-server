@@ -9,6 +9,7 @@ import Toast from "@/components/atoms/Toast";
 import { useToast } from "@/hooks/useToast";
 import { colors } from "@/utils/colors";
 import { loginAstrologer } from "@/store/api/astrologer/auth";
+import { ArrowLeft } from "lucide-react";
 
 export default function AstrologerLogin() {
   const router = useRouter();
@@ -19,15 +20,17 @@ export default function AstrologerLogin() {
   });
   const [loading, setLoading] = useState(false);
 
-  // Check if someone is already logged in via role flag
+  // Check if someone is already logged in
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const role = localStorage.getItem('auth_role');
-      if (role === 'astrologer') {
+      const astrologerToken = localStorage.getItem('token_astrologer');
+      const middlewareToken = localStorage.getItem('token_middleware');
+      
+      if (astrologerToken) {
         router.push('/astrologer/dashboard');
         return;
       }
-      if (role === 'user') {
+      if (middlewareToken) {
         router.push('/profile');
       }
     }
@@ -60,18 +63,19 @@ export default function AstrologerLogin() {
       });
 
       if (response.success) {
-      if (typeof window !== "undefined") {
-        // Persist only the role; authentication itself is cookie-based
-        localStorage.setItem("auth_role", "astrologer");
-        window.dispatchEvent(new Event("auth_role_change"));
-      }
+        // Store astrologerToken and astrologer id in localStorage
+        if (typeof window !== "undefined") {
+          localStorage.setItem("token_astrologer", response.astrologerToken);
+          localStorage.setItem("astrologer_id", response.astrologer.id.toString());
+          window.dispatchEvent(new Event("auth_change"));
+        }
 
         showToast("Login successful! Redirecting to dashboard...", "success");
 
         // Redirect to dashboard
-      setTimeout(() => {
-        router.push("/astrologer/dashboard");
-      }, 1500);
+        setTimeout(() => {
+          router.push("/astrologer/dashboard");
+        }, 1500);
       }
     } catch (err: any) {
       showToast(err.message || "Failed to login", "error");
@@ -81,7 +85,7 @@ export default function AstrologerLogin() {
   };
 
   return (
-    <div className=" relative flex items-center justify-center p-4">
+    <div className="min-h-screen relative flex items-center justify-center p-4">
       {/* Background Image */}
       <div className="absolute inset-0 -z-10">
         <Image
@@ -96,6 +100,15 @@ export default function AstrologerLogin() {
 
       {/* Login Card */}
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        {/* Back Button */}
+        <button
+          onClick={() => router.push("/")}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-sm font-medium">Back</span>
+        </button>
+
         <h1
           className="text-3xl font-bold text-center mb-6"
           style={{ color: colors.black }}
