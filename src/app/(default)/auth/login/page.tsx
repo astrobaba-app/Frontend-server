@@ -12,7 +12,6 @@ import { useToast } from "@/hooks/useToast";
 import { FcGoogle } from "react-icons/fc";
 import { Button } from "@/components/atoms";
 import { Suspense } from "react";
-import { setCookie, getCookie } from "@/utils/cookies";
 function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -29,15 +28,17 @@ function LoginPage() {
       router.push("/profile");
       return;
     }
-    const astrologerToken = getCookie("token_astrologer");
-    const middlewareToken = getCookie("token_middleware");
-    
-    if (astrologerToken) {
-      router.push("/astrologer/dashboard");
-      return;
-    }
-    if (middlewareToken) {
-      router.push("/profile");
+    if (typeof window !== "undefined") {
+      const astrologerToken = localStorage.getItem("token_astrologer");
+      const middlewareToken = localStorage.getItem("token_middleware");
+      
+      if (astrologerToken) {
+        router.push("/astrologer/dashboard");
+        return;
+      }
+      if (middlewareToken) {
+        router.push("/profile");
+      }
     }
   }, [isLoggedIn, router]);
 
@@ -91,9 +92,12 @@ function LoginPage() {
     try {
       const response = await verifyOtp(otpString);
       
-      setCookie("token_middleware", response.middlewareToken, 30);
-      setCookie("user_id", response.user.id.toString(), 30);
-      window.dispatchEvent(new Event("auth_change"));
+      // Store middlewareToken and user id in localStorage
+      if (typeof window !== "undefined") {
+        localStorage.setItem("token_middleware", response.middlewareToken);
+        localStorage.setItem("user_id", response.user.id.toString());
+        window.dispatchEvent(new Event("auth_change"));
+      }
       
       login(response.user, response.token, response.middlewareToken);
       sessionStorage.setItem("loginSuccess", "true");

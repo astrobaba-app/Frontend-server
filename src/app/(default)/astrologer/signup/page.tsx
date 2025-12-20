@@ -13,7 +13,6 @@ import {
   verifyRegistrationOTP,
 } from "@/store/api/astrologer/auth";
 import { ArrowLeft } from "lucide-react";
-import { getCookie } from "@/utils/cookies";
 
 export default function AstrologerSignup() {
   const router = useRouter();
@@ -25,15 +24,17 @@ export default function AstrologerSignup() {
 
   // Check if someone is already logged in
   useEffect(() => {
-    const astrologerToken = getCookie("token_astrologer");
-    const middlewareToken = getCookie("token_middleware");
-    
-    if (astrologerToken) {
-      router.push("/astrologer/dashboard");
-      return;
-    }
-    if (middlewareToken) {
-      router.push("/profile");
+    if (typeof window !== "undefined") {
+      const astrologerToken = localStorage.getItem("token_astrologer");
+      const middlewareToken = localStorage.getItem("token_middleware");
+      
+      if (astrologerToken) {
+        router.push("/astrologer/dashboard");
+        return;
+      }
+      if (middlewareToken) {
+        router.push("/profile");
+      }
     }
   }, [router]);
 

@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { AuthSkeleton } from '@/components/skeletons/AuthSkeleton';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -10,14 +9,44 @@ export default function AuthCallbackPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Redirect to home if accessed directly (not from OAuth flow)
+    router.push('/');
+  }, [router]);
+
+  useEffect(() => {
     const handleCallback = async () => {
       try {
         setLoading(true);
-        // Refresh user data from backend (cookies are already set by backend)
+        
+        // Extract token_middleware from cookies and save to localStorage
+        const cookies = document.cookie.split(';');
+        let middlewareToken = '';
+        
+        for (const cookie of cookies) {
+          const [name, value] = cookie.trim().split('=');
+          if (name === 'token_middleware') {
+            middlewareToken = value;
+            break;
+          }
+        }
+        
+        if (!middlewareToken) {
+          console.error('No middleware token found in cookies');
+          router.push('/auth/login?error=auth_failed');
+          return;
+        }
+        
+        // Save token to localStorage
+        localStorage.setItem('token_middleware', middlewareToken);
+        
+        // Refresh user data from backend to get user details
         await refreshUser();
         
         // Store success message in sessionStorage to show toast on home page
         sessionStorage.setItem('loginSuccess', 'true');
+        
+        // Dispatch auth change event for RouteProtection
+        window.dispatchEvent(new Event('auth_change'));
         
         // Redirect to home after successful authentication
         router.push('/');
@@ -31,10 +60,6 @@ export default function AuthCallbackPage() {
 
     handleCallback();
   }, [refreshUser, router]);
-
-  if (loading) {
-    return <AuthSkeleton />;
-  }
 
   return null;
 }

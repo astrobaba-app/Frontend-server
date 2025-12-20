@@ -13,7 +13,6 @@ import { registerAstrologer } from "@/store/api/astrologer/auth";
 import { FiUploadCloud } from "react-icons/fi";
 import { Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
-import { getCookie } from "@/utils/cookies";
  function AstrologerRegister() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -41,16 +40,18 @@ import { getCookie } from "@/utils/cookies";
 
   // Check if someone is already logged in
   useEffect(() => {
-    const astrologerToken = getCookie('token_astrologer');
-    const middlewareToken = getCookie('token_middleware');
-    
-    if (astrologerToken) {
-      router.push('/astrologer/dashboard');
-      return;
-    }
-    if (middlewareToken) {
-      router.push('/profile');
-      return;
+    if (typeof window !== 'undefined') {
+      const astrologerToken = localStorage.getItem('token_astrologer');
+      const middlewareToken = localStorage.getItem('token_middleware');
+      
+      if (astrologerToken) {
+        router.push('/astrologer/dashboard');
+        return;
+      }
+      if (middlewareToken) {
+        router.push('/profile');
+        return;
+      }
     }
     
     // Redirect if no phone number

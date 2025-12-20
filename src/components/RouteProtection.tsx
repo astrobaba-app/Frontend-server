@@ -2,25 +2,53 @@
 
 import { useEffect, useState, ReactNode, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { getCookie } from '@/utils/cookies';
 
-// Routes that require astrologer authentication
+// Routes that astrologers cannot access when logged in
+const ASTROLOGER_BLOCKED_ROUTES = [
+  '/chat',
+  '/aichat',
+  '/',
+  '/horoscope',
+  '/kundlimatching',
+  '/kundlireport',
+  '/blog',
+  '/cart',
+  '/store',
+  '/checkout',
+  '/compatibility',
+  '/astrologer/login',
+  '/astrologer/register',
+  '/astrologer/signup',
+];
+
+// Routes that start with /profile
+const PROFILE_ROUTES_PREFIX = '/profile';
+
+// Routes that users cannot access when logged in (routes starting with these paths)
+const USER_BLOCKED_ASTROLOGER_ROUTE_PREFIXES = [
+  '/astrologer/dashboard',
+  '/astrologer/live-chats',
+  '/astrologer/livechats',
+];
+
+// Routes that require authentication (no guest access)
+const PROTECTED_ROUTES = [
+  '/cart',
+  '/chat',
+  '/aichat',
+  '/checkout',
+  '/kundli-matching',
+  '/kundliReport',
+];
+
+// Routes that require astrologer authentication (routes starting with these paths)
 const ASTROLOGER_PROTECTED_ROUTE_PREFIXES = [
   '/astrologer/dashboard',
   '/astrologer/live-chats',
   '/astrologer/livechats',
 ];
 
-// Routes that require user authentication
-const USER_PROTECTED_ROUTES = [
-  '/cart',
-  '/chat',
-  '/aichat',
-  '/checkout',
-  '/profile',
-];
-
-// Loading component
+// Loading component to show while checking auth
 function AuthLoadingScreen() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
@@ -41,24 +69,48 @@ export function RouteProtection({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
+  // Check auth status
   const authStatus = useMemo(() => {
     if (typeof window === 'undefined') {
-      return { checking: true, authorized: false, shouldRedirect: false, redirectTo: '' };
+      return { checking: false, authorized: true, shouldRedirect: false, redirectTo: '' };
     }
 
-    const astrologerToken = getCookie('token_astrologer');
-    const middlewareToken = getCookie('token_middleware');
+    const astrologerToken = localStorage.getItem('token_astrologer');
+    const middlewareToken = localStorage.getItem('token_middleware');
+
+    // PUBLIC ROUTES - Always accessible (unless blocked by other rules)
+    const publicRoutes = [
+      '/auth/login',
+      '/astrologer/login',
+      '/astrologer/register',
+      '/astrologer/signup',
+      '/',
+      '/horoscope',
+      '/kundlimatching',
+      '/kundlireport',
+      '/blog',
+      '/store',
+      '/compatibility',
+    ];
+
+    const isPublicRoute = publicRoutes.includes(pathname) || pathname.startsWith('/store/');
 
     // ASTROLOGER LOGGED IN
     if (astrologerToken) {
-      const isAstrologerRoute = ASTROLOGER_PROTECTED_ROUTE_PREFIXES.some(prefix => pathname.startsWith(prefix));
+      // Astrologers can ONLY access astrologer routes
+      const isAstrologerRoute = ASTROLOGER_PROTECTED_ROUTE_PREFIXES.some(
+        (prefix) => pathname.startsWith(prefix)
+      );
+
       const isAstrologerAuthRoute = ['/astrologer/login', '/astrologer/register', '/astrologer/signup'].includes(pathname);
 
       if (!isAstrologerRoute && !isAstrologerAuthRoute) {
+        // Redirect to dashboard for any non-astrologer route
         return { checking: false, authorized: false, shouldRedirect: true, redirectTo: '/astrologer/dashboard/profile' };
       }
 
       if (isAstrologerAuthRoute) {
+        // Already logged in, redirect to dashboard
         return { checking: false, authorized: false, shouldRedirect: true, redirectTo: '/astrologer/dashboard/profile' };
       }
 
@@ -67,58 +119,79 @@ export function RouteProtection({ children }: { children: ReactNode }) {
 
     // USER LOGGED IN
     if (middlewareToken) {
-      const isAstrologerRoute = ASTROLOGER_PROTECTED_ROUTE_PREFIXES.some(prefix => pathname.startsWith(prefix));
-      const isAstrologerAuthRoute = ['/astrologer/login', '/astrologer/register', '/astrologer/signup'].includes(pathname);
+      // Users cannot access astrologer routes
+      const isAstrologerRoute = USER_BLOCKED_ASTROLOGER_ROUTE_PREFIXES.some(
+        (prefix) => pathname.startsWith(prefix)
+      );
 
-      if (isAstrologerRoute || isAstrologerAuthRoute) {
+      if (isAstrologerRoute) {
         return { checking: false, authorized: false, shouldRedirect: true, redirectTo: '/' };
       }
 
+      // Users cannot access astrologer auth routes (login, register, signup)
+      const isAstrologerAuthRoute = ['/astrologer/login', '/astrologer/register', '/astrologer/signup'].includes(pathname);
+      if (isAstrologerAuthRoute) {
+        return { checking: false, authorized: false, shouldRedirect: true, redirectTo: '/' };
+      }
+
+      // Users cannot access user login page (already logged in)
       if (pathname === '/auth/login') {
         return { checking: false, authorized: false, shouldRedirect: true, redirectTo: '/' };
       }
 
+      // Users can access protected routes and public routes
       return { checking: false, authorized: true, shouldRedirect: false, redirectTo: '' };
     }
 
-    // GUEST (NO TOKEN)
-    const isUserProtectedRoute = USER_PROTECTED_ROUTES.some(route => pathname.startsWith(route));
-    
-    if (isUserProtectedRoute) {
+    // NO ONE LOGGED IN (Guest)
+    // Check if trying to access protected routes
+    const isProtectedRoute = 
+      PROTECTED_ROUTES.some((route) => pathname.startsWith(route)) ||
+      pathname.startsWith(PROFILE_ROUTES_PREFIX);
+
+    if (isProtectedRoute) {
       return { checking: false, authorized: false, shouldRedirect: true, redirectTo: `/auth/login?redirect=${pathname}` };
     }
 
-    const isAstrologerProtectedRoute = ASTROLOGER_PROTECTED_ROUTE_PREFIXES.some(prefix => pathname.startsWith(prefix));
-    
+    // Check if trying to access astrologer protected routes
+    const isAstrologerProtectedRoute = ASTROLOGER_PROTECTED_ROUTE_PREFIXES.some(
+      (prefix) => pathname.startsWith(prefix)
+    );
+
     if (isAstrologerProtectedRoute) {
       return { checking: false, authorized: false, shouldRedirect: true, redirectTo: '/astrologer/login' };
     }
 
+    // Public route - allow access
     return { checking: false, authorized: true, shouldRedirect: false, redirectTo: '' };
   }, [pathname]);
 
+  // Handle redirects
   useEffect(() => {
     if (authStatus.shouldRedirect && authStatus.redirectTo) {
       setIsRedirecting(true);
       router.replace(authStatus.redirectTo);
-    } else {
-      setIsRedirecting(false);
     }
   }, [authStatus, router]);
 
+  // Listen for auth changes
   useEffect(() => {
-    const handleAuthChange = () => setIsRedirecting(false);
+    const handleAuthChange = () => {
+      setIsRedirecting(false);
+    };
+
     window.addEventListener('auth_change', handleAuthChange);
-    return () => window.removeEventListener('auth_change', handleAuthChange);
+
+    return () => {
+      window.removeEventListener('auth_change', handleAuthChange);
+    };
   }, []);
 
-  if (authStatus.checking || authStatus.shouldRedirect || isRedirecting) {
+  // Show loading screen only while redirecting
+  if (authStatus.shouldRedirect || isRedirecting) {
     return <AuthLoadingScreen />;
   }
 
-  if (authStatus.authorized) {
-    return <>{children}</>;
-  }
-
-  return <AuthLoadingScreen />;
+  // Show children if authorized, otherwise show loading (redirect in progress)
+  return authStatus.authorized ? <>{children}</> : <AuthLoadingScreen />;
 }
