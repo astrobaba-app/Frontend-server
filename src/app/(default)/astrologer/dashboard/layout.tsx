@@ -9,6 +9,7 @@ import type { AstrologerProfile } from "@/store/api/astrologer/auth";
 import AstrologerSidebar from "@/components/layout/AstrologerSidebar";
 import { RxCross2 } from "react-icons/rx";
 import { IoIosMenu } from "react-icons/io";
+import { deleteCookie } from "@/utils/cookies";
 
 export default function AstrologerDashboardLayout({
   children,
@@ -63,17 +64,13 @@ export default function AstrologerDashboardLayout({
   };
 
   const handleLogout = async () => {
-    if (typeof window !== "undefined") {
-      // Clear tokens immediately
-      localStorage.removeItem("token_astrologer");
-      localStorage.removeItem("astrologer_id");
-      window.dispatchEvent(new Event("auth_change"));
-    }
-    
-    // Redirect immediately
+    deleteCookie("token_astrologer");
+    deleteCookie("token");
+    deleteCookie("astrologer_id");
+    window.dispatchEvent(new Event("auth_change"));
     window.location.href = "/";
     
-    // Call API in background (non-blocking)
+    // Call API in background
     try {
       await logoutAstrologer();
     } catch (error) {

@@ -27,6 +27,7 @@ import Link from "next/link";
 import type { AstrologerProfile } from "@/store/api/astrologer/profile";
 
 import { getAstrologerProfile } from "@/store/api/astrologer/profile";
+import { getCookie } from "@/utils/cookies";
 
 const NAV_LINKS = [
   { name: "Home", href: "/", icon: <Home className="w-5 h-5" /> },
@@ -63,15 +64,15 @@ const Header = () => {
   // Initialize auth state synchronously to prevent flash
   const [isAstrologer, setIsAstrologer] = useState(() => {
     if (typeof window !== "undefined") {
-      return !!localStorage.getItem("token_astrologer");
+      return !!getCookie("token_astrologer");
     }
     return false;
   });
 
   const [role, setRole] = useState<"user" | "astrologer" | null>(() => {
     if (typeof window !== "undefined") {
-      const astrologerToken = localStorage.getItem("token_astrologer");
-      const middlewareToken = localStorage.getItem("token_middleware");
+      const astrologerToken = getCookie("token_astrologer");
+      const middlewareToken = getCookie("token_middleware");
       if (astrologerToken) return "astrologer";
       if (middlewareToken) return "user";
     }
@@ -82,8 +83,8 @@ const Header = () => {
     const checkRoleAndLoadProfile = async () => {
       if (typeof window === "undefined") return;
 
-      const astrologerToken = localStorage.getItem("token_astrologer");
-      const middlewareToken = localStorage.getItem("token_middleware");
+      const astrologerToken = getCookie("token_astrologer");
+      const middlewareToken = getCookie("token_middleware");
 
       if (astrologerToken) {
         setRole("astrologer");

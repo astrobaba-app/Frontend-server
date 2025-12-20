@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/useToast";
 import { colors } from "@/utils/colors";
 import { loginAstrologer } from "@/store/api/astrologer/auth";
 import { ArrowLeft } from "lucide-react";
+import { setCookie, getCookie } from "@/utils/cookies";
 
 export default function AstrologerLogin() {
   const router = useRouter();
@@ -22,17 +23,15 @@ export default function AstrologerLogin() {
 
   // Check if someone is already logged in
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const astrologerToken = localStorage.getItem('token_astrologer');
-      const middlewareToken = localStorage.getItem('token_middleware');
-      
-      if (astrologerToken) {
-        router.push('/astrologer/dashboard');
-        return;
-      }
-      if (middlewareToken) {
-        router.push('/profile');
-      }
+    const astrologerToken = getCookie('token_astrologer');
+    const middlewareToken = getCookie('token_middleware');
+    
+    if (astrologerToken) {
+      router.push('/astrologer/dashboard');
+      return;
+    }
+    if (middlewareToken) {
+      router.push('/profile');
     }
   }, [router]);
 
@@ -63,16 +62,11 @@ export default function AstrologerLogin() {
       });
 
       if (response.success) {
-        // Store astrologerToken and astrologer id in localStorage
-        if (typeof window !== "undefined") {
-          localStorage.setItem("token_astrologer", response.astrologerToken);
-          localStorage.setItem("astrologer_id", response.astrologer.id.toString());
-          window.dispatchEvent(new Event("auth_change"));
-        }
+        setCookie("token_astrologer", response.astrologerToken, 30);
+        setCookie("astrologer_id", response.astrologer.id.toString(), 30);
+        window.dispatchEvent(new Event("auth_change"));
 
         showToast("Login successful! Redirecting to dashboard...", "success");
-
-        // Redirect to dashboard
         setTimeout(() => {
           router.push("/astrologer/dashboard");
         }, 1500);

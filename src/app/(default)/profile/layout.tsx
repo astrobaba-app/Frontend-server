@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { IoIosMenu } from "react-icons/io";
 import { RxCross2 } from "react-icons/rx";
 import { useRouter } from "next/navigation";
+import { deleteCookie } from "@/utils/cookies";
 
 export default function ProfileLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
@@ -12,6 +13,10 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
   const router = useRouter();
 
   const handleLogout = async () => {
+    deleteCookie('token_middleware');
+    deleteCookie('user_id');
+     deleteCookie("token");
+    window.dispatchEvent(new Event('auth_change'));
     logout();
     window.location.href = "/";
   };

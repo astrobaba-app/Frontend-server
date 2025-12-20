@@ -2,22 +2,21 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { getCookie } from "@/utils/cookies";
 
 export default function AstrologerRootPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const astrologerToken = localStorage.getItem("token_astrologer");
-      const middlewareToken = localStorage.getItem("token_middleware");
+    const astrologerToken = getCookie("token_astrologer");
+    const middlewareToken = getCookie("token_middleware");
 
-      if (astrologerToken) {
-        router.replace("/astrologer/dashboard");
-      } else if (middlewareToken) {
-        router.replace("/profile");
-      } else {
-        router.replace("/astrologer/login");
-      }
+    if (astrologerToken) {
+      router.replace("/astrologer/dashboard");
+    } else if (middlewareToken) {
+      router.replace("/profile");
+    } else {
+      router.replace("/astrologer/login");
     }
   }, [router]);
 
