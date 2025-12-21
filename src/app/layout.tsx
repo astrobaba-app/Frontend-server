@@ -42,8 +42,16 @@ export default function RootLayout({
     <html lang="en">
       <head>
 
- {/* Mobile viewport for React Native WebView */}
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes" />
+ {/* Mobile viewport for React Native WebView and mobile browsers */}
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
+        
+        {/* Mobile web app capable */}
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        
+        {/* Prevent automatic scaling in landscape */}
+        <meta name="format-detection" content="telephone=no" />
 
         {/* Razorpay Script */}
         <script src="https://checkout.razorpay.com/v1/checkout.js" async></script>

@@ -9,11 +9,6 @@ export default function AuthCallbackPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Redirect to home if accessed directly (not from OAuth flow)
-    router.push('/');
-  }, [router]);
-
-  useEffect(() => {
     const handleCallback = async () => {
       try {
         setLoading(true);
@@ -61,5 +56,22 @@ export default function AuthCallbackPage() {
     handleCallback();
   }, [refreshUser, router]);
 
-  return null;
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50">
+      <div className="text-center p-8 max-w-md mx-auto">
+        {loading ? (
+          <>
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-yellow-500 mx-auto mb-6"></div>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">Authenticating...</h2>
+            <p className="text-gray-600 text-sm sm:text-base">Please wait while we log you in</p>
+          </>
+        ) : (
+          <>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">Redirecting...</h2>
+            <p className="text-gray-600 text-sm sm:text-base">Taking you to the app</p>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
