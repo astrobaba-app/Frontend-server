@@ -15,6 +15,8 @@ import {
   Settings,
   LogOut,
   ChevronRight,
+  Video,
+  Clock,
 } from "lucide-react";
 import { IoChatboxEllipsesOutline } from "react-icons/io5";
 
@@ -34,6 +36,17 @@ export default function AstrologerSidebar({
       icon: User,
       label: "My Profile",
       href: "/astrologer/dashboard/profile",
+    },
+    {
+      icon: Video,
+      label: "Go Live",
+      href: "/astrologer/dashboard/go-live",
+      highlight: true,
+    },
+    {
+      icon: Clock,
+      label: "Live History",
+      href: "/astrologer/dashboard/live-history",
     },
     {
       icon: Wallet,
@@ -118,6 +131,7 @@ export default function AstrologerSidebar({
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
+          const isHighlight = (item as any).highlight;
 
           return (
             <Link
@@ -126,16 +140,41 @@ export default function AstrologerSidebar({
               className={`flex items-center justify-between px-6 py-3.5 transition-all group ${
                 isActive 
                   ? "bg-yellow-50 border-r-4 border-yellow-500" 
+                  : isHighlight
+                  ? "hover:bg-red-50 border-r-4 border-transparent"
                   : "hover:bg-gray-50 border-r-4 border-transparent"
               }`}
             >
               <div className="flex items-center gap-4">
-                <Icon className={`w-5 h-5 ${isActive ? "text-yellow-600" : "text-gray-500 group-hover:text-yellow-600"}`} />
-                <span className={`text-sm font-medium ${isActive ? "text-gray-900" : "text-gray-600 group-hover:text-gray-900"}`}>
+                <Icon className={`w-5 h-5 ${
+                  isActive 
+                    ? "text-yellow-600" 
+                    : isHighlight
+                    ? "text-red-500 group-hover:text-red-600"
+                    : "text-gray-500 group-hover:text-yellow-600"
+                }`} />
+                <span className={`text-sm font-medium ${
+                  isActive 
+                    ? "text-gray-900" 
+                    : isHighlight
+                    ? "text-red-500 group-hover:text-red-600 font-semibold"
+                    : "text-gray-600 group-hover:text-gray-900"
+                }`}>
                   {item.label}
                 </span>
+                {isHighlight && (
+                  <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs font-bold rounded-full">
+                    NEW
+                  </span>
+                )}
               </div>
-              <ChevronRight className={`w-4 h-4 ${isActive ? "text-yellow-600" : "text-gray-300 group-hover:text-yellow-600"}`} />
+              <ChevronRight className={`w-4 h-4 ${
+                isActive 
+                  ? "text-yellow-600" 
+                  : isHighlight
+                  ? "text-red-500 group-hover:text-red-600"
+                  : "text-gray-300 group-hover:text-yellow-600"
+              }`} />
             </Link>
           );
         })}

@@ -46,6 +46,7 @@ const ASTROLOGER_PROTECTED_ROUTE_PREFIXES = [
   '/astrologer/dashboard',
   '/astrologer/live-chats',
   '/astrologer/livechats',
+  '/astrologer/live/', // Add live streaming routes
 ];
 
 // Loading component to show while checking auth

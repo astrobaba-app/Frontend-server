@@ -357,6 +357,12 @@ function ChatPage() {
       showToast(`Call ended by ${payload.endedBy}`, "info");
     };
 
+    const handleWalletUpdated = (payload: { balance: number; deduction: number; reason: string }) => {
+      console.log("[User] Received wallet:updated event:", payload);
+      // Trigger balance refresh in the hook
+      window.dispatchEvent(new CustomEvent("refreshWalletBalance"));
+    };
+
     socket.on("message:new", handleNewMessage);
     socket.on("typing", handleTyping);
     socket.on("chat:updated", handleChatUpdated);
@@ -365,6 +371,7 @@ function ChatPage() {
     socket.on("call:accepted", handleCallAccepted);
     socket.on("call:rejected", handleCallRejected);
     socket.on("call:ended", handleCallEnded);
+    socket.on("wallet:updated", handleWalletUpdated);
 
     return () => {
       socket.emit("leave_chat", { sessionId: selectedSessionId });
@@ -376,6 +383,7 @@ function ChatPage() {
       socket.off("call:accepted", handleCallAccepted);
       socket.off("call:rejected", handleCallRejected);
       socket.off("call:ended", handleCallEnded);
+      socket.off("wallet:updated", handleWalletUpdated);
       
       // Clean up typing timeout
       if (typingTimeoutRef.current) {

@@ -219,7 +219,18 @@ export const useAstrologerChatWallet = ({
       fetchBalance();
     }
   }, [userId, fetchBalance]);
+  // Listen for wallet update events from socket
+  useEffect(() => {
+    const handleRefresh = () => {
+      console.log('[Wallet] Refreshing balance due to wallet update event');
+      fetchBalance();
+    };
 
+    window.addEventListener('refreshWalletBalance', handleRefresh);
+    return () => {
+      window.removeEventListener('refreshWalletBalance', handleRefresh);
+    };
+  }, [fetchBalance]);
   // Cleanup on unmount
   useEffect(() => {
     return () => {

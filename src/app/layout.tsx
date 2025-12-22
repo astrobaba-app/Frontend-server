@@ -7,6 +7,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
+import { LiveStreamProvider } from "@/contexts/LiveStreamContext";
 import { RouteProtection } from "@/components/RouteProtection";
 import { usePathname } from "next/navigation";
 
@@ -35,8 +36,11 @@ export default function RootLayout({
     '/aichat', '/chat', '/astrologer/live-chats', 
     "/astrologer/signup", "/astrologer/login", "/astrologer/register"
   ];
-    // Check if current path is in list OR starts with /astrologer/dashboard
-  const shouldHideLayout = NO_LAYOUT_ROUTES.includes(pathname) || pathname.startsWith('/astrologer/dashboard');
+  // Check if current path is in list OR starts with /astrologer/dashboard OR /live/ OR /astrologer/live/
+  const shouldHideLayout = NO_LAYOUT_ROUTES.includes(pathname) || 
+                          pathname.startsWith('/astrologer/dashboard') ||
+                          pathname.match(/^\/live\/[^/]+$/) ||
+                          pathname.match(/^\/astrologer\/live\/[^/]+$/);
 
   return (
     <html lang="en">
@@ -61,13 +65,15 @@ export default function RootLayout({
       >
         <AuthProvider>
           <CartProvider>
-            <RouteProtection>
-              {!shouldHideLayout && <Header />}
-              
-              {children}
-              {!shouldHideLayout && <Footer />}
-              {/* <ChatButton /> */}
-            </RouteProtection>
+            <LiveStreamProvider>
+              <RouteProtection>
+                {!shouldHideLayout && <Header />}
+                
+                {children}
+                {!shouldHideLayout && <Footer />}
+                {/* <ChatButton /> */}
+              </RouteProtection>
+            </LiveStreamProvider>
           </CartProvider>
         </AuthProvider>
       </body>
