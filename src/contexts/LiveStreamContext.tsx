@@ -73,7 +73,31 @@ export const LiveStreamProvider: React.FC<LiveStreamProviderProps> = ({ children
       return;
     }
 
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:6001";
+    const backendUrl = (() => {
+      // Try NEXT_PUBLIC_BACKEND_URL first
+      if (process.env.NEXT_PUBLIC_BACKEND_URL) {
+        return process.env.NEXT_PUBLIC_BACKEND_URL;
+      }
+      
+      // Derive from API_BASE_URL (remove /api suffix)
+      if (process.env.NEXT_PUBLIC_API_BASE_URL) {
+        return process.env.NEXT_PUBLIC_API_BASE_URL.replace(/\/api$/, '');
+      }
+      
+      // In browser, try to use current origin if on same domain
+      if (typeof window !== 'undefined') {
+        const currentOrigin = window.location.origin;
+        // If we're on a production domain, use it
+        if (!currentOrigin.includes('localhost')) {
+          return currentOrigin;
+        }
+      }
+      
+      // Fallback to localhost for development
+      return "http://localhost:6001";
+    })();
+    
+    console.log("[Live Socket] Backend URL:", backendUrl);
     
     // Get token from localStorage - check all possible token keys
     const token = typeof window !== "undefined" 
@@ -234,15 +258,17 @@ export const LiveStreamProvider: React.FC<LiveStreamProviderProps> = ({ children
         return;
       }
 
+      console.log("[Live Chat] Sending message:", { sessionId: currentSessionId, message });
+
       socketRef.current.emit(
         "live_chat_message",
         { sessionId: currentSessionId, message, messageType: "text" },
         (response: { success: boolean; error?: string }) => {
           if (response.success) {
-            console.log("Message sent successfully");
+            console.log("[Live Chat] Message sent successfully");
             resolve(true);
           } else {
-            console.error("Failed to send message:", response.error);
+            console.error("[Live Chat] Failed to send message:", response.error);
             resolve(false);
           }
         }

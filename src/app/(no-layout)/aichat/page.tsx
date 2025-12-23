@@ -358,9 +358,18 @@ const AIChatPage = () => {
 
       // Connect to backend WebSocket proxy (handles OpenAI auth)
       const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsHost =
-        process.env.NEXT_PUBLIC_API_URL?.replace(/^https?:\/\//, "") ||
-        "localhost:6001";
+      
+      // Derive WebSocket host from API URL
+      let wsHost = "localhost:6001";
+      if (process.env.NEXT_PUBLIC_API_URL) {
+        wsHost = process.env.NEXT_PUBLIC_API_URL.replace(/^https?:\/\//, '').replace(/\/api$/, '');
+      } else if (process.env.NEXT_PUBLIC_API_BASE_URL) {
+        wsHost = process.env.NEXT_PUBLIC_API_BASE_URL.replace(/^https?:\/\//, '').replace(/\/api$/, '');
+      } else if (!window.location.origin.includes('localhost')) {
+        // Use current origin if on production
+        wsHost = window.location.host;
+      }
+      
       const wsUrl = `${wsProtocol}//${wsHost}/api/ai-voice-ws`;
       console.log("Connecting to backend WebSocket:", wsUrl);
 
