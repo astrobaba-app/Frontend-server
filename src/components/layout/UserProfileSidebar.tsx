@@ -16,7 +16,8 @@ const MENU_ITEMS = [
   { icon: Wallet, label: "My Wallet", href: "/profile/wallet" },
   { icon: Heart, label: "My Following", href: "/profile/following" },
   { icon: Heart, label: "Free Kundli", href: "/profile/kundli" },
-  { icon: FileText, label: "Generate Kundli Report (PDF)", href: "/profile/kundli-report" },
+  // TEMPORARILY HIDDEN: Uncomment the line below to show Generate Kundli Report feature
+  // { icon: FileText, label: "Generate Kundli Report (PDF)", href: "/profile/kundli-report" },
   { icon: ShoppingBag, label: "My Orders", href: "/profile/orders" },
   { icon: LuShoppingCart, label: "My cart", href: "/cart" },
   { icon: Star, label: "My Reviews", href: "/profile/reviews" },
