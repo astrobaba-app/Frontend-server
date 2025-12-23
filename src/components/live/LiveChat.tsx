@@ -1,15 +1,17 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Send } from "lucide-react";
+import { Send, Smile } from "lucide-react";
 import { useLiveStream } from "@/contexts/LiveStreamContext";
 import { getLiveChatMessages } from "@/store/api/live/live";
 
 const LiveChat: React.FC<{ sessionId: string }> = ({ sessionId }) => {
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { messages, sendMessage } = useLiveStream();
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const { messages, sendMessage, sendEmoji } = useLiveStream();
 
   // Load previous messages on mount
   useEffect(() => {
@@ -33,6 +35,23 @@ const LiveChat: React.FC<{ sessionId: string }> = ({ sessionId }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showEmojiPicker]);
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -49,6 +68,40 @@ const LiveChat: React.FC<{ sessionId: string }> = ({ sessionId }) => {
     
     setIsSending(false);
   };
+
+  const handleEmojiClick = async (emoji: string) => {
+    if (isSending) return;
+
+    setIsSending(true);
+    const success = await sendEmoji(emoji);
+    
+    if (!success) {
+      alert("Failed to send emoji");
+    }
+    
+    setShowEmojiPicker(false);
+    setIsSending(false);
+  };
+
+  // Popular emoji list
+  const emojis = [
+    "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂",
+    "🙂", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗",
+    "😚", "😙", "😋", "😛", "😜", "🤪", "😝", "🤑",
+    "🤗", "🤭", "🤫", "🤔", "🤐", "🤨", "😐", "😑",
+    "😶", "😏", "😒", "🙄", "😬", "🤥", "😌", "😔",
+    "😪", "🤤", "😴", "😷", "🤒", "🤕", "🤢", "🤮",
+    "🤧", "🥵", "🥶", "😵", "🤯", "🤠", "🥳", "😎",
+    "🤓", "🧐", "😕", "😟", "🙁", "☹️", "😮", "😯",
+    "😲", "😳", "🥺", "😦", "😧", "😨", "😰", "😥",
+    "😢", "😭", "😱", "😖", "😣", "😞", "😓", "😩",
+    "😫", "🥱", "😤", "😡", "😠", "🤬", "👍", "👎",
+    "👌", "✌️", "🤞", "🤟", "🤘", "🤙", "👏", "🙌",
+    "👐", "🤲", "🤝", "🙏", "✨", "💫", "⭐", "🌟",
+    "💥", "💢", "💯", "💪", "🔥", "✅", "❤️", "💔",
+    "💕", "💖", "💗", "💓", "💞", "💝", "💘", "💟",
+    "❣️", "💌", "💋", "💎", "🎉", "🎊", "🎈", "🎁"
+  ];
 
   return (
     <div className="flex-1 flex flex-col h-full">
@@ -90,9 +143,13 @@ const LiveChat: React.FC<{ sessionId: string }> = ({ sessionId }) => {
                     })}
                   </span>
                 </div>
-                <p className="text-sm text-gray-700 mt-1 break-words">
-                  {msg.message}
-                </p>
+                {msg.messageType === "emoji" ? (
+                  <span className="text-3xl">{msg.message}</span>
+                ) : (
+                  <p className="text-sm text-gray-700 mt-1 break-words">
+                    {msg.message}
+                  </p>
+                )}
               </div>
             </div>
           ))
@@ -102,7 +159,38 @@ const LiveChat: React.FC<{ sessionId: string }> = ({ sessionId }) => {
 
       {/* Message Input */}
       <div className="border-t p-4 bg-gray-50">
-        <form onSubmit={handleSendMessage} className="flex gap-2">
+        <form onSubmit={handleSendMessage} className="flex gap-2 relative">
+          {/* Emoji Picker Button */}
+          <div className="relative" ref={emojiPickerRef}>
+            <button
+              type="button"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              className="px-3 py-2 text-gray-600 hover:text-yellow-500 transition-colors"
+              disabled={isSending}
+            >
+              <Smile className="w-5 h-5" />
+            </button>
+
+            {/* Emoji Picker Dropdown */}
+            {showEmojiPicker && (
+              <div className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-xl border border-gray-200 p-3 w-72 max-h-64 overflow-y-auto z-50">
+                <div className="grid grid-cols-8 gap-1">
+                  {emojis.map((emoji, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => handleEmojiClick(emoji)}
+                      className="text-2xl hover:bg-yellow-50 rounded p-1 transition-colors"
+                      disabled={isSending}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           <input
             type="text"
             value={message}

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Mic, MicOff, Video, VideoOff, X, Users, Minimize2, MessageSquare } from "lucide-react";
 import { useLiveStream } from "@/contexts/LiveStreamContext";
 import LiveChat from "./LiveChat";
+import FloatingMessages from "./FloatingMessages";
 
 interface LiveStreamHostViewProps {
   sessionId: string;
@@ -412,6 +413,9 @@ const LiveStreamHostView: React.FC<LiveStreamHostViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Floating Messages */}
+      <FloatingMessages />
 
       {/* Live Chat Sidebar */}
       {showChat && (

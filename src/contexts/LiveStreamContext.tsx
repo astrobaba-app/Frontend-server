@@ -34,6 +34,7 @@ interface LiveStreamContextType {
   joinLiveSession: (sessionId: string) => void;
   leaveLiveSession: () => void;
   sendMessage: (message: string) => Promise<boolean>;
+  sendEmoji: (emoji: string) => Promise<boolean>;
   updateParticipantCount: (count: number) => void;
   
   // Minimized player state
@@ -139,6 +140,11 @@ export const LiveStreamProvider: React.FC<LiveStreamProviderProps> = ({ children
       setMessages((prev) => [...prev, message]);
     });
 
+    newSocket.on("live:chat_emoji", (message: LiveChatMessage) => {
+      console.log("Received emoji:", message);
+      setMessages((prev) => [...prev, message]);
+    });
+
     newSocket.on("live_session_ended", (data: { sessionId: string; message: string; astrologerName: string }) => {
       console.log("Live session ended by astrologer:", data);
       // Store the event for components to handle
@@ -230,13 +236,43 @@ export const LiveStreamProvider: React.FC<LiveStreamProviderProps> = ({ children
 
       socketRef.current.emit(
         "live_chat_message",
-        { sessionId: currentSessionId, message },
+        { sessionId: currentSessionId, message, messageType: "text" },
         (response: { success: boolean; error?: string }) => {
           if (response.success) {
             console.log("Message sent successfully");
             resolve(true);
           } else {
             console.error("Failed to send message:", response.error);
+            resolve(false);
+          }
+        }
+      );
+    });
+  }, [currentSessionId]);
+
+  const sendEmoji = useCallback(async (emoji: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (!socketRef.current?.connected) {
+        console.error("Cannot send emoji: socket not connected");
+        resolve(false);
+        return;
+      }
+
+      if (!currentSessionId) {
+        console.error("Cannot send emoji: no active session");
+        resolve(false);
+        return;
+      }
+
+      socketRef.current.emit(
+        "live_chat_emoji",
+        { sessionId: currentSessionId, emoji },
+        (response: { success: boolean; error?: string }) => {
+          if (response.success) {
+            console.log("Emoji sent successfully");
+            resolve(true);
+          } else {
+            console.error("Failed to send emoji:", response.error);
             resolve(false);
           }
         }
@@ -267,6 +303,7 @@ export const LiveStreamProvider: React.FC<LiveStreamProviderProps> = ({ children
     joinLiveSession,
     leaveLiveSession,
     sendMessage,
+    sendEmoji,
     updateParticipantCount,
     isMinimized,
     setIsMinimized,
