@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Phone, Mic, MicOff, Video, VideoOff, X } from "lucide-react";
+import { Phone, Mic, MicOff, Video, VideoOff, X, BookOpen } from "lucide-react";
 import { getCallToken, endCall } from "@/store/api/call";
 import type { CallSession } from "@/store/api/call";
+import KundliViewer from "./call/KundliViewer";
 
 interface AgoraCallProps {
   callSession: CallSession;
@@ -16,12 +17,17 @@ export default function AgoraCall({ callSession, onCallEnd }: AgoraCallProps) {
   const [hasVideoTrack, setHasVideoTrack] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [isConnecting, setIsConnecting] = useState(true);
+  const [showKundliViewer, setShowKundliViewer] = useState(false);
   const agoraClientRef = useRef<any | null>(null);
   const localAudioTrackRef = useRef<any | null>(null);
   const localVideoTrackRef = useRef<any | null>(null);
   const localVideoRef = useRef<HTMLDivElement>(null);
   const remoteVideoRef = useRef<HTMLDivElement>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Check if current user is an astrologer (you may need to get this from context or props)
+  const isAstrologer = typeof window !== "undefined" && 
+    (localStorage.getItem("token_astrologer") !== null);
 
   const cleanupAgora = () => {
     // Stop duration timer
@@ -250,6 +256,19 @@ export default function AgoraCall({ callSession, onCallEnd }: AgoraCallProps) {
 
       {/* Call Controls */}
       <div className="bg-gray-800 p-6 flex items-center justify-center gap-4">
+        {/* Kundli Viewer Button (Only for Astrologers) */}
+        {isAstrologer && (
+          <button
+            onClick={() => setShowKundliViewer(!showKundliViewer)}
+            className={`p-4 rounded-full transition-colors ${
+              showKundliViewer ? "bg-yellow-500" : "bg-gray-600 hover:bg-gray-700"
+            }`}
+            title="View User Kundli"
+          >
+            <BookOpen className="w-6 h-6 text-white" />
+          </button>
+        )}
+
         <button
           onClick={toggleMute}
           className={`p-4 rounded-full transition-colors ${
@@ -280,6 +299,14 @@ export default function AgoraCall({ callSession, onCallEnd }: AgoraCallProps) {
           <Phone className="w-6 h-6 text-white rotate-135" />
         </button>
       </div>
+
+      {/* Kundli Viewer Sidebar */}
+      {isAstrologer && showKundliViewer && (
+        <KundliViewer
+          callId={callSession.id.toString()}
+          onClose={() => setShowKundliViewer(false)}
+        />
+      )}
     </div>
   );
 }
