@@ -1,10 +1,10 @@
 import axios from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:6001/api";
+const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:6001";
 
 // Create axios instance with credentials
 const api = axios.create({
-  baseURL: API_URL.replace('/api', ''), // Remove /api if present since we add it in routes
+  baseURL: API_BASE,
   withCredentials: true,
 });
 
