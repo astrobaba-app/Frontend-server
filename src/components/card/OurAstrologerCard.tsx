@@ -85,7 +85,7 @@ const OurAstrologerCard: React.FC<OurAstrologerCardProps> = ({
       <div className="relative w-full max-w-[280px] sm:w-64 rounded-2xl shadow-lg overflow-hidden bg-white mx-auto hover:shadow-xl transition-shadow cursor-pointer">
         <div
           style={photoStyle}
-          className="h-28 sm:h-32 flex flex-col items-center justify-center relative"
+          className="h-45 sm:h-64 flex flex-col items-center justify-center relative"
         >
           {/* Online Status Badge */}
 

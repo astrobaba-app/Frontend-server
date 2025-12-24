@@ -112,7 +112,7 @@ export default function BlogDetailClient({ blog: initialBlog }: BlogDetailClient
               </div>
 
               {/* Like Button - Only show for logged-in users */}
-              {isLoggedIn && (
+              {/* {isLoggedIn && (
                 <button
                   onClick={handleLike}
                   disabled={isLiking || hasLiked}
@@ -133,7 +133,7 @@ export default function BlogDetailClient({ blog: initialBlog }: BlogDetailClient
                   <FiHeart className={`w-5 h-5 ${hasLiked ? 'fill-red-600' : ''}`} style={hasLiked ? { fill: '#dc2626' } : {}} />
                   <span>{blog.likes}</span>
                 </button>
-              )}
+              )} */}
             </div>
 
             {/* Title */}

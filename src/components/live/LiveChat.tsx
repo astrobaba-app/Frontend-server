@@ -5,7 +5,7 @@ import { Send, Smile } from "lucide-react";
 import { useLiveStream } from "@/contexts/LiveStreamContext";
 import { getLiveChatMessages } from "@/store/api/live/live";
 
-const LiveChat: React.FC<{ sessionId: string }> = ({ sessionId }) => {
+const LiveChat: React.FC<{ sessionId: string; onError?: (message: string) => void }> = ({ sessionId, onError }) => {
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -63,7 +63,7 @@ const LiveChat: React.FC<{ sessionId: string }> = ({ sessionId }) => {
     if (success) {
       setMessage("");
     } else {
-      alert("Failed to send message");
+      onError?.("Failed to send message");
     }
     
     setIsSending(false);
@@ -76,7 +76,7 @@ const LiveChat: React.FC<{ sessionId: string }> = ({ sessionId }) => {
     const success = await sendEmoji(emoji);
     
     if (!success) {
-      alert("Failed to send emoji");
+      onError?.("Failed to send emoji");
     }
     
     setShowEmojiPicker(false);

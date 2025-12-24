@@ -36,6 +36,7 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description, hre
                         width={40}
                         height={40}
                         className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 object-contain"
+                        unoptimized
                     />
                 ) : (
                     IconComponent && <IconComponent className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 text-white" />

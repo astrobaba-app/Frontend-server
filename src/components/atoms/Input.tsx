@@ -35,6 +35,7 @@ export default function Input({
             icon ? 'pl-10' : ''
           } ${error ? 'border-red-500' : 'border-gray-300'} ${className}`}
           {...props}
+          onWheel={(e) => e.currentTarget.blur()}
         />
       </div>
       {error && <p className="mt-1 text-sm text-red-500">{error}</p>}

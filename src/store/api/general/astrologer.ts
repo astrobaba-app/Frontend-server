@@ -9,6 +9,7 @@ export interface Astrologer {
   photo: string | null;
   skills: string[];
   languages: string[];
+  categories: string[];
   yearsOfExperience: number;
   rating: string;
   pricePerMinute: string;
@@ -97,9 +98,32 @@ export interface ErrorResponseData {
 
 const BASE_URL = "/astrologers";
 
-export const getAllAstrologers = async (): Promise<AstrologerListResponse> => {
+export interface AstrologerFilters {
+  page?: number;
+  limit?: number;
+  skills?: string[];
+  languages?: string[];
+  categories?: string[];
+  minRating?: number;
+  maxPrice?: number;
+}
+
+export const getAllAstrologers = async (filters?: AstrologerFilters): Promise<AstrologerListResponse> => {
   try {
-    const response: AxiosResponse<AstrologerListResponse> = await api.get(BASE_URL);
+    const params = new URLSearchParams();
+    
+    if (filters) {
+      if (filters.page) params.append('page', filters.page.toString());
+      if (filters.limit) params.append('limit', filters.limit.toString());
+      if (filters.skills && filters.skills.length > 0) params.append('skills', filters.skills.join(','));
+      if (filters.languages && filters.languages.length > 0) params.append('languages', filters.languages.join(','));
+      if (filters.categories && filters.categories.length > 0) params.append('categories', filters.categories.join(','));
+      if (filters.minRating) params.append('minRating', filters.minRating.toString());
+      if (filters.maxPrice) params.append('maxPrice', filters.maxPrice.toString());
+    }
+    
+    const url = params.toString() ? `${BASE_URL}?${params.toString()}` : BASE_URL;
+    const response: AxiosResponse<AstrologerListResponse> = await api.get(url);
     return response.data;
   } catch (error: any) {
     throw error.response?.data as ErrorResponseData || { 

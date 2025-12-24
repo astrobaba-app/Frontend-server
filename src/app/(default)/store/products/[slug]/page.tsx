@@ -285,16 +285,16 @@ export default function ProductDetailPage() {
   const mainImage = imageList[selectedImage] || "/images/placeholder.png";
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-10">
+    <div className="max-w-7xl mx-auto px-3 md:px-4 py-4 md:py-10">
       {/* Product Section */}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-10">
         {/* LEFT: Images */}
 
         {/* ... (Image display and thumbnails remain the same) */}
 
         <div>
-          <div className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden">
+          <div className="relative aspect-square bg-gray-100 rounded-lg md:rounded-xl overflow-hidden">
             <img
               src={mainImage}
               alt={product.productName}
@@ -305,12 +305,12 @@ export default function ProductDetailPage() {
           {/* Thumbnails */}
 
           {imageList && imageList.length > 1 && (
-            <div className="flex gap-3 mt-4">
+            <div className="flex gap-2 md:gap-3 mt-3 md:mt-4 overflow-x-auto">
               {imageList.map((img, i) => (
                 <button
                   key={i}
                   onClick={() => setSelectedImage(i)}
-                  className={`relative w-20 h-20 rounded-lg overflow-hidden border ${
+                  className={`relative w-16 h-16 md:w-20 md:h-20 rounded-md md:rounded-lg overflow-hidden border flex-shrink-0 ${
                     selectedImage === i
                       ? "border-yellow-400"
                       : "border-gray-300"
@@ -326,21 +326,21 @@ export default function ProductDetailPage() {
         {/* RIGHT: Info */}
 
         <div>
-          <h1 className="text-2xl font-bold mb-3">{product.productName}</h1>
+          <h1 className="text-xl md:text-2xl font-bold mb-2 md:mb-3">{product.productName}</h1>
 
           {/* Price */}
 
-          <div className="flex items-center gap-4 mb-6">
+          <div className="flex items-center gap-2 md:gap-4 mb-4 md:mb-6">
             {originalPrice && (
-              <span className="text-gray-400 line-through">
+              <span className="text-sm md:text-base text-gray-400 line-through">
                 Rs.{originalPrice}
               </span>
             )}
 
-            <span className="text-2xl font-bold">Rs.{displayPrice}</span>
+            <span className="text-xl md:text-2xl font-bold">Rs.{displayPrice}</span>
 
             {discount > 0 && (
-              <span className="text-green-600 font-semibold">
+              <span className="text-sm md:text-base text-green-600 font-semibold">
                 {discount}% OFF
               </span>
             )}
@@ -348,23 +348,23 @@ export default function ProductDetailPage() {
 
           {/* Quantity + Add */}
 
-          <div className="flex items-center gap-6 mb-8">
+          <div className="flex items-center gap-3 md:gap-6 mb-6 md:mb-8">
             {/* Quantity controls remain basic buttons as they are simple */}
 
-            <div className="flex border border-yellow-400 rounded">
+            <div className="flex border border-yellow-400 rounded text-sm md:text-base">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="px-3"
+                className="px-2 md:px-3 py-1"
                 disabled={quantity <= 1 || addingToCart}
               >
                 −
               </button>
 
-              <span className="px-4">{quantity}</span>
+              <span className="px-3 md:px-4 py-1">{quantity}</span>
 
               <button
                 onClick={() => setQuantity(quantity + 1)}
-                className="px-3"
+                className="px-2 md:px-3 py-1"
                 disabled={quantity >= product.stock || addingToCart}
               >
                 +
@@ -379,6 +379,7 @@ export default function ProductDetailPage() {
               size="md"
               loading={addingToCart}
               disabled={isOutOfStock || addingToCart}
+              className="flex-1 md:flex-initial text-sm md:text-base"
             >
               {isOutOfStock ? "Out of Stock" : "Add to Cart"}
             </Button>
@@ -388,16 +389,16 @@ export default function ProductDetailPage() {
 
           {/* ... (Description and details section remains the same) */}
 
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             <div>
-              <h3 className="font-semibold mb-2">Product Description</h3>
+              <h3 className="font-semibold mb-2 text-sm md:text-base">Product Description</h3>
 
-              <p className="text-gray-600 leading-relaxed">
+              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
                 {product.description}
               </p>
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
+            <div className="bg-gray-50 rounded-lg p-3 md:p-4 space-y-2 text-xs md:text-sm">
               <p>
                 <span className="text-gray-600">Category:</span>{" "}
                 <span className="font-semibold">
@@ -454,12 +455,12 @@ export default function ProductDetailPage() {
 
       {/* Reviews */}
 
-      <div className="mt-16">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-lg">Reviews ({reviews.length})</h2>
+      <div className="mt-8 md:mt-16">
+        <div className="flex items-center justify-between mb-3 md:mb-4">
+          <h2 className="font-semibold text-base md:text-lg">Reviews ({reviews.length})</h2>
 
           {totalReviews > 0 && (
-            <div className="text-sm text-gray-600">
+            <div className="text-xs md:text-sm text-gray-600">
               <span className="text-yellow-400 mr-1">★</span>
               {averageRating.toFixed(1)} average from {totalReviews} ratings
             </div>
@@ -467,13 +468,13 @@ export default function ProductDetailPage() {
         </div>
 
         {reviewsLoading ? (
-          <p className="text-gray-500 text-sm">Loading reviews...</p>
+          <p className="text-gray-500 text-xs md:text-sm">Loading reviews...</p>
         ) : reviews.length === 0 ? (
-          <p className="text-gray-500 text-sm">
+          <p className="text-gray-500 text-xs md:text-sm">
             No reviews yet. Be the first to review this product.
           </p>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             {reviews.map((rev) => {
               const name = rev.user?.fullName || "Anonymous";
 
@@ -488,14 +489,14 @@ export default function ProductDetailPage() {
               const emptyStars = "☆".repeat(5 - Math.round(rev.rating || 0));
 
               return (
-                <div key={rev.id} className="flex gap-4">
-                  <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center text-xs font-semibold text-yellow-800">
+                <div key={rev.id} className="flex gap-3 md:gap-4">
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-yellow-100 flex items-center justify-center text-xs font-semibold text-yellow-800 flex-shrink-0">
                     {initials}
                   </div>
 
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold text-gray-900 text-sm">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="font-semibold text-gray-900 text-xs md:text-sm">
                         {name}
                       </span>
 
@@ -506,19 +507,19 @@ export default function ProductDetailPage() {
                       )}
                     </div>
 
-                    <div className="text-yellow-400 text-sm">
+                    <div className="text-yellow-400 text-xs md:text-sm">
                       {stars}
 
                       <span className="text-gray-300">{emptyStars}</span>
                     </div>
 
                     {rev.title && (
-                      <p className="text-sm font-semibold text-gray-900 mt-1">
+                      <p className="text-xs md:text-sm font-semibold text-gray-900 mt-1">
                         {rev.title}
                       </p>
                     )}
 
-                    <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">
+                    <p className="text-xs md:text-sm text-gray-600 mt-1 whitespace-pre-line break-words">
                       {rev.review}
                     </p>
                   </div>

@@ -22,42 +22,43 @@ const testimonials: Testimonial[] = [
 
 export default function TestimonialsSection() {
   return (
-    <section className="py-16 px-4 md:px-8 max-w-7xl mx-auto">
-      <h2 className="text-4xl font-bold text-gray-900 mb-12 text-center">
+    <section className="py-8 md:py-16 px-2 md:px-8 max-w-7xl mx-auto">
+      <h2 className="text-2xl md:text-4xl font-bold text-gray-900 mb-6 md:mb-12 text-center">
         Testimonials
       </h2>
 
-      <div className="relative  px-20">
+      <div className="relative px-2 md:px-20">
         {/* Left Arrow */}
-        <button className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center hover:bg-yellow-500 transition">
+        <button className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-yellow-400 items-center justify-center hover:bg-yellow-500 transition">
           <ChevronLeft className="text-black" />
         </button>
 
         {/* Right Arrow */}
-        <button className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center hover:bg-yellow-500 transition">
+        <button className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-yellow-400 items-center justify-center hover:bg-yellow-500 transition">
           <ChevronRight className="text-black" />
         </button>
 
         {/* Content */}
-        <div className="grid grid-cols-1 p-20 rounded-2xl bg-white border border-gray-200 md:grid-cols-2 gap-8 items-center">
+        <div className="grid grid-cols-1 p-6 md:p-20 rounded-2xl bg-white border border-gray-200 md:grid-cols-2 gap-6 md:gap-8 items-center">
           {/* Text */}
-          <div>
-            <p className="text-gray-700 leading-relaxed mb-6">
+          <div className="order-2 md:order-1">
+            <p className="text-sm md:text-base text-gray-700 leading-relaxed mb-4 md:mb-6">
               {testimonials[0].message}
             </p>
-            <p className="font-semibold text-gray-900">
+            <p className="font-semibold text-gray-900 text-sm md:text-base">
               {testimonials[0].name}
             </p>
           </div>
 
           {/* Image */}
-          <div className="flex justify-center">
-            <div className="relative w-40 h-52 rounded-lg overflow-hidden">
+          <div className="flex justify-center order-1 md:order-2">
+            <div className="relative w-32 h-40 md:w-40 md:h-52 rounded-lg overflow-hidden">
               <Image
                 src={testimonials[0].image}
                 alt="Customer testimonial"
                 fill
                 className="object-cover"
+                unoptimized
               />
             </div>
           </div>

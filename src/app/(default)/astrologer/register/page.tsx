@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Input from "@/components/atoms/Input";
+import Select from "@/components/atoms/Select";
 import Textarea from "@/components/atoms/Textarea";
 import Button from "@/components/atoms/Button";
 import Toast from "@/components/atoms/Toast";
@@ -25,6 +26,7 @@ import { ArrowLeft } from "lucide-react";
     phoneNumber: searchParams.get("phone") || "",
     password: "",
     dateOfBirth: "",
+    gender: "",
     yearsOfExperience: "",
     pricePerMinute: "",
     languages: "",
@@ -32,6 +34,7 @@ import { ArrowLeft } from "lucide-react";
     bio: "",
   });
 
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -61,7 +64,7 @@ import { ArrowLeft } from "lucide-react";
   }, [searchParams, router]);
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -108,6 +111,7 @@ import { ArrowLeft } from "lucide-react";
     }
     if (!formData.languages.trim()) newErrors.languages = "Languages are required";
     if (!formData.skills.trim()) newErrors.skills = "Skills are required";
+    if (selectedCategories.length === 0) newErrors.categories = "Please select at least one consultation category";
     if (!formData.yearsOfExperience) {
       newErrors.yearsOfExperience = "Years of experience is required";
     }
@@ -133,10 +137,12 @@ import { ArrowLeft } from "lucide-react";
         phoneNumber: formData.phoneNumber,
         password: formData.password,
         dateOfBirth: formData.dateOfBirth || undefined,
+        gender: formData.gender || undefined,
         yearsOfExperience: parseInt(formData.yearsOfExperience) || undefined,
         pricePerMinute: parseFloat(formData.pricePerMinute) || undefined,
         languages: formData.languages,
         skills: formData.skills,
+        categories: selectedCategories,
         bio: formData.bio || undefined,
         photo: profileImage || undefined,
       };
@@ -251,6 +257,49 @@ import { ArrowLeft } from "lucide-react";
                   helperText="e.g., Numerology, Vedic, Tarot"
                 />
               </div>
+            </div>
+
+            {/* Consultation Categories */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-3" style={{ color: colors.black }}>
+                Consultation Categories <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {['Love', 'Relationship', 'Education', 'Health', 'Career', 'Finance', 'Marriage', 'Family', 'Business', 'Legal', 'Travel', 'Spiritual'].map((category) => (
+                  <label
+                    key={category}
+                    className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${
+                      selectedCategories.includes(category)
+                        ? 'border-yellow-400 bg-yellow-50'
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedCategories.includes(category)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedCategories([...selectedCategories, category]);
+                        } else {
+                          setSelectedCategories(selectedCategories.filter(c => c !== category));
+                        }
+                        // Clear error when user selects a category
+                        if (errors.categories) {
+                          setErrors((prev) => ({ ...prev, categories: "" }));
+                        }
+                      }}
+                      className="w-4 h-4 accent-yellow-400"
+                    />
+                    <span className="text-sm font-medium">{category}</span>
+                  </label>
+                ))}
+              </div>
+              {errors.categories && (
+                <p className="text-red-500 text-xs mt-1">{errors.categories}</p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
 
               {/* Year of Experience */}
               <div>
@@ -330,6 +379,23 @@ import { ArrowLeft } from "lucide-react";
                   value={formData.dateOfBirth}
                   onChange={handleInputChange}
                 />
+              </div>
+
+              {/* Gender */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
+                  Gender
+                </label>
+                <Select
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </Select>
               </div>
             </div>
 

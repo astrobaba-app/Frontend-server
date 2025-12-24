@@ -51,22 +51,22 @@ export default function ProductsPage() {
   return (
     <div className="min-h-screen bg-[#fafafa]">
       {/* Header */}
-      <div className="text-center py-10">
-        <h1 className="text-4xl font-bold text-gray-900">
+      <div className="text-center py-6 md:py-10 px-4">
+        <h1 className="text-2xl md:text-4xl font-bold text-gray-900">
           Graho Store
         </h1>
-        <p className="text-gray-500 mt-2">
+        <p className="text-sm md:text-base text-gray-500 mt-2">
           Shop Best Online Astrology Products And Services
         </p>
       </div>
 
       {/* Filters Row */}
-      <div className="max-w-7xl mx-auto px-4 mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 mb-6 md:mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
         {/* Tabs */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 overflow-x-auto">
           <button
             onClick={() => setActiveType("digital")}
-            className={`px-5 py-2 rounded-full font-medium border ${
+            className={`px-3 md:px-5 py-1.5 md:py-2 rounded-full font-medium border text-xs md:text-sm whitespace-nowrap ${
               activeType === "digital"
                 ? "bg-yellow-400 border-yellow-400 text-black"
                 : "bg-white border-gray-300 text-gray-700"
@@ -77,7 +77,7 @@ export default function ProductsPage() {
 
           <button
             onClick={() => setActiveType("physical")}
-            className={`px-5 py-2 rounded-full font-medium border ${
+            className={`px-3 md:px-5 py-1.5 md:py-2 rounded-full font-medium border text-xs md:text-sm whitespace-nowrap ${
               activeType === "physical"
                 ? "bg-yellow-400 border-yellow-400 text-black"
                 : "bg-white border-gray-300 text-gray-700"
@@ -94,17 +94,17 @@ export default function ProductsPage() {
             placeholder="Search Your product..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="border border-yellow-400 px-4 py-2 rounded-l-full w-full md:w-64 focus:outline-none"
+            className="border border-yellow-400 px-3 md:px-4 py-1.5 md:py-2 rounded-l-full w-full md:w-64 focus:outline-none text-sm md:text-base"
           />
-          <button className="bg-yellow-400 px-6 rounded-r-full font-semibold">
+          <button className="bg-yellow-400 px-4 md:px-6 rounded-r-full font-semibold text-xs md:text-sm">
             Search
           </button>
         </div>
       </div>
 
       {/* Products Grid */}
-      <div className="max-w-7xl mx-auto px-4 pb-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="max-w-7xl mx-auto px-4 pb-8 md:pb-16">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
           {loading
             ? Array.from({ length: 8 }).map((_, i) => (
                 <ProductCardSkeleton key={i} />

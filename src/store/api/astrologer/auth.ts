@@ -9,6 +9,7 @@ export interface AstrologerProfile {
   email: string;
   phoneNumber: string;
   dateOfBirth?: string | null;
+  gender?: string | null;
   languages: string[];
   skills: string[];
   yearsOfExperience?: number | null;
@@ -61,6 +62,7 @@ export interface RegisterRequest {
   dateOfBirth?: string;
   languages: string[] | string;
   skills: string[] | string;
+  categories: string[] | string;
   yearsOfExperience?: number;
   bio?: string;
   pricePerMinute?: number;
@@ -160,6 +162,13 @@ export const registerAstrologer = async (data: RegisterRequest): Promise<Registe
       formData.append('skills', JSON.stringify(data.skills));
     } else {
       formData.append('skills', data.skills);
+    }
+    
+    // Handle categories
+    if (Array.isArray(data.categories)) {
+      formData.append('categories', JSON.stringify(data.categories));
+    } else {
+      formData.append('categories', data.categories);
     }
     
     // Handle photo upload

@@ -66,9 +66,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
   return (
     <>
       <Link href={`/store/products/${slug}`} className="block">
-        <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition overflow-hidden w-full max-w-[260px]">
+        <div className="bg-white rounded-lg md:rounded-xl shadow-md hover:shadow-lg transition overflow-hidden w-full">
           {/* Image */}
-          <div className="relative w-full h-44 bg-gray-100">
+          <div className="relative w-full h-32 sm:h-40 md:h-44 bg-gray-100">
             {(() => {
               const primaryImage = Array.isArray(images)
                 ? images[0]
@@ -88,23 +88,23 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </div>
 
           {/* Content */}
-          <div className="p-4">
+          <div className="p-2 sm:p-3 md:p-4">
             {/* Title */}
-            <h3 className="font-bold text-base text-gray-900 mb-1">
+            <h3 className="font-bold text-xs sm:text-sm md:text-base text-gray-900 mb-1 line-clamp-2">
               {productName}
             </h3>
 
             {/* Rating */}
-            <div className="flex items-center gap-2 mb-2">
-              <div className="text-yellow-400 text-sm">{"★".repeat(5)}</div>
-              <span className="text-sm text-gray-500">
+            <div className="flex items-center gap-1 md:gap-2 mb-1 md:mb-2">
+              <div className="text-yellow-400 text-xs md:text-sm">{"★".repeat(5)}</div>
+              <span className="text-xs md:text-sm text-gray-500">
                 {totalReviews} reviews
               </span>
             </div>
 
             {/* Price + Add */}
-            <div className="flex items-center justify-between">
-              <span className="text-lg font-bold text-gray-900">₹ {price}</span>
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-sm sm:text-base md:text-lg font-bold text-gray-900">₹ {price}</span>
 
               <Button
                 variant="custom"
@@ -112,7 +112,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 onClick={handleAddToCart}
                 loading={addingToCart}
                 disabled={isOutOfStock || addingToCart}
-                className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-4 py-1.5 rounded-sm"
+                className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-2 sm:px-3 md:px-4 py-1 md:py-1.5 rounded-sm text-xs sm:text-sm"
               >
                 {isOutOfStock ? "Out of Stock" : "Add"}
               </Button>

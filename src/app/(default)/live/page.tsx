@@ -48,7 +48,7 @@ const LiveSessionsPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="max-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
@@ -85,6 +85,7 @@ const LiveSessionsPage: React.FC = () => {
                       alt={session.title}
                       fill
                       className="object-cover"
+                      unoptimized
                     />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -96,6 +97,7 @@ const LiveSessionsPage: React.FC = () => {
                             width={96}
                             height={96}
                             className="rounded-full object-cover"
+                            unoptimized
                           />
                         ) : (
                           <span className="text-4xl text-white font-bold">
@@ -135,6 +137,7 @@ const LiveSessionsPage: React.FC = () => {
                           width={40}
                           height={40}
                           className="object-cover"
+                          unoptimized
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-white font-bold">

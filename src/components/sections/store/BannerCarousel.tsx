@@ -77,7 +77,7 @@ const BannerCarousel: React.FC = () => {
   const slide = BANNER_SLIDES[currentSlide];
 
   return (
-    <div className="relative w-full h-96 md:h-[500px] overflow-hidden rounded-lg">
+    <div className="relative w-full aspect-[16/7] sm:aspect-[16/7] md:h-[500px] md:aspect-auto overflow-hidden md:rounded-lg">
       {/* Banner Images */}
       <div className="relative w-full h-full">
         {BANNER_SLIDES.map((bannerSlide, index) => (
@@ -91,7 +91,7 @@ const BannerCarousel: React.FC = () => {
               src={bannerSlide.image}
               alt={bannerSlide.title}
               fill
-              className="object-cover"
+              className="object-contain sm:object-cover object-center"
               priority={index === 0}
             />
           </div>
@@ -104,11 +104,11 @@ const BannerCarousel: React.FC = () => {
       {/* Previous Button */}
       <button
         onClick={goToPrevSlide}
-        className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-black/50 cursor-pointer hover:bg-yellow-400 text-white p-3 rounded-full transition-colors backdrop-blur-sm"
+        className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 bg-black/50 cursor-pointer hover:bg-yellow-400 text-white p-2 md:p-3 rounded-full transition-colors backdrop-blur-sm"
         aria-label="Previous slide"
       >
         <svg
-          className="w-6 h-6"
+          className="w-4 h-4 md:w-6 md:h-6"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -125,11 +125,11 @@ const BannerCarousel: React.FC = () => {
       {/* Next Button */}
       <button
         onClick={goToNextSlide}
-        className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-black/50 cursor-pointer hover:bg-yellow-400 text-white p-3 rounded-full transition-colors backdrop-blur-sm"
+        className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 bg-black/50 cursor-pointer hover:bg-yellow-400 text-white p-2 md:p-3 rounded-full transition-colors backdrop-blur-sm"
         aria-label="Next slide"
       >
         <svg
-          className="w-6 h-6"
+          className="w-4 h-4 md:w-6 md:h-6"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -144,14 +144,14 @@ const BannerCarousel: React.FC = () => {
       </button>
 
       {/* Dot Indicators */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex gap-3">
+      <div className="absolute bottom-3 md:bottom-6 left-1/2 -translate-x-1/2 z-10 flex gap-2 md:gap-3">
         {BANNER_SLIDES.map((_, index) => (
           <button
             key={index}
             onClick={() => goToSlide(index)}
-            className={`w-3 h-3 rounded-full transition-all ${
+            className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all ${
               index === currentSlide
-                ? "bg-yellow-400 w-8"
+                ? "bg-yellow-400 w-6 md:w-8"
                 : "bg-white/50 hover:bg-white/70"
             }`}
             aria-label={`Go to slide ${index + 1}`}

@@ -186,18 +186,17 @@ const LiveStreamHostView: React.FC<LiveStreamHostViewProps> = ({
   };
 
   const handleEndStream = async () => {
-    if (confirm("Are you sure you want to end this live stream?")) {
-      try {
-        console.log("=== START CLEANUP ===");
-        console.log("Initial state:", {
-          hasClient: !!client,
-          hasAudioTrack: !!localAudioTrack,
-          hasVideoTrack: !!localVideoTrack,
-          isJoined,
-        });
-        
-        // Prevent re-initialization
-        setIsJoined(false);
+    try {
+      console.log("=== START CLEANUP ===");
+      console.log("Initial state:", {
+        hasClient: !!client,
+        hasAudioTrack: !!localAudioTrack,
+        hasVideoTrack: !!localVideoTrack,
+        isJoined,
+      });
+      
+      // Prevent re-initialization
+      setIsJoined(false);
         console.log("Set isJoined to false");
         
         // Unpublish tracks BEFORE leaving channel (important when users are connected)
@@ -284,7 +283,6 @@ const LiveStreamHostView: React.FC<LiveStreamHostViewProps> = ({
         // Call parent's onEndStream after cleanup completes
         onEndStream();
       }
-    }
   };
   const retryInitialization = () => {
     setInitError(null);

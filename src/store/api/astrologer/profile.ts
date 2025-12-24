@@ -9,6 +9,7 @@ export interface AstrologerProfile {
   email: string;
   phoneNumber: string;
   dateOfBirth?: string | null;
+  gender?: string | null;
   languages: string[];
   skills: string[];
   yearsOfExperience?: number | null;
@@ -40,6 +41,7 @@ export interface GetProfileResponse {
 export interface UpdateProfileRequest {
   fullName?: string;
   dateOfBirth?: string;
+  gender?: string;
   languages?: string[] | string;
   skills?: string[] | string;
   yearsOfExperience?: number;

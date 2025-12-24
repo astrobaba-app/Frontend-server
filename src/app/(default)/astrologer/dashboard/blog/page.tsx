@@ -25,7 +25,13 @@ import Textarea from "@/components/atoms/Textarea";
 
 import Button from "@/components/atoms/Button";
 
-import { FiUploadCloud, FiEdit2, FiTrash2, FiPlus, FiFileText } from "react-icons/fi";
+import {
+  FiUploadCloud,
+  FiEdit2,
+  FiTrash2,
+  FiPlus,
+  FiFileText,
+} from "react-icons/fi";
 
 import { MyBlogSkeleton } from "@/components/skeletons";
 import { UpdateBlogModal } from "@/components/modals/updateBlog";
@@ -56,7 +62,11 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
 
   const [imageFile, setImageFile] = useState<File | null>(null);
 
+  const [imagePreview, setImagePreview] = useState<string>("");
+
   const [loading, setLoading] = useState(false);
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const [toast, setToast] = useState<{
     message: string;
@@ -69,8 +79,17 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
 
     if (file && ["image/png", "image/jpeg", "image/jpg"].includes(file.type)) {
       setImageFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     } else {
       setImageFile(null);
+      setImagePreview("");
+      e.target.value = "";
 
       setToast({
         message: "Please select a valid image file (png, jpg, jpeg).",
@@ -99,7 +118,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
       const data: CreateBlogRequest = {
         title: title.trim(),
 
-        description: content.trim(), // Content maps to description in API
+        description: content.trim(),
 
         image: imageFile,
       };
@@ -115,8 +134,10 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
       setContent("");
 
       setImageFile(null);
+      
+      setImagePreview("");
 
-      // Notify parent to refetch and switch view
+      if (fileInputRef.current) fileInputRef.current.value = "";
 
       setTimeout(() => onPostSuccess(), 1000);
     } catch (error: any) {
@@ -170,39 +191,52 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
 
         {/* Image Upload (Kept native for File functionality, styled for design consistency) */}
 
-        <label className="block">
-          <span className="text-gray-700 font-medium">Image</span>
+        <div className="block">
+          <span className="text-gray-700 font-medium block mb-2">Image</span>
 
           <div
-            className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md bg-gray-50 cursor-pointer"
-            onClick={() =>
-              document.getElementById("image-upload-input")?.click()
-            }
+            className="flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md bg-gray-50 cursor-pointer hover:border-gray-400 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              fileInputRef.current?.click();
+            }}
           >
-            <div className="space-y-1 text-center">
-              <FiUploadCloud className="mx-auto h-12 w-12 text-gray-400" />
-
-              <div className="flex text-sm text-gray-600">
-                <span className="relative cursor-pointer rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
-                  {imageFile
-                    ? imageFile.name
-                    : "Click to upload or drag and drop"}
-                </span>
+            {imagePreview ? (
+              <div className="space-y-2 text-center">
+                <div className="relative w-full max-w-xs mx-auto">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="rounded-md max-h-48 mx-auto"
+                  />
+                </div>
+                <p className="text-sm text-gray-600">{imageFile?.name}</p>
+                <p className="text-xs text-gray-500">Click to change image</p>
               </div>
+            ) : (
+              <div className="space-y-1 text-center">
+                <FiUploadCloud className="mx-auto h-12 w-12 text-gray-400" />
 
-              <p className="text-xs text-gray-500">PNG, JPG, JPEG up to 10MB</p>
+                <div className="flex text-sm text-gray-600">
+                  <span className="relative cursor-pointer rounded-md font-medium text-indigo-600 hover:text-indigo-500">
+                    Click to upload or drag and drop
+                  </span>
+                </div>
 
-              <input
-                id="image-upload-input"
-                type="file"
-                className="sr-only"
-                accept=".png,.jpg,.jpeg"
-                onChange={handleFileChange}
-                disabled={loading}
-              />
-            </div>
+                <p className="text-xs text-gray-500">PNG, JPG, JPEG up to 10MB</p>
+              </div>
+            )}
           </div>
-        </label>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            accept="image/png,image/jpeg,image/jpg"
+            onChange={handleFileChange}
+            disabled={loading}
+          />
+        </div>
 
         <div className="flex justify-end mb-4 space-x-4">
           {/* Cancel Button (Using Button component) */}
@@ -371,7 +405,10 @@ export default function AstrologerBlogPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {blogs.map((blog) => (
           <div key={blog.id || blog._id} className="relative group">
-            <div onClick={() => handleBlogClick(blog)} className="cursor-pointer">
+            <div
+              onClick={() => handleBlogClick(blog)}
+              className="cursor-pointer"
+            >
               <BlogCard
                 img={blog.image}
                 title={blog.title}
@@ -404,7 +441,6 @@ export default function AstrologerBlogPage() {
                   e.stopPropagation();
                   handleEditBlog(blog);
                 }}
-
                 icon={<FiEdit2 className="w-5 h-5" />}
               >
                 {""}
@@ -439,11 +475,7 @@ export default function AstrologerBlogPage() {
   return (
     <div className="px-8">
       {toast.show && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={hideToast}
-        />
+        <Toast message={toast.message} type={toast.type} onClose={hideToast} />
       )}
 
       {/* Update Blog Modal */}

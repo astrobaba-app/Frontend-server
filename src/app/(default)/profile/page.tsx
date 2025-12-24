@@ -16,7 +16,7 @@ export default function MyProfilePage() {
 
   const [formData, setFormData] = useState({
     name: "", gender: "", day: "", month: "", year: "",
-    hour: "", minute: "", second: "00", birthPlace: "",
+    hour: "", minute: "", ampm: "AM", birthPlace: "",
     address: "", city: "", state: "", country: "", pincode: "",
   });
 
@@ -28,11 +28,26 @@ export default function MyProfilePage() {
         if (response.success && response.user) {
           const p = response.user;
           const dateObj = p.dateOfbirth ? new Date(p.dateOfbirth) : null;
-          let hour = "", minute = "";
+          let hour = "", minute = "", ampm = "AM";
           if (p.timeOfbirth) {
             const parts = p.timeOfbirth.split(":");
-            hour = parts[0] || "";
+            const hour24 = parseInt(parts[0] || "0");
             minute = parts[1] || "";
+            
+            // Convert 24-hour to 12-hour format
+            if (hour24 === 0) {
+              hour = "12";
+              ampm = "AM";
+            } else if (hour24 === 12) {
+              hour = "12";
+              ampm = "PM";
+            } else if (hour24 > 12) {
+              hour = (hour24 - 12).toString().padStart(2, "0");
+              ampm = "PM";
+            } else {
+              hour = hour24.toString().padStart(2, "0");
+              ampm = "AM";
+            }
           }
 
           setFormData((prev) => ({
@@ -42,7 +57,7 @@ export default function MyProfilePage() {
             day: dateObj ? dateObj.getDate().toString().padStart(2, "0") : "",
             month: dateObj ? (dateObj.getMonth() + 1).toString().padStart(2, "0") : "",
             year: dateObj ? dateObj.getFullYear().toString() : "",
-            hour, minute,
+            hour, minute, ampm,
             birthPlace: p.placeOfBirth || "",
           }));
         }
@@ -72,7 +87,14 @@ export default function MyProfilePage() {
       // Validate and construct time of birth
       let timeOfbirth: string | undefined;
       if (formData.hour && formData.minute) {
-        timeOfbirth = `${formData.hour}:${formData.minute}`;
+        // Convert 12-hour format to 24-hour format
+        let hour24 = parseInt(formData.hour);
+        if (formData.ampm === "PM" && hour24 !== 12) {
+          hour24 += 12;
+        } else if (formData.ampm === "AM" && hour24 === 12) {
+          hour24 = 0;
+        }
+        timeOfbirth = `${hour24.toString().padStart(2, "0")}:${formData.minute}:00`;
       }
       
       const response = await updateProfile({
@@ -125,13 +147,16 @@ export default function MyProfilePage() {
 
             <div className="grid grid-cols-3 gap-3">
               <Select label="Hour" required value={formData.hour} onChange={(e) => setFormData({ ...formData, hour: e.target.value })}>
-                {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map(h => <option key={h} value={h}>{h}</option>)}
+                <option value="">HH</option>
+                {Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, "0")).map(h => <option key={h} value={h}>{h}</option>)}
               </Select>
               <Select label="Mins" required value={formData.minute} onChange={(e) => setFormData({ ...formData, minute: e.target.value })}>
+                <option value="">MM</option>
                 {Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, "0")).map(m => <option key={m} value={m}>{m}</option>)}
               </Select>
-              <Select label="Secs" required value={formData.second} onChange={(e) => setFormData({ ...formData, second: e.target.value })}>
-                {Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, "0")).map(s => <option key={s} value={s}>{s}</option>)}
+              <Select label="AM/PM" required value={formData.ampm} onChange={(e) => setFormData({ ...formData, ampm: e.target.value })}>
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
               </Select>
             </div>
 

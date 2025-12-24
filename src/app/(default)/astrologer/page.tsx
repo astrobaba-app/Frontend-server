@@ -11,15 +11,49 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/useToast';
 import Toast from '@/components/atoms/Toast';
 import { Suspense } from 'react';
+
 const CATEGORIES = [
-  { id: 'all', label: 'All', icon: '✨' },
-  { id: 'love', label: 'Love', icon: '❤️' },
-  { id: 'education', label: 'Education', icon: '📚' },
-  { id: 'career', label: 'Career', icon: '💼' },
-  { id: 'marriage', label: 'Marriage', icon: '💑' },
-  { id: 'health', label: 'Health', icon: '🏥' },
-  { id: 'wealth', label: 'Wealth', icon: '💰' },
-  { id: 'remedies', label: 'Remedies', icon: '🔮' },
+  { name: 'All' },
+  { name: 'Love' },
+  { name: 'Relationship' },
+  { name: 'Education' },
+  { name: 'Health' },
+  { name: 'Career' },
+  { name: 'Finance' },
+  { name: 'Marriage' },
+  { name: 'Family' },
+  { name: 'Business' },
+  { name: 'Legal' },
+  { name: 'Travel' },
+  { name: 'Spiritual' },
+];
+
+const SKILLS = [
+  'Vedic',
+  'KP',
+  'Numerology',
+  'Tarot',
+  'Palmistry',
+  'Vastu',
+  'Prashna',
+  'Nadi',
+  'Lal Kitab',
+  'Face Reading',
+];
+
+const LANGUAGES = [
+  'Hindi',
+  'English',
+  'Bengali',
+  'Tamil',
+  'Telugu',
+  'Marathi',
+  'Gujarati',
+  'Kannada',
+  'Malayalam',
+  'Punjabi',
+  'Odia',
+  'Urdu',
 ];
 
 interface TrendingAstrologerCardProps {
@@ -75,14 +109,37 @@ function AstrologersPage() {
   const [astrologers, setAstrologers] = useState<Astrologer[]>([]);
   const [filteredAstrologers, setFilteredAstrologers] = useState<Astrologer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFiltering, setIsFiltering] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+  const [minRating, setMinRating] = useState<number | undefined>(undefined);
+  const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
+  const [showFiltersModal, setShowFiltersModal] = useState(false);
 
+  // Fetch astrologers with filters applied on backend
   useEffect(() => {
     const fetchAstrologers = async () => {
       try {
-        setLoading(true);
-        const response = await getAllAstrologers();
+        // Only show full loading on initial load, use isFiltering for filter updates
+        if (astrologers.length === 0) {
+          setLoading(true);
+        } else {
+          setIsFiltering(true);
+        }
+        
+        const filters = {
+          skills: selectedSkills.length > 0 ? selectedSkills : undefined,
+          categories: selectedCategories.length > 0 ? selectedCategories : undefined,
+          languages: selectedLanguages.length > 0 ? selectedLanguages : undefined,
+          minRating,
+          maxPrice,
+        };
+        
+        console.log('Fetching astrologers with filters:', filters);
+        const response = await getAllAstrologers(filters);
+        console.log('API Response:', response);
         if (response.success && response.astrologers) {
           setAstrologers(response.astrologers);
           setFilteredAstrologers(response.astrologers);
@@ -91,12 +148,14 @@ function AstrologersPage() {
         console.error('Error fetching astrologers:', error);
       } finally {
         setLoading(false);
+        setIsFiltering(false);
       }
     };
 
     fetchAstrologers();
-  }, []);
+  }, [selectedCategories, selectedSkills, selectedLanguages, minRating, maxPrice]);
 
+  // Client-side search filtering only (backend handles category/skills/language filters)
   useEffect(() => {
     let filtered = astrologers;
 
@@ -113,15 +172,36 @@ function AstrologersPage() {
       );
     }
 
-    if (selectedCategory !== 'all') {
-    }
-
     setFilteredAstrologers(filtered);
-  }, [searchQuery, selectedCategory, astrologers]);
+  }, [searchQuery, astrologers]);
 
   const handleCallClick = () => {
     showToast('This feature is coming soon.', 'info');
   };
+
+  const clearAllFilters = () => {
+    setSelectedCategories([]);
+    setSelectedSkills([]);
+    setSelectedLanguages([]);
+    setMinRating(undefined);
+    setMaxPrice(undefined);
+  };
+
+  const toggleCategory = (categoryName: string) => {
+    if (categoryName === 'All') {
+      setSelectedCategories([]);
+    } else {
+      if (selectedCategories.includes(categoryName)) {
+        setSelectedCategories(selectedCategories.filter(c => c !== categoryName));
+      } else {
+        setSelectedCategories([...selectedCategories, categoryName]);
+      }
+    }
+  };
+
+  const hasActiveFilters = selectedCategories.length > 0 || selectedSkills.length > 0 || 
+                           selectedLanguages.length > 0 || minRating !== undefined || 
+                           maxPrice !== undefined;
 
   const trendingAstrologers = [...astrologers]
     .sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating))
@@ -160,9 +240,9 @@ function AstrologersPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Search Bar (Filter button removed) */}
-        <div className="flex gap-4 mb-6">
-          <div className="flex-1 relative">
+        {/* Search Bar */}
+        <div className="mb-4">
+          <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
@@ -174,43 +254,236 @@ function AstrologersPage() {
           </div>
         </div>
 
-        {/* Category Filters */}
-        <div className="flex gap-2 overflow-x-auto pb-4 mb-6 scrollbar-hide">
-          {CATEGORIES.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => setSelectedCategory(category.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all shrink-0 text-sm ${
-                selectedCategory === category.id
-                  ? 'text-gray-900 shadow-md font-bold'
-                  : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 font-medium'
-              }`}
-              style={
-                selectedCategory === category.id
-                  ? { backgroundColor: colors.primeYellow }
-                  : {}
-              }
-            >
-              <span className="text-base">{category.icon}</span>
-              <span>{category.label}</span>
-            </button>
-          ))}
+        {/* Categories Row with Filter Button */}
+        <div className="mb-6 flex items-center gap-3">
+          <div className="flex-1 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-2 pb-2">
+              {CATEGORIES.map((category) => (
+                <button
+                  key={category.name}
+                  onClick={() => toggleCategory(category.name)}
+                  disabled={isFiltering}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all shrink-0 border ${
+                    category.name === 'All' && selectedCategories.length === 0
+                      ? 'bg-yellow-400 text-gray-900 border-yellow-400 shadow-md font-semibold'
+                      : selectedCategories.includes(category.name)
+                      ? 'bg-yellow-400 text-gray-900 border-yellow-400 shadow-md font-semibold'
+                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 font-medium'
+                  } ${isFiltering ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <span className="text-sm">{category.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Filter Button */}
+          <button
+            onClick={() => setShowFiltersModal(true)}
+            disabled={isFiltering}
+            className={`shrink-0 px-4 py-2 rounded-full border-2 border-yellow-400 bg-white text-gray-900 font-semibold hover:bg-yellow-50 transition-colors flex items-center gap-2 ${
+              isFiltering ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+          >
+            {isFiltering ? (
+              <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+            )}
+            <span className="hidden sm:inline">Filters</span>
+            {(selectedSkills.length + selectedLanguages.length + (minRating ? 1 : 0) + (maxPrice ? 1 : 0) > 0) && (
+              <span className="px-2 py-0.5 bg-yellow-400 text-xs rounded-full">
+                {selectedSkills.length + selectedLanguages.length + (minRating ? 1 : 0) + (maxPrice ? 1 : 0)}
+              </span>
+            )}
+          </button>
         </div>
+
+        {/* Filters Modal */}
+        {showFiltersModal && (
+          <div className="fixed inset-0 bg-gray-900/75 backdrop-blur-sm z-50 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+              {/* Backdrop */}
+              <div 
+                className="fixed inset-0 transition-opacity"
+                onClick={() => setShowFiltersModal(false)}
+              />
+
+              {/* Modal */}
+              <div 
+                className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full relative z-10"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="bg-white px-6 pt-6 pb-4">
+                  {/* Modal Header */}
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-2xl font-bold text-gray-900">Filters</h3>
+                    <button
+                      onClick={() => setShowFiltersModal(false)}
+                      className="text-gray-400 hover:text-gray-500"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div className="max-h-[60vh] overflow-y-auto pr-2">
+                    {/* Skills Filters */}
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-lg font-semibold text-gray-900">Skills</h4>
+                        {selectedSkills.length > 0 && (
+                          <button
+                            onClick={() => setSelectedSkills([])}
+                            className="text-sm text-red-500 hover:text-red-700 font-medium"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {SKILLS.map((skill) => (
+                          <button
+                            key={skill}
+                            onClick={() => {
+                              if (selectedSkills.includes(skill)) {
+                                setSelectedSkills(selectedSkills.filter(s => s !== skill));
+                              } else {
+                                setSelectedSkills([...selectedSkills, skill]);
+                              }
+                            }}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                              selectedSkills.includes(skill)
+                                ? 'bg-yellow-400 text-gray-900 shadow-md'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                          >
+                            {skill}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Languages Filters */}
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-lg font-semibold text-gray-900">Languages</h4>
+                        {selectedLanguages.length > 0 && (
+                          <button
+                            onClick={() => setSelectedLanguages([])}
+                            className="text-sm text-red-500 hover:text-red-700 font-medium"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {LANGUAGES.map((language) => (
+                          <button
+                            key={language}
+                            onClick={() => {
+                              if (selectedLanguages.includes(language)) {
+                                setSelectedLanguages(selectedLanguages.filter(l => l !== language));
+                              } else {
+                                setSelectedLanguages([...selectedLanguages, language]);
+                              }
+                            }}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                              selectedLanguages.includes(language)
+                                ? 'bg-yellow-400 text-gray-900 shadow-md'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                          >
+                            {language}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Rating Filter */}
+                    <div className="mb-6">
+                      <label className="block text-lg font-semibold text-gray-900 mb-3">
+                        Minimum Rating
+                      </label>
+                      <div className="grid grid-cols-5 gap-2">
+                        {[1, 2, 3, 4, 5].map((rating) => (
+                          <button
+                            key={rating}
+                            onClick={() => setMinRating(minRating === rating ? undefined : rating)}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                              minRating === rating
+                                ? 'bg-yellow-400 text-gray-900 shadow-md'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                          >
+                            {rating}+ ⭐
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Maximum Price */}
+                    <div className="mb-4">
+                      <label className="block text-lg font-semibold text-gray-900 mb-3">
+                        Maximum Price (per minute)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="Enter max price"
+                        value={maxPrice || ''}
+                        onChange={(e) => setMaxPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
+                        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200"
+                        min="0"
+                        step="0.5"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="bg-gray-50 px-6 py-4 flex items-center justify-between gap-3">
+                  <button
+                    onClick={clearAllFilters}
+                    className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700"
+                  >
+                    Clear All Filters
+                  </button>
+                  <button
+                    onClick={() => setShowFiltersModal(false)}
+                    className="px-6 py-2 bg-yellow-400 text-gray-900 font-semibold rounded-lg hover:bg-yellow-500 transition-colors"
+                  >
+                    Apply Filters
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Astrologers Grid (TOP SECTION) */}
         {topAstrologers.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 transition-opacity duration-300 ${
+            isFiltering ? 'opacity-50 pointer-events-none' : 'opacity-100'
+          }`}>
             {topAstrologers.map(renderAstrologerCard)}
           </div>
         )}
 
         {/* Trending Section */}
         {trendingAstrologers.length > 0 && (
-          <div className="mb-8 p-6 bg-white rounded-xl shadow-md">
+          <div className={`mb-8 p-6 bg-white rounded-xl shadow-md transition-opacity duration-300 ${
+            isFiltering ? 'opacity-50 pointer-events-none' : 'opacity-100'
+          }`}>
             <h2 className="text-2xl font-bold mb-6 text-gray-800">
               Trending Now
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {trendingAstrologers.map((astro) => (
                 <Link
                   key={astro.id}
@@ -230,7 +503,9 @@ function AstrologersPage() {
             <p className="text-xl text-gray-600">No astrologers found</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 transition-opacity duration-300 ${
+            isFiltering ? 'opacity-50 pointer-events-none' : 'opacity-100'
+          }`}>
             {remainingAstrologers.map(renderAstrologerCard)}
           </div>
         )}

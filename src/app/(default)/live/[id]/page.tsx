@@ -6,6 +6,8 @@ import { joinLiveSession, leaveLiveSession } from "@/store/api/live/live";
 import LiveStreamAudienceView from "@/components/live/LiveStreamAudienceView";
 import FloatingLivePlayer from "@/components/live/FloatingLivePlayer";
 import { LiveStreamProvider } from "@/contexts/LiveStreamContext";
+import Toast, { ToastType } from "@/components/atoms/Toast";
+import LiveEndedModal from "@/components/modals/LiveEndedModal";
 
 const LiveSessionPage: React.FC = () => {
   const params = useParams();
@@ -18,6 +20,9 @@ const LiveSessionPage: React.FC = () => {
   const [isMinimized, setIsMinimized] = useState(false);
   const hasJoinedRef = React.useRef(false);
   const sessionDataRef = React.useRef<any>(null);
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+  const [showEndModal, setShowEndModal] = useState(false);
+  const [astrologerName, setAstrologerName] = useState<string>("Astrologer");
 
   useEffect(() => {
     // Only join once - prevent React StrictMode double invocation
@@ -28,9 +33,14 @@ const LiveSessionPage: React.FC = () => {
 
     // Listen for live session ended event
     const handleSessionEnded = (event: any) => {
-      const { message, astrologerName } = event.detail;
-      alert(message || `${astrologerName} has ended the live session`);
-      handleLeaveSession(true); // Navigate back to live sessions list
+      const { message, astrologerName: astroName } = event.detail;
+      const displayName = astroName || sessionDataRef.current?.liveSession?.astrologer?.fullName || "Astrologer";
+      setAstrologerName(displayName);
+      setToast({ 
+        message: `${displayName} is no longer live`, 
+        type: "info" 
+      });
+      setShowEndModal(true);
     };
 
     window.addEventListener("liveSessionEnded", handleSessionEnded);
@@ -78,6 +88,11 @@ const LiveSessionPage: React.FC = () => {
         router.push("/live");
       }
     }
+  };
+
+  const handleModalClose = () => {
+    setShowEndModal(false);
+    handleLeaveSession(true); // Navigate back to live sessions list
   };
 
   const handleMinimize = () => {
@@ -148,6 +163,23 @@ const LiveSessionPage: React.FC = () => {
           showMinimize={true}
         />
       )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* Live Ended Modal */}
+      <LiveEndedModal
+        isOpen={showEndModal}
+        onClose={handleModalClose}
+        astrologerName={astrologerName}
+        isHost={false}
+      />
     </LiveStreamProvider>
   );
 };

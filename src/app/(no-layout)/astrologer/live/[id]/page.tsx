@@ -5,6 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { getHostToken, endLiveSession } from "@/store/api/live/live";
 import { LiveStreamProvider } from "@/contexts/LiveStreamContext";
+import Toast, { ToastType } from "@/components/atoms/Toast";
+import LiveEndedModal from "@/components/modals/LiveEndedModal";
+import EndLiveConfirmModal from "@/components/modals/EndLiveConfirmModal";
 
 // Dynamic import to prevent SSR
 const LiveStreamHostView = dynamic(
@@ -37,6 +40,11 @@ const AstrologerLivePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [tokenData, setTokenData] = useState<any>(null);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+  const [showEndModal, setShowEndModal] = useState(false);
+  const [endStats, setEndStats] = useState<any>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isEnding, setIsEnding] = useState(false);
 
   const fetchToken = useCallback(async () => {
     try {
@@ -67,27 +75,42 @@ const AstrologerLivePage: React.FC = () => {
     }
   }, []); // Empty deps - only run once on mount
 
-  const handleEndStream = async () => {
+  const handleEndStreamClick = () => {
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmEndStream = async () => {
     try {
+      setIsEnding(true);
+      setShowConfirmModal(false);
+      
       // Add small delay to ensure device cleanup completes
       await new Promise(resolve => setTimeout(resolve, 500));
       
       const response = await endLiveSession(sessionId);
       if (response.success) {
-        alert(
-          `Stream ended!\n\nTotal Viewers: ${response.liveSession?.totalViewers}\nPeak Viewers: ${response.liveSession?.maxViewers}\nRevenue: ₹${response.liveSession?.totalRevenue}\nDuration: ${response.liveSession?.duration} minutes`
-        );
-        
-        // Add another small delay before navigation to ensure alert is dismissed
-        await new Promise(resolve => setTimeout(resolve, 300));
-        router.push("/astrologer/dashboard/live-history");
+        setToast({ message: "Live stream ended successfully!", type: "success" });
+        setEndStats({
+          totalViewers: response.liveSession?.totalViewers,
+          maxViewers: response.liveSession?.maxViewers,
+          totalRevenue: response.liveSession?.totalRevenue,
+          duration: response.liveSession?.duration,
+        });
+        setShowEndModal(true);
       } else {
-        alert(response.error || "Failed to end stream");
+        setToast({ message: response.error || "Failed to end stream", type: "error" });
       }
     } catch (error: any) {
       console.error("Failed to end stream:", error);
-      alert(error.message || "Failed to end stream");
+      setToast({ message: error.message || "Failed to end stream", type: "error" });
+    } finally {
+      setIsEnding(false);
     }
+  };
+
+  const handleModalClose = () => {
+    setShowEndModal(false);
+    router.push("/astrologer/dashboard/live-history");
   };
 
   const handleMinimize = () => {
@@ -141,7 +164,7 @@ const AstrologerLivePage: React.FC = () => {
         <FloatingLivePlayer
           isHost={true}
           onMaximize={handleMaximize}
-          onClose={handleEndStream}
+          onClose={handleEndStreamClick}
         />
       ) : (
         <LiveStreamHostView
@@ -150,11 +173,36 @@ const AstrologerLivePage: React.FC = () => {
           token={tokenData.token}
           appId={tokenData.appId}
           uid={tokenData.uid}
-          onEndStream={handleEndStream}
+          onEndStream={handleEndStreamClick}
           onMinimize={handleMinimize}
           showMinimize={true}
         />
       )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* End Stream Confirmation Modal */}
+      <EndLiveConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={handleConfirmEndStream}
+        loading={isEnding}
+      />
+
+      {/* Live Ended Modal */}
+      <LiveEndedModal
+        isOpen={showEndModal}
+        onClose={handleModalClose}
+        stats={endStats}
+        isHost={true}
+      />
     </LiveStreamProvider>
   );
 };

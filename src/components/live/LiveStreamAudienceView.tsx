@@ -3,6 +3,8 @@ import { X, Users, Minimize2, MessageSquare, Maximize2 } from "lucide-react";
 import { useLiveStream } from "@/contexts/LiveStreamContext";
 import LiveChat from "./LiveChat";
 import FloatingMessages from "./FloatingMessages";
+import Toast, { ToastType } from "@/components/atoms/Toast";
+import LeaveLiveConfirmModal from "@/components/modals/LeaveLiveConfirmModal";
 
 interface LiveStreamAudienceViewProps {
   sessionId: string;
@@ -33,6 +35,8 @@ const LiveStreamAudienceView: React.FC<LiveStreamAudienceViewProps> = ({
   const [isJoined, setIsJoined] = useState(false);
   const isInitializingRef = useRef(false); // Prevent double initialization
   const [showChat, setShowChat] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
 
   const { participantCount, joinLiveSession, leaveLiveSession, connect, isConnected } = useLiveStream();
 
@@ -155,9 +159,16 @@ const LiveStreamAudienceView: React.FC<LiveStreamAudienceViewProps> = ({
   }, [appId, channelName, token, uid]);
 
   const handleLeave = () => {
-    if (confirm("Are you sure you want to leave this live stream?")) {
-      onLeave();
-    }
+    setShowLeaveModal(true);
+  };
+
+  const handleConfirmLeave = () => {
+    setShowLeaveModal(false);
+    onLeave();
+  };
+
+  const handleChatError = (message: string) => {
+    setToast({ message, type: "error" });
   };
 
   return (
@@ -235,10 +246,27 @@ const LiveStreamAudienceView: React.FC<LiveStreamAudienceViewProps> = ({
                 <X className="w-5 h-5 text-gray-600" />
               </button>
             </div>
-            <LiveChat sessionId={sessionId} />
+            <LiveChat sessionId={sessionId} onError={handleChatError} />
           </div>
         </div>
       )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* Leave Confirmation Modal */}
+      <LeaveLiveConfirmModal
+        isOpen={showLeaveModal}
+        onClose={() => setShowLeaveModal(false)}
+        onConfirm={handleConfirmLeave}
+        astrologerName={astrologerName}
+      />
     </div>
   );
 };

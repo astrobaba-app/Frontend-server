@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Input from "@/components/atoms/Input";
+import Select from "@/components/atoms/Select";
 import Textarea from "@/components/atoms/Textarea";
 import Button from "@/components/atoms/Button";
 import Toast from "@/components/atoms/Toast";
@@ -26,6 +27,7 @@ export default function AstrologerProfilePage() {
     phoneNumber: "",
     yearsOfExperience: "",
     dateOfBirth: "",
+    gender: "",
     pricePerMinute: "",
     languages: [] as string[],
     skills: [] as string[],
@@ -46,6 +48,7 @@ export default function AstrologerProfilePage() {
           phoneNumber: response.astrologer.phoneNumber || "",
           yearsOfExperience: response.astrologer.yearsOfExperience?.toString() || "",
           dateOfBirth: response.astrologer.dateOfBirth || "",
+          gender: response.astrologer.gender || "",
           pricePerMinute: response.astrologer.pricePerMinute?.toString() || "",
           languages: Array.isArray(response.astrologer.languages) 
             ? response.astrologer.languages 
@@ -67,7 +70,7 @@ export default function AstrologerProfilePage() {
   };
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -118,6 +121,7 @@ export default function AstrologerProfilePage() {
       const updateData = {
         fullName: formData.fullName,
         dateOfBirth: formData.dateOfBirth || undefined,
+        gender: formData.gender || undefined,
         yearsOfExperience: parseInt(formData.yearsOfExperience) || undefined,
         pricePerMinute: parseFloat(formData.pricePerMinute) || undefined,
         languages: formData.languages,
@@ -242,6 +246,24 @@ export default function AstrologerProfilePage() {
                 value={formData.dateOfBirth}
                 onChange={handleInputChange}
               />
+            </div>
+
+            {/* Gender */}
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
+                Gender
+              </label>
+              <Select
+                name="gender"
+                value={formData.gender}
+                onChange={handleInputChange}
+                disabled={true}
+              >
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </Select>
             </div>
 
             {/* Languages */}

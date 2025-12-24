@@ -65,32 +65,7 @@ export default function BlogListPage() {
         </div>
       </div>
 
-      {/* Category Filters */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide">
-            {CATEGORIES.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all shrink-0 ${
-                  selectedCategory === category.id
-                    ? 'text-gray-900 shadow-md'
-                    : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
-                }`}
-                style={
-                  selectedCategory === category.id
-                    ? { backgroundColor: colors.primeYellow }
-                    : {}
-                }
-              >
-                <span className="text-lg">{category.icon}</span>
-                <span className="font-medium">{category.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+   
 
       {/* Blog Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

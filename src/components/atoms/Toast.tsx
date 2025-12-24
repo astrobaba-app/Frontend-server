@@ -55,17 +55,19 @@ export default function Toast({ message, type, onClose, duration = 4000 }: Toast
 
   return (
     <div
-      className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg animate-slideIn ${getBackgroundColor()}`}
+      className="fixed top-4 right-4 flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg animate-slideIn"
       style={{
         minWidth: '300px',
         maxWidth: '500px',
+        zIndex: 99999,
       }}
     >
-      <div className="shrink-0">{getIcon()}</div>
-      <p className={`flex-1 text-sm font-medium ${getTextColor()}`}>{message}</p>
+      <div className={`${getBackgroundColor()} absolute inset-0 rounded-lg`}></div>
+      <div className="shrink-0 relative z-10">{getIcon()}</div>
+      <p className={`flex-1 text-sm font-medium ${getTextColor()} relative z-10`}>{message}</p>
       <button
         onClick={onClose}
-        className="shrink-0 cursor-pointer hover:opacity-70 transition-opacity"
+        className="shrink-0 cursor-pointer hover:opacity-70 transition-opacity relative z-10"
         aria-label="Close notification"
       >
         <X className={`w-4 h-4 ${getTextColor()}`} />
