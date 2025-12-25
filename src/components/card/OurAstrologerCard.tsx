@@ -47,17 +47,11 @@ const OurAstrologerCard: React.FC<OurAstrologerCardProps> = ({
 }) => {
   const {
     fullName,
-
     photo,
-
     yearsOfExperience,
-
     rating,
-
     skills,
-
     pricePerMinute,
-
     isOnline,
   } = astrologer;
 
@@ -83,29 +77,35 @@ const OurAstrologerCard: React.FC<OurAstrologerCardProps> = ({
   return (
     <Link href={`/astrologer/${astrologer.id}`} className="block">
       <div className="relative w-full max-w-[280px] sm:w-64 rounded-2xl shadow-lg overflow-hidden bg-white mx-auto hover:shadow-xl transition-shadow cursor-pointer">
-        <div
-          style={photoStyle}
-          className="h-45 sm:h-64 flex flex-col items-center justify-center relative"
-        >
-          {/* Online Status Badge */}
+        <div className="py-0 px-0">
+          <div
+            style={{
+              ...photoStyle,
+              backgroundSize: "contain", // Ensures image is fully visible
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center",
+            }}
+            className="h-28 w-28 sm:h-40 sm:w-40 mx-auto flex flex-col items-center justify-center relative"
+          >
+            {/* Online Status Badge */}
+            {isOnline && (
+              <div
+                style={{ background: colors.primeGreen }}
+                className="absolute top-3 -right-8 px-2 py-0.5 text-[10px] sm:text-xs font-semibold rounded-full text-white"
+              >
+                Online
+              </div>
+            )}
 
-          {isOnline && (
-            <div
-              style={{ background: colors.primeGreen }}
-              className="absolute top-2 sm:top-3 right-2 sm:right-3 px-3 sm:px-4 py-0.5 sm:py-1 text-xs font-semibold rounded-full text-white"
-            >
-              Online
-            </div>
-          )}
-
-          {/* Default Icon if no photo */}
-
-          {!photo && (
-            <FaUserAstronaut
-              style={{ color: "white" }}
-              className="w-12 h-12 sm:w-16 sm:h-16 -mb-4 sm:-mb-5"
-            />
-          )}
+            {/* Default Icon if no photo */}
+            {!photo && (
+              <FaUserAstronaut
+                style={{ color: "white" }}
+                /* Reduced icon size to fit smaller container */
+                className="w-8 h-8 sm:w-12 sm:h-12"
+              />
+            )}
+          </div>
         </div>
 
         <div className="bg-white px-3 sm:px-4 pb-3 sm:pb-4 pt-2 sm:pt-3">

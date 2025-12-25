@@ -234,10 +234,10 @@ export default function FreeKundliPage() {
       return (
         <div className={stackClass}>
           <div className="text-center">
-            <Heading level={2} className="text-2xl sm:text-3xl font-bold mb-2">
+            <Heading level={2} className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">
               Hey There!
             </Heading>
-            <Heading level={3} className="text-gray-600 text-base sm:text-lg">
+            <Heading level={3} className="text-gray-600 text-sm sm:text-base md:text-lg">
               What is your name?
             </Heading>
           </div>
@@ -255,7 +255,7 @@ export default function FreeKundliPage() {
             disabled={!formData.fullName}
             fullWidth
             size="lg"
-            className="h-12 sm:h-14 text-lg"
+            className="h-11 sm:h-12 md:h-14 text-base sm:text-lg"
           >
             Next
           </Button>
@@ -266,7 +266,7 @@ export default function FreeKundliPage() {
       return (
         <div className={stackClass}>
           <div className="text-center">
-            <Heading level={3} className="text-xl sm:text-2xl">
+            <Heading level={3} className="text-lg sm:text-xl md:text-2xl">
               What is your Gender?
             </Heading>
           </div>
@@ -306,7 +306,7 @@ export default function FreeKundliPage() {
       return (
         <div className={stackClass}>
           <div className="text-center">
-            <Heading level={3} className="text-xl sm:text-2xl">
+            <Heading level={3} className="text-lg sm:text-xl md:text-2xl">
               {isStep3 ? "Enter your Birth Date" : "Enter your Birth Time"}
             </Heading>
           </div>
@@ -342,7 +342,7 @@ export default function FreeKundliPage() {
       return (
         <div className={stackClass}>
           <div className="text-center">
-            <Heading level={3} className="text-xl sm:text-2xl">
+            <Heading level={3} className="text-lg sm:text-xl md:text-2xl">
               What is your Birth Place?
             </Heading>
           </div>
@@ -363,13 +363,13 @@ export default function FreeKundliPage() {
               placeholder="Mumbai, India"
             />
             {placeSuggestions.length > 0 && (
-              <div className="absolute z-50 w-full mt-1 bg-white border rounded-xl shadow-xl max-h-48 sm:max-h-60 overflow-auto">
+              <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg sm:rounded-xl shadow-xl max-h-48 sm:max-h-60 overflow-auto">
                 {placeSuggestions.map((s) => (
                   <button
                     key={s.placeId}
                     type="button"
                     onClick={() => handleSelectPlaceSuggestion(s.placeId, s.description)}
-                    className="w-full text-left px-4 py-3 text-sm hover:bg-indigo-50 border-b last:border-0 transition-colors"
+                    className="w-full text-left px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm hover:bg-indigo-50 active:bg-indigo-100 border-b last:border-0 transition-colors"
                   >
                     {s.description}
                   </button>
@@ -403,8 +403,8 @@ export default function FreeKundliPage() {
 };
 
   return (
-    <div className=" bg-gray-50 pb-20">
-      <main className="max-w-4xl mx-auto">
+    <div className="bg-gray-50 pb-20 px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
+      <main className={!showForm ? "max-w-4xl mx-auto" : "mx-auto"}>
         {!showForm ? (
           <div className="space-y-8">
             <div className="text-center space-y-2">
@@ -438,24 +438,24 @@ export default function FreeKundliPage() {
               </Button>
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest px-2">
+            <div className="space-y-4 px-2 sm:px-0">
+              <h3 className="text-xs sm:text-sm font-black text-gray-400 uppercase tracking-widest">
                 Recently Generated
               </h3>
               {historyLoading ? (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {[1, 2, 3].map((i) => (
                     <KundliCardSkeleton key={i} />
                   ))}
                 </div>
               ) : kundliHistory.length === 0 ? (
-                <div className="bg-white border-2 border-dashed border-gray-200 rounded-3xl p-12 text-center">
-                  <p className="text-gray-400 font-bold">
+                <div className="bg-white border-2 border-dashed border-gray-200 rounded-2xl sm:rounded-3xl p-8 sm:p-12 text-center">
+                  <p className="text-sm sm:text-base text-gray-400 font-bold">
                     No saved Kundlis found.
                   </p>
                 </div>
               ) : (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {kundliHistory.map((kundli) => (
                     <KundliCard
                       key={kundli.id}
@@ -473,12 +473,12 @@ export default function FreeKundliPage() {
           </div>
         ) : (
          
-  <div className="max-w-4xl mx-auto"> {/* Reduced max-width for better form readability */}
+  <div className="w-full max-w-[280px] xs:max-w-[320px] sm:max-w-md md:max-w-lg lg:max-w-xl mx-auto">
     <Card className="rounded-lg sm:rounded-xl shadow-sm border-0 overflow-hidden bg-white">
-      <div className="p-5 sm:p-10">
+      <div className="p-3 sm:p-5 md:p-6 lg:p-8">
         <StepIndicator currentStep={currentStep} totalSteps={5} />
         
-        <div className="mt-8">
+        <div className="mt-6 sm:mt-8">
           {renderStepContent()}
         </div>
       </div>

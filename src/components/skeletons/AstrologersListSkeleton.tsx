@@ -8,6 +8,9 @@ const AstrologersListSkeleton: React.FC = () => {
         <div className="flex gap-4 mb-6">
           <div className="flex-1 h-12 bg-gray-200 rounded-lg"></div>
         </div>
+        <div className="flex gap-4 mb-6">
+          <div className="flex-1 h-12 bg-gray-200 rounded-lg"></div>
+        </div>
 
         {/* Astrologers Grid Skeleton */}
         <div className="grid mb-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

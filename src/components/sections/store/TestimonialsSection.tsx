@@ -22,7 +22,7 @@ const testimonials: Testimonial[] = [
 
 export default function TestimonialsSection() {
   return (
-    <section className="py-8 md:py-16 px-2 md:px-8 max-w-7xl mx-auto">
+    <section className="py-8 md:py-8 px-2 md:px-8 max-w-7xl mx-auto">
       <h2 className="text-2xl md:text-4xl font-bold text-gray-900 mb-6 md:mb-12 text-center">
         Testimonials
       </h2>
@@ -39,7 +39,7 @@ export default function TestimonialsSection() {
         </button>
 
         {/* Content */}
-        <div className="grid grid-cols-1 p-6 md:p-20 rounded-2xl bg-white border border-gray-200 md:grid-cols-2 gap-6 md:gap-8 items-center">
+        <div className="grid grid-cols-1 p-6 md:p-10 rounded-2xl bg-white border border-gray-200 md:grid-cols-2 gap-6 md:gap-8 items-center">
           {/* Text */}
           <div className="order-2 md:order-1">
             <p className="text-sm md:text-base text-gray-700 leading-relaxed mb-4 md:mb-6">
@@ -52,9 +52,9 @@ export default function TestimonialsSection() {
 
           {/* Image */}
           <div className="flex justify-center order-1 md:order-2">
-            <div className="relative w-32 h-40 md:w-40 md:h-52 rounded-lg overflow-hidden">
+            <div className="relative w-full h-40 md:w-full md:h-64 rounded-lg overflow-hidden">
               <Image
-                src={testimonials[0].image}
+                src="/images/test.jpg"
                 alt="Customer testimonial"
                 fill
                 className="object-cover"

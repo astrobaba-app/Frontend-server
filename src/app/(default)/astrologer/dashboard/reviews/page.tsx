@@ -158,14 +158,14 @@ export default function AstrologerReviewsPage() {
 
   return (
     <>
-      <div className="px-8">
+      <div className="md:px-4 sm:px-6 md:px-8">
         <div className="max-w-6xl">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold" style={{ color: colors.black }}>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-3 sm:gap-0">
+            <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: colors.black }}>
               My Reviews
             </h1>
             <button
-              className="px-6 py-2 rounded-lg font-semibold"
+              className="px-4 sm:px-6 py-2 rounded-lg font-semibold text-sm sm:text-base"
               style={{
                 backgroundColor: colors.primeYellow,
                 color: colors.black,
@@ -176,29 +176,29 @@ export default function AstrologerReviewsPage() {
           </div>
 
           {reviews.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-md p-8">
-              <div className="text-center py-12">
+            <div className="bg-white rounded-lg shadow-md p-6 sm:p-8">
+              <div className="text-center py-8 sm:py-12">
                 <Star
-                  className="w-24 h-24 mx-auto mb-4"
+                  className="w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-4"
                   style={{ color: colors.gray }}
                 />
                 <h2
-                  className="text-2xl font-bold mb-2"
+                  className="text-xl sm:text-2xl font-bold mb-2"
                   style={{ color: colors.black }}
                 >
                   No Reviews Yet
                 </h2>
-                <p style={{ color: colors.gray }}>
+                <p className="text-sm sm:text-base" style={{ color: colors.gray }}>
                   You don't have any reviews at the moment.
                 </p>
               </div>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               {reviews.map((review) => (
                 <div
                   key={review.id}
-                  className="bg-white rounded-2xl shadow-md p-6 border border-gray-200"
+                  className="bg-white rounded-2xl shadow-md p-4 sm:p-6 border border-gray-200"
                 >
                   {/* Review Content */}
                   <p
@@ -209,10 +209,10 @@ export default function AstrologerReviewsPage() {
                   </p>
 
                   {/* User Info and Rating */}
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       <div
-                        className="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold"
+                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white text-base sm:text-lg font-bold flex-shrink-0"
                         style={{ backgroundColor: colors.primeRed }}
                       >
                         {review.user?.fullName
@@ -243,10 +243,10 @@ export default function AstrologerReviewsPage() {
                       >
                         Your Reply:
                       </p>
-                      <p className="text-sm" style={{ color: colors.darkGray }}>
+                      <p className="text-sm break-words" style={{ color: colors.darkGray }}>
                         {review.reply}
                       </p>
-                      <div className="flex gap-2 mt-3">
+                      <div className="flex flex-wrap gap-2 mt-3">
                         <Button
                           variant="custom"
                           size="sm"
@@ -294,12 +294,13 @@ export default function AstrologerReviewsPage() {
                         }}
                         rows={3}
                       />
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <Button
                           variant="primary"
                           size="md"
                           onClick={() => handleReplySubmit(review.id)}
                           loading={submittingReply[review.id]}
+                          className="flex-1 sm:flex-initial"
                         >
                           {editingReply[review.id]
                             ? "Update Reply"

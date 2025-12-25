@@ -151,7 +151,7 @@ const CreateBlogForm: React.FC<CreateBlogFormProps> = ({
   };
 
   return (
-    <div className="max-w-4xl px-6 mx-auto bg-white rounded-lg shadow-xl">
+    <div className="max-w-4xl py-5 px-6 mx-auto bg-white rounded-lg shadow-xl">
       {toast && (
         <Toast
           message={toast.message}
@@ -473,7 +473,7 @@ export default function AstrologerBlogPage() {
   };
 
   return (
-    <div className="px-8">
+    <div className="md:px-8">
       {toast.show && (
         <Toast message={toast.message} type={toast.type} onClose={hideToast} />
       )}

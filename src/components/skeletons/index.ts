@@ -24,3 +24,4 @@ export { default as BlogDetailSkeleton } from './BlogDetailSkeleton';
 export { default as AstrologersListSkeleton } from './AstrologersListSkeleton';
 export { default as AstrologerDetailPageSkeleton } from './AstrologerDetailPageSkeleton';
 export { default as OrdersSkeleton } from './OrdersSkeleton';
+export { CartSkeleton } from './CartSkeleton';

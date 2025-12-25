@@ -20,7 +20,7 @@ export const featureServices: FeatureService[] = [
     href: "/horoscope",
   },
   {
-    icon: "/images/kundli_.png",
+    icon: "/icons/kundli.png",
     title: "Free Kundli",
     description: "Generate Birth Chart",
     href: "/profile/kundli",

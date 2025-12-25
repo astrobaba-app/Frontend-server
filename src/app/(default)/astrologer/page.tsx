@@ -1,66 +1,68 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { Search } from 'lucide-react';
-import { getAllAstrologers, Astrologer } from '@/store/api/general/astrologer';
-import AstrologerCard from '@/components/card/AstrologerCard';
-import { AstrologersListSkeleton } from '@/components/skeletons';
-import { colors } from '@/utils/colors';
-import Link from 'next/link';
-import { useToast } from '@/hooks/useToast';
-import Toast from '@/components/atoms/Toast';
-import { Suspense } from 'react';
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { Search } from "lucide-react";
+import { getAllAstrologers, Astrologer } from "@/store/api/general/astrologer";
+import AstrologerCard from "@/components/card/AstrologerCard";
+import { AstrologersListSkeleton } from "@/components/skeletons";
+import { colors } from "@/utils/colors";
+import Link from "next/link";
+import { useToast } from "@/hooks/useToast";
+import Toast from "@/components/atoms/Toast";
+import { Suspense } from "react";
 
 const CATEGORIES = [
-  { name: 'All' },
-  { name: 'Love' },
-  { name: 'Relationship' },
-  { name: 'Education' },
-  { name: 'Health' },
-  { name: 'Career' },
-  { name: 'Finance' },
-  { name: 'Marriage' },
-  { name: 'Family' },
-  { name: 'Business' },
-  { name: 'Legal' },
-  { name: 'Travel' },
-  { name: 'Spiritual' },
+  { name: "All" },
+  { name: "Love" },
+  { name: "Relationship" },
+  { name: "Education" },
+  { name: "Health" },
+  { name: "Career" },
+  { name: "Finance" },
+  { name: "Marriage" },
+  { name: "Family" },
+  { name: "Business" },
+  { name: "Legal" },
+  { name: "Travel" },
+  { name: "Spiritual" },
 ];
 
 const SKILLS = [
-  'Vedic',
-  'KP',
-  'Numerology',
-  'Tarot',
-  'Palmistry',
-  'Vastu',
-  'Prashna',
-  'Nadi',
-  'Lal Kitab',
-  'Face Reading',
+  "Vedic",
+  "KP",
+  "Numerology",
+  "Tarot",
+  "Palmistry",
+  "Vastu",
+  "Prashna",
+  "Nadi",
+  "Lal Kitab",
+  "Face Reading",
 ];
 
 const LANGUAGES = [
-  'Hindi',
-  'English',
-  'Bengali',
-  'Tamil',
-  'Telugu',
-  'Marathi',
-  'Gujarati',
-  'Kannada',
-  'Malayalam',
-  'Punjabi',
-  'Odia',
-  'Urdu',
+  "Hindi",
+  "English",
+  "Bengali",
+  "Tamil",
+  "Telugu",
+  "Marathi",
+  "Gujarati",
+  "Kannada",
+  "Malayalam",
+  "Punjabi",
+  "Odia",
+  "Urdu",
 ];
 
 interface TrendingAstrologerCardProps {
   astro: Astrologer;
 }
 
-const TrendingAstrologerCard: React.FC<TrendingAstrologerCardProps> = ({ astro }) => {
+const TrendingAstrologerCard: React.FC<TrendingAstrologerCardProps> = ({
+  astro,
+}) => {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 flex flex-col items-center text-center hover:shadow-md transition-shadow duration-200 w-full">
       <div className="relative w-16 h-16 rounded-full overflow-hidden mb-2 ring-2 ring-yellow-200">
@@ -70,12 +72,12 @@ const TrendingAstrologerCard: React.FC<TrendingAstrologerCardProps> = ({ astro }
             astro.photo
               ? {
                   backgroundImage: `url(${astro.photo})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
                 }
               : {
                   background:
-                    'linear-gradient(to bottom right, #FEF3C7, #FDE68A)',
+                    "linear-gradient(to bottom right, #FEF3C7, #FDE68A)",
                 }
           }
         >
@@ -90,7 +92,7 @@ const TrendingAstrologerCard: React.FC<TrendingAstrologerCardProps> = ({ astro }
         )}
       </div>
       <p className="text-sm font-semibold text-gray-900 leading-tight">
-        {astro.fullName.split(' ')[0]}
+        {astro.fullName.split(" ")[0]}
       </p>
       <p className="text-xs text-gray-600 mb-2">₹ {astro.pricePerMinute}/min</p>
     </div>
@@ -98,19 +100,21 @@ const TrendingAstrologerCard: React.FC<TrendingAstrologerCardProps> = ({ astro }
 };
 
 interface AstrologersPageContentProps {
-  mode: 'chat' | 'call';
+  mode: "chat" | "call";
 }
 
 function AstrologersPage() {
   const searchParams = useSearchParams();
-  const mode = (searchParams.get('mode') as 'chat' | 'call') || 'chat';
+  const mode = (searchParams.get("mode") as "chat" | "call") || "chat";
   const { toast, showToast, hideToast } = useToast();
-  
+
   const [astrologers, setAstrologers] = useState<Astrologer[]>([]);
-  const [filteredAstrologers, setFilteredAstrologers] = useState<Astrologer[]>([]);
+  const [filteredAstrologers, setFilteredAstrologers] = useState<Astrologer[]>(
+    []
+  );
   const [loading, setLoading] = useState(true);
   const [isFiltering, setIsFiltering] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
@@ -128,24 +132,26 @@ function AstrologersPage() {
         } else {
           setIsFiltering(true);
         }
-        
+
         const filters = {
           skills: selectedSkills.length > 0 ? selectedSkills : undefined,
-          categories: selectedCategories.length > 0 ? selectedCategories : undefined,
-          languages: selectedLanguages.length > 0 ? selectedLanguages : undefined,
+          categories:
+            selectedCategories.length > 0 ? selectedCategories : undefined,
+          languages:
+            selectedLanguages.length > 0 ? selectedLanguages : undefined,
           minRating,
           maxPrice,
         };
-        
-        console.log('Fetching astrologers with filters:', filters);
+
+        console.log("Fetching astrologers with filters:", filters);
         const response = await getAllAstrologers(filters);
-        console.log('API Response:', response);
+        console.log("API Response:", response);
         if (response.success && response.astrologers) {
           setAstrologers(response.astrologers);
           setFilteredAstrologers(response.astrologers);
         }
       } catch (error) {
-        console.error('Error fetching astrologers:', error);
+        console.error("Error fetching astrologers:", error);
       } finally {
         setLoading(false);
         setIsFiltering(false);
@@ -153,7 +159,13 @@ function AstrologersPage() {
     };
 
     fetchAstrologers();
-  }, [selectedCategories, selectedSkills, selectedLanguages, minRating, maxPrice]);
+  }, [
+    selectedCategories,
+    selectedSkills,
+    selectedLanguages,
+    minRating,
+    maxPrice,
+  ]);
 
   // Client-side search filtering only (backend handles category/skills/language filters)
   useEffect(() => {
@@ -176,7 +188,7 @@ function AstrologersPage() {
   }, [searchQuery, astrologers]);
 
   const handleCallClick = () => {
-    showToast('This feature is coming soon.', 'info');
+    showToast("This feature is coming soon.", "info");
   };
 
   const clearAllFilters = () => {
@@ -188,25 +200,30 @@ function AstrologersPage() {
   };
 
   const toggleCategory = (categoryName: string) => {
-    if (categoryName === 'All') {
+    if (categoryName === "All") {
       setSelectedCategories([]);
     } else {
       if (selectedCategories.includes(categoryName)) {
-        setSelectedCategories(selectedCategories.filter(c => c !== categoryName));
+        setSelectedCategories(
+          selectedCategories.filter((c) => c !== categoryName)
+        );
       } else {
         setSelectedCategories([...selectedCategories, categoryName]);
       }
     }
   };
 
-  const hasActiveFilters = selectedCategories.length > 0 || selectedSkills.length > 0 || 
-                           selectedLanguages.length > 0 || minRating !== undefined || 
-                           maxPrice !== undefined;
+  const hasActiveFilters =
+    selectedCategories.length > 0 ||
+    selectedSkills.length > 0 ||
+    selectedLanguages.length > 0 ||
+    minRating !== undefined ||
+    maxPrice !== undefined;
 
   const trendingAstrologers = [...astrologers]
     .sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating))
     .slice(0, 5);
-  
+
   // Split filtered astrologers for top and bottom sections
   const topAstrologers = filteredAstrologers.slice(0, 3);
   const remainingAstrologers = filteredAstrologers.slice(3);
@@ -222,13 +239,13 @@ function AstrologersPage() {
           id: astrologer.id,
           name: astrologer.fullName,
           photo: astrologer.photo,
-          title: astrologer.skills.join(', '),
+          title: astrologer.skills.join(", "),
           experience: `${astrologer.yearsOfExperience} years`,
           rating: astrologer.rating,
           topics: astrologer.skills,
           price: parseFloat(astrologer.pricePerMinute),
           languages: astrologer.languages,
-          status: astrologer.isOnline ? 'available' : 'offline',
+          status: astrologer.isOnline ? "available" : "offline",
           isOnline: astrologer.isOnline,
         }}
         mode={mode}
@@ -255,80 +272,90 @@ function AstrologersPage() {
         </div>
 
         {/* Categories Row with Filter Button */}
-        <div className="mb-6 flex items-center gap-3">
-          <div className="flex-1 overflow-x-auto scrollbar-hide">
-            <div className="flex gap-2 pb-2">
-              {CATEGORIES.map((category) => (
-                <button
-                  key={category.name}
-                  onClick={() => toggleCategory(category.name)}
-                  disabled={isFiltering}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all shrink-0 border ${
-                    category.name === 'All' && selectedCategories.length === 0
-                      ? 'bg-yellow-400 text-gray-900 border-yellow-400 shadow-md font-semibold'
-                      : selectedCategories.includes(category.name)
-                      ? 'bg-yellow-400 text-gray-900 border-yellow-400 shadow-md font-semibold'
-                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 font-medium'
-                  } ${isFiltering ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  <span className="text-sm">{category.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          
+        {/* Categories Row with Filter Button */}
+        <div className="mb-6 flex items-center gap-2 sm:gap-3 px-2">
           {/* Filter Button */}
           <button
             onClick={() => setShowFiltersModal(true)}
             disabled={isFiltering}
-            className={`shrink-0 px-4 py-2 rounded-full border-2 border-yellow-400 bg-white text-gray-900 font-semibold hover:bg-yellow-50 transition-colors flex items-center gap-2 ${
-              isFiltering ? 'opacity-50 cursor-not-allowed' : ''
+            className={`shrink-0 px-3 cursor-pointer sm:px-4 py-1.5 sm:py-2  border-gray-500 rounded-full bg-gray-100 text-gray-900 font-semibold flex items-center gap-2 ${
+              isFiltering ? "opacity-50 cursor-not-allowed" : ""
             }`}
           >
-            {isFiltering ? (
-              <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-              </svg>
-            )}
-            <span className="hidden sm:inline">Filters</span>
-            {(selectedSkills.length + selectedLanguages.length + (minRating ? 1 : 0) + (maxPrice ? 1 : 0) > 0) && (
-              <span className="px-2 py-0.5 bg-yellow-400 text-xs rounded-full">
-                {selectedSkills.length + selectedLanguages.length + (minRating ? 1 : 0) + (maxPrice ? 1 : 0)}
-              </span>
-            )}
+            <svg
+              className="w-4 h-4 sm:w-5 sm:h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+              />
+            </svg>
+            <span className=" text-sm">Filters</span>
           </button>
-        </div>
 
+          {/* Categories Scroll Area - added 'scrollbar-hide' */}
+          <div className="flex-1 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-4 sm:gap-6 items-center">
+              {CATEGORIES.map((category) => (
+                <button
+                  key={category.name}
+                  onClick={() => toggleCategory(category.name)}
+                  className={`whitespace-nowrap cursor-pointer transition-all shrink-0 text-sm sm:text-base ${
+                    (category.name === "All" &&
+                      selectedCategories.length === 0) ||
+                    selectedCategories.includes(category.name)
+                      ? "bg-yellow-400 px-3 py-1 rounded-full font-bold text-gray-900"
+                      : "text-gray-600 hover:text-gray-900 font-medium"
+                  }`}
+                >
+                  {category.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
         {/* Filters Modal */}
         {showFiltersModal && (
           <div className="fixed inset-0 bg-gray-900/75 backdrop-blur-sm z-50 overflow-y-auto">
             <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
               {/* Backdrop */}
-              <div 
+              <div
                 className="fixed inset-0 transition-opacity"
                 onClick={() => setShowFiltersModal(false)}
               />
 
               {/* Modal */}
-              <div 
+              <div
                 className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full relative z-10"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="bg-white px-6 pt-6 pb-4">
                   {/* Modal Header */}
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-2xl font-bold text-gray-900">Filters</h3>
+                    <h3 className="text-2xl font-bold text-gray-900">
+                      Filters
+                    </h3>
                     <button
                       onClick={() => setShowFiltersModal(false)}
                       className="text-gray-400 hover:text-gray-500"
                     >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      <svg
+                        className="w-6 h-6"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
                       </svg>
                     </button>
                   </div>
@@ -337,7 +364,9 @@ function AstrologersPage() {
                     {/* Skills Filters */}
                     <div className="mb-6">
                       <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-lg font-semibold text-gray-900">Skills</h4>
+                        <h4 className="text-lg font-semibold text-gray-900">
+                          Skills
+                        </h4>
                         {selectedSkills.length > 0 && (
                           <button
                             onClick={() => setSelectedSkills([])}
@@ -353,15 +382,17 @@ function AstrologersPage() {
                             key={skill}
                             onClick={() => {
                               if (selectedSkills.includes(skill)) {
-                                setSelectedSkills(selectedSkills.filter(s => s !== skill));
+                                setSelectedSkills(
+                                  selectedSkills.filter((s) => s !== skill)
+                                );
                               } else {
                                 setSelectedSkills([...selectedSkills, skill]);
                               }
                             }}
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                               selectedSkills.includes(skill)
-                                ? 'bg-yellow-400 text-gray-900 shadow-md'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? "bg-yellow-400 text-gray-900 shadow-md"
+                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                             }`}
                           >
                             {skill}
@@ -373,7 +404,9 @@ function AstrologersPage() {
                     {/* Languages Filters */}
                     <div className="mb-6">
                       <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-lg font-semibold text-gray-900">Languages</h4>
+                        <h4 className="text-lg font-semibold text-gray-900">
+                          Languages
+                        </h4>
                         {selectedLanguages.length > 0 && (
                           <button
                             onClick={() => setSelectedLanguages([])}
@@ -389,15 +422,22 @@ function AstrologersPage() {
                             key={language}
                             onClick={() => {
                               if (selectedLanguages.includes(language)) {
-                                setSelectedLanguages(selectedLanguages.filter(l => l !== language));
+                                setSelectedLanguages(
+                                  selectedLanguages.filter(
+                                    (l) => l !== language
+                                  )
+                                );
                               } else {
-                                setSelectedLanguages([...selectedLanguages, language]);
+                                setSelectedLanguages([
+                                  ...selectedLanguages,
+                                  language,
+                                ]);
                               }
                             }}
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                               selectedLanguages.includes(language)
-                                ? 'bg-yellow-400 text-gray-900 shadow-md'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? "bg-yellow-400 text-gray-900 shadow-md"
+                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                             }`}
                           >
                             {language}
@@ -415,11 +455,15 @@ function AstrologersPage() {
                         {[1, 2, 3, 4, 5].map((rating) => (
                           <button
                             key={rating}
-                            onClick={() => setMinRating(minRating === rating ? undefined : rating)}
+                            onClick={() =>
+                              setMinRating(
+                                minRating === rating ? undefined : rating
+                              )
+                            }
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                               minRating === rating
-                                ? 'bg-yellow-400 text-gray-900 shadow-md'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? "bg-yellow-400 text-gray-900 shadow-md"
+                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                             }`}
                           >
                             {rating}+ ⭐
@@ -436,8 +480,14 @@ function AstrologersPage() {
                       <input
                         type="number"
                         placeholder="Enter max price"
-                        value={maxPrice || ''}
-                        onChange={(e) => setMaxPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
+                        value={maxPrice || ""}
+                        onChange={(e) =>
+                          setMaxPrice(
+                            e.target.value
+                              ? parseFloat(e.target.value)
+                              : undefined
+                          )
+                        }
                         className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200"
                         min="0"
                         step="0.5"
@@ -465,21 +515,25 @@ function AstrologersPage() {
             </div>
           </div>
         )}
-        
+
         {/* Astrologers Grid (TOP SECTION) */}
         {topAstrologers.length > 0 && (
-          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 transition-opacity duration-300 ${
-            isFiltering ? 'opacity-50 pointer-events-none' : 'opacity-100'
-          }`}>
+          <div
+            className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 transition-opacity duration-300 ${
+              isFiltering ? "opacity-50 pointer-events-none" : "opacity-100"
+            }`}
+          >
             {topAstrologers.map(renderAstrologerCard)}
           </div>
         )}
 
         {/* Trending Section */}
         {trendingAstrologers.length > 0 && (
-          <div className={`mb-8 p-6 bg-white rounded-xl shadow-md transition-opacity duration-300 ${
-            isFiltering ? 'opacity-50 pointer-events-none' : 'opacity-100'
-          }`}>
+          <div
+            className={`mb-8 p-6 bg-white rounded-xl shadow-md transition-opacity duration-300 ${
+              isFiltering ? "opacity-50 pointer-events-none" : "opacity-100"
+            }`}
+          >
             <h2 className="text-2xl font-bold mb-6 text-gray-800">
               Trending Now
             </h2>
@@ -503,14 +557,16 @@ function AstrologersPage() {
             <p className="text-xl text-gray-600">No astrologers found</p>
           </div>
         ) : (
-          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 transition-opacity duration-300 ${
-            isFiltering ? 'opacity-50 pointer-events-none' : 'opacity-100'
-          }`}>
+          <div
+            className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 transition-opacity duration-300 ${
+              isFiltering ? "opacity-50 pointer-events-none" : "opacity-100"
+            }`}
+          >
             {remainingAstrologers.map(renderAstrologerCard)}
           </div>
         )}
       </div>
-      
+
       {/* Toast Notification */}
       {toast.show && (
         <Toast message={toast.message} type={toast.type} onClose={hideToast} />

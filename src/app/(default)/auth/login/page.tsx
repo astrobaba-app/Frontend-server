@@ -154,10 +154,10 @@ function LoginPage() {
         {/* Responsive Grid: Stacks on mobile, Side-by-side on desktop */}
         <div className="flex flex-col md:flex-row w-full">
           {/* Left Column (Branding & QR) - Now visible on all devices */}
-          <div className="w-full md:w-1/2 flex flex-col items-center justify-center p-8 md:p-12 bg-gray-50 border-b md:border-b-0 md:border-r border-gray-100">
+          <div className="hidden w-full md:w-1/2 md:flex flex-col items-center justify-center p-8 md:p-12 bg-gray-50 border-b md:border-b-0 md:border-r border-gray-100">
             <div className="text-center mb-6 md:mb-8">
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                Astrobaba
+                Graho
               </h1>
               <p className="text-sm md:text-base text-gray-600">
                 Scan to download our app
