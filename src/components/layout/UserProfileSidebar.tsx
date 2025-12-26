@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { User, Wallet, Heart, ShoppingBag, FileText, Settings, LogOut, Star, ChevronRight } from "lucide-react";
+import { User, Wallet, Heart, ShoppingBag, FileText, Settings, LogOut, Star, ChevronRight, HelpCircle } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LuShoppingCart } from "react-icons/lu";
@@ -21,6 +21,7 @@ const MENU_ITEMS = [
   { icon: ShoppingBag, label: "My Orders", href: "/profile/orders" },
   { icon: LuShoppingCart, label: "My cart", href: "/cart" },
   { icon: Star, label: "My Reviews", href: "/profile/reviews" },
+  { icon: HelpCircle, label: "Support Tickets", href: "/support" },
   { icon: Settings, label: "Settings", href: "/profile/settings" },
 ];
 
