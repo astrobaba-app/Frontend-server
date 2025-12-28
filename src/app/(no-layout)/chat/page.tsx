@@ -782,11 +782,11 @@ function ChatPage() {
           >
             <IoChatbubblesSharp className="w-5 h-5 mr-2" />Chat
           </button>
-          <button 
+          {/* <button 
             className="flex-1 flex items-center justify-center py-3 rounded-lg text-sm font-bold bg-white text-gray-600 border border-gray-300 shadow-sm"
           >
             <Phone className="w-5 h-5 mr-2" />Call
-          </button>
+          </button> */}
         </div>
 
         {/* Available Balance & Chat Control Section */}

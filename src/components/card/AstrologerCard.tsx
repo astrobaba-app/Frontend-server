@@ -24,13 +24,15 @@ export interface Astrologer {
 interface OurAstrologerCardProps {
   astrologer: Astrologer;
   mode?: "chat" | "call";
-  onCallClick?: () => void;
+  onCallClick?: (e?: React.MouseEvent) => void;
+  onChatClick?: (e?: React.MouseEvent) => void;
 }
 
 const AstrologerCard: React.FC<OurAstrologerCardProps> = ({
   astrologer,
   mode = "chat",
   onCallClick,
+  onChatClick,
 }) => {
   const {
     id,
@@ -136,7 +138,12 @@ const AstrologerCard: React.FC<OurAstrologerCardProps> = ({
         <div className="mt-3">
           {isCallMode ? (
             <Button
-              onClick={onCallClick}
+              onClick={(e) => {
+                if (onCallClick) {
+                  e.preventDefault();
+                  onCallClick(e);
+                }
+              }}
               variant="custom"
               size="md"
               className="shadow-lg w-full"
@@ -155,6 +162,31 @@ const AstrologerCard: React.FC<OurAstrologerCardProps> = ({
               }
             >
               Call
+            </Button>
+          ) : onChatClick ? (
+            <Button
+              onClick={(e) => {
+                e.preventDefault();
+                onChatClick(e);
+              }}
+              variant="custom"
+              size="md"
+              className="shadow-lg w-full"
+              customColors={{
+                backgroundColor: colors.primeYellow,
+                textColor: colors.white,
+              }}
+              customStyles={{
+                paddingTop: "0.5rem",
+                paddingBottom: "0.5rem",
+              }}
+              icon={
+                <span role="img" aria-label="chat">
+                  <IoChatbubblesSharp />
+                </span>
+              }
+            >
+              Chat
             </Button>
           ) : (
             <Button

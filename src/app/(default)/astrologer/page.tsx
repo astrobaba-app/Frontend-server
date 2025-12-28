@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { getAllAstrologers, Astrologer } from "@/store/api/general/astrologer";
 import AstrologerCard from "@/components/card/AstrologerCard";
@@ -56,6 +56,22 @@ const LANGUAGES = [
   "Urdu",
 ];
 
+// Hardcoded AI Astrologer
+const AI_ASTROLOGER: Astrologer = {
+  id: "ai-astrologer",
+  fullName: "AI Astro Guide",
+  photo: null,
+  yearsOfExperience: 10,
+  pricePerMinute: "20",
+  rating: "4.9",
+  totalConsultations: 5420,
+  bio: "Your 24/7 AI-powered astrology companion. Get instant answers to your astrology questions using advanced artificial intelligence. Available anytime, anywhere!",
+  skills: ["Vedic", "Tarot", "Numerology", "Palmistry"],
+  languages: ["Hindi", "English"],
+  categories: ["Love", "Career", "Health", "Finance"],
+  isOnline: true,
+};
+
 interface TrendingAstrologerCardProps {
   astro: Astrologer;
 }
@@ -107,6 +123,7 @@ function AstrologersPage() {
   const searchParams = useSearchParams();
   const mode = (searchParams.get("mode") as "chat" | "call") || "chat";
   const { toast, showToast, hideToast } = useToast();
+  const router = useRouter();
 
   const [astrologers, setAstrologers] = useState<Astrologer[]>([]);
   const [filteredAstrologers, setFilteredAstrologers] = useState<Astrologer[]>(
@@ -184,7 +201,8 @@ function AstrologersPage() {
       );
     }
 
-    setFilteredAstrologers(filtered);
+    // Always add AI astrologer at the beginning
+    setFilteredAstrologers([AI_ASTROLOGER, ...filtered]);
   }, [searchQuery, astrologers]);
 
   const handleCallClick = () => {
@@ -232,27 +250,64 @@ function AstrologersPage() {
     return <AstrologersListSkeleton />;
   }
 
-  const renderAstrologerCard = (astrologer: Astrologer) => (
-    <Link key={astrologer.id} href={`/astrologer/${astrologer.id}`}>
-      <AstrologerCard
-        astrologer={{
-          id: astrologer.id,
-          name: astrologer.fullName,
-          photo: astrologer.photo,
-          title: astrologer.skills.join(", "),
-          experience: `${astrologer.yearsOfExperience} years`,
-          rating: astrologer.rating,
-          topics: astrologer.skills,
-          price: parseFloat(astrologer.pricePerMinute),
-          languages: astrologer.languages,
-          status: astrologer.isOnline ? "available" : "offline",
-          isOnline: astrologer.isOnline,
-        }}
-        mode={mode}
-        onCallClick={handleCallClick}
-      />
-    </Link>
-  );
+  const renderAstrologerCard = (astrologer: Astrologer) => {
+    // Special handling for AI Astrologer
+    if (astrologer.id === "ai-astrologer") {
+      return (
+        <div key={astrologer.id}>
+          <Link href={`/astrologer/${astrologer.id}`}>
+            <AstrologerCard
+              astrologer={{
+                id: astrologer.id,
+                name: astrologer.fullName,
+                photo: astrologer.photo,
+                title: astrologer.skills.join(", "),
+                experience: `${astrologer.yearsOfExperience} years`,
+                rating: astrologer.rating,
+                topics: astrologer.skills,
+                price: parseFloat(astrologer.pricePerMinute),
+                languages: astrologer.languages,
+                status: astrologer.isOnline ? "available" : "offline",
+                isOnline: astrologer.isOnline,
+              }}
+              mode={mode}
+              onCallClick={(e) => {
+                e?.preventDefault();
+                router.push("/aichat");
+              }}
+              onChatClick={(e) => {
+                e?.preventDefault();
+                router.push("/aichat");
+              }}
+            />
+          </Link>
+        </div>
+      );
+    }
+
+    // Regular astrologer card
+    return (
+      <Link key={astrologer.id} href={`/astrologer/${astrologer.id}`}>
+        <AstrologerCard
+          astrologer={{
+            id: astrologer.id,
+            name: astrologer.fullName,
+            photo: astrologer.photo,
+            title: astrologer.skills.join(", "),
+            experience: `${astrologer.yearsOfExperience} years`,
+            rating: astrologer.rating,
+            topics: astrologer.skills,
+            price: parseFloat(astrologer.pricePerMinute),
+            languages: astrologer.languages,
+            status: astrologer.isOnline ? "available" : "offline",
+            isOnline: astrologer.isOnline,
+          }}
+          mode={mode}
+          onCallClick={handleCallClick}
+        />
+      </Link>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -515,6 +570,9 @@ function AstrologersPage() {
             </div>
           </div>
         )}
+
+        {/* Ai astrologers Card */}
+
 
         {/* Astrologers Grid (TOP SECTION) */}
         {topAstrologers.length > 0 && (

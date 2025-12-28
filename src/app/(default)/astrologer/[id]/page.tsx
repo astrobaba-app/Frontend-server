@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef, use } from "react";
-import { useParams, notFound,useRouter } from "next/navigation";
+import React, { useState, useEffect, useRef } from "react";
+import { useParams, notFound, useRouter } from "next/navigation";
 import { Star, MessageCircle, Phone, User } from "lucide-react";
 import {
   getAstrologerById,
@@ -15,12 +15,65 @@ import {
 } from "@/store/api/general/astrologer";
 import { createReview } from "@/store/api/user/review";
 import { AstrologerDetailPageSkeleton } from "@/components/skeletons";
-import ReviewsSkeleton from "@/components/skeletons/ReviewsSkeleton";
 import { colors } from "@/utils/colors";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";
 import Toast from "@/components/atoms/Toast";
 import Button from "@/components/atoms/Button";
+
+// Hardcoded AI Astrologer data
+const AI_ASTROLOGER: Astrologer = {
+  id: "ai-astrologer",
+  fullName: "AI Astrologer",
+  photo: null,
+  yearsOfExperience: 2,
+  pricePerMinute: "20",
+  rating: "4.9",
+  totalConsultations: 15420,
+  bio: "Your 24/7 AI-powered astrology companion. Get instant answers to your astrology questions using advanced artificial intelligence. I'm trained on thousands of astrological texts and can provide personalized readings, predictions, and guidance on love, career, health, and more. Available anytime, anywhere - no waiting required!",
+  skills: [
+    "Vedic",
+    "KP",
+    "Numerology",
+    "Tarot",
+    "Palmistry",
+    "Vastu",
+    "Prashna",
+    "Nadi",
+    "Lal Kitab",
+    "Face Reading",
+  ],
+  languages: [
+    "Hindi",
+    "English",
+    "Bengali",
+    "Tamil",
+    "Telugu",
+    "Marathi",
+    "Gujarati",
+    "Kannada",
+    "Malayalam",
+    "Punjabi",
+    "Odia",
+    "Urdu",
+  ],
+  categories: [
+    "Love",
+    "Relationship",
+    "Education",
+    "Health",
+    "Career",
+    "Finance",
+    "Marriage",
+    "Family",
+    "Business",
+    "Legal",
+    "Travel",
+    "Spiritual",
+  ],
+  isOnline: true,
+  followersCount: 15420,
+};
 
 export default function AstrologerDetailPage() {
   const params = useParams();
@@ -47,6 +100,14 @@ export default function AstrologerDetailPage() {
     const fetchData = async () => {
       if (hasFetched.current) return;
       hasFetched.current = true;
+
+      // Handle AI Astrologer specially
+      if (id === "ai-astrologer") {
+        setAstrologer(AI_ASTROLOGER);
+        setLoading(false);
+        setReviewsLoading(false);
+        return;
+      }
 
       try {
         setLoading(true);
@@ -122,11 +183,22 @@ export default function AstrologerDetailPage() {
 
   const handleChatClick = () => {
     if (!id) return;
+    // Redirect to AI chat for AI astrologer
+    if (id === "ai-astrologer") {
+      router.push("/aichat");
+      return;
+    }
     router.push(`/chat?astrologerId=${id}`);
   };
 
-   const handleCallClick = () => {
-    showToast("Call feature coming soon!", "info");  }
+  const handleCallClick = () => {
+    // Redirect to AI chat for AI astrologer
+    if (id === "ai-astrologer") {
+      router.push("/aichat");
+      return;
+    }
+    showToast("Call feature coming soon!", "info");
+  };
 
   const handleSubmitReview = async () => {
     if (!isLoggedIn) {
@@ -153,7 +225,7 @@ export default function AstrologerDetailPage() {
         setShowReviewForm(false);
         setReviewText("");
         setReviewRating(5);
-        
+
         // Refresh reviews
         setReviewsLoading(true);
         const reviewsResponse = await getAstrologerReviews(id);
@@ -167,7 +239,8 @@ export default function AstrologerDetailPage() {
       showToast(error.message || "Failed to submit review", "error");
     } finally {
       setSubmittingReview(false);
-    }  }
+    }
+  };
 
   if (loading) {
     return <AstrologerDetailPageSkeleton />;
@@ -178,7 +251,7 @@ export default function AstrologerDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className=" bg-gray-50">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Profile Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8 mb-8">
@@ -198,17 +271,21 @@ export default function AstrologerDetailPage() {
                   </div>
                 )}
                 {/* Rating Badge (Moved to Avatar based on image) */}
-                <div className="absolute -bottom-2 left-7 flex items-center bg-white   px-2 py-0.5 border-3 rounded-md border-yellow-400">
-                  <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
-                  <span className="text-sm font-bold text-gray-800 ml-1">
-                    {astrologer.rating}
-                  </span>
-                </div>
+                {id !== "ai-astrologer" && (
+                  <div className="absolute -bottom-2 left-7 flex items-center bg-white   px-2 py-0.5 border-3 rounded-md border-yellow-400">
+                    <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
+                    <span className="text-sm font-bold text-gray-800 ml-1">
+                      {astrologer.rating}
+                    </span>
+                  </div>
+                )}
               </div>
               {/* Followers Badge */}
-              <div className="absolute -top-2 -right-2 bg-linear-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg border-2 border-white">
-                {astrologer.followersCount || 0}
-              </div>
+              {id !== "ai-astrologer" && (
+                <div className="absolute -top-2 -right-2 bg-linear-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg border-2 border-white">
+                  {astrologer.followersCount || 0}
+                </div>
+              )}
               {astrologer.isOnline && (
                 <div className="absolute bottom-2 right-2 w-6 h-6 bg-green-500 rounded-full border-4 border-white" />
               )}
@@ -235,55 +312,60 @@ export default function AstrologerDetailPage() {
                     ₹ {astrologer.pricePerMinute}
                   </span>
                   <span className="text-gray-500 ml-1">/min</span>
-                  <span className="text-gray-500 ml-3">
-                    ({ratingStats?.total || 0} reviews)
-                  </span>
+                  {id !== "ai-astrologer" && (
+                    <span className="text-gray-500 ml-3">
+                      ({ratingStats?.total || 0} reviews)
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-              {isLoggedIn && (
-                <Button
-                  variant={isFollowing ? 'secondary' : 'primary'}
-                  size="sm"
-                  loading={followLoading}
-                  onClick={handleFollowToggle}
-                  customColors={!isFollowing ? {
-                    backgroundColor: colors.primeYellow,
-                    textColor: 'black',
-                    
-                  } : undefined}
-                  className="shadow"
-                >
-                  {isFollowing ? 'Following' : 'Follow'}
-                </Button>
-              )}
-              <Button
-                variant="custom"
-                size="sm"
-                onClick={handleChatClick}
-                icon={<MessageCircle className="w-4 h-4 text-gray-800" />}
-                className="shadow sm:w-1/2" // Added sm:w-1/2 for better layout on small screens
-                customColors={{
-                  backgroundColor: colors.primeYellow,
-                  textColor: 'black',
-                  hoverBackgroundColor: '#e5d41f',
-                }}
-              >
-                Chat
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCallClick}
-                icon={<Phone className="w-4 h-4 text-gray-800" />}
-                className="shadow sm:w-1/2" // Added sm:w-1/2 for better layout on small screens
-                customStyles={{
-                  borderColor: '#F0DF20', // Matches your yellow-500 border
-                }}
-              >
-                Call
-              </Button>
-            </div>
+                  {isLoggedIn && id !== "ai-astrologer" && (
+                    <Button
+                      variant={isFollowing ? "secondary" : "primary"}
+                      size="sm"
+                      loading={followLoading}
+                      onClick={handleFollowToggle}
+                      customColors={
+                        !isFollowing
+                          ? {
+                              backgroundColor: colors.primeYellow,
+                              textColor: "black",
+                            }
+                          : undefined
+                      }
+                      className="shadow"
+                    >
+                      {isFollowing ? "Following" : "Follow"}
+                    </Button>
+                  )}
+                  <Button
+                    variant="custom"
+                    size="sm"
+                    onClick={handleChatClick}
+                    icon={<MessageCircle className="w-4 h-4 text-gray-800" />}
+                    className="shadow sm:w-1/2" // Added sm:w-1/2 for better layout on small screens
+                    customColors={{
+                      backgroundColor: colors.primeYellow,
+                      textColor: "black",
+                      hoverBackgroundColor: "#e5d41f",
+                    }}
+                  >
+                    Chat
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCallClick}
+                    icon={<Phone className="w-4 h-4 text-gray-800" />}
+                    className="shadow sm:w-1/2" // Added sm:w-1/2 for better layout on small screens
+                    customStyles={{
+                      borderColor: "#F0DF20", // Matches your yellow-500 border
+                    }}
+                  >
+                    Call
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -298,180 +380,219 @@ export default function AstrologerDetailPage() {
           )}
         </div>
         {/* Reviews Section */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
-          <div className="flex justify-between items-center mb-6">
-            <p
-              className="text-2xl font-bold"
-              style={{ color: colors.darkGray }}
-            >
-              Reviews
-            </p>
-            {isLoggedIn && !showReviewForm && (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => setShowReviewForm(true)}
-                customColors={{
-                  backgroundColor: colors.primeYellow,
-                  textColor: colors.black,
-                }}
+        {id !== "ai-astrologer" && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
+            <div className="flex justify-between items-center mb-6">
+              <p
+                className="text-2xl font-bold"
+                style={{ color: colors.darkGray }}
               >
-                Write Review
-              </Button>
-            )}
-          </div>
-
-          {/* Review Form */}
-          {showReviewForm && (
-            <div className="mb-8 p-6 rounded-xl border-2 border-gray-200" style={{ backgroundColor: colors.offYellow }}>
-              <h3 className="text-lg font-bold mb-4" style={{ color: colors.black }}>
-                Write Your Review
-              </h3>
-
-              {/* Star Rating */}
-              <div className="mb-4">
-                <label className="block text-sm font-semibold mb-2" style={{ color: colors.black }}>
-                  Rating
-                </label>
-                <div className="flex gap-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      onClick={() => setReviewRating(star)}
-                      onMouseEnter={() => setHoveredStar(star)}
-                      onMouseLeave={() => setHoveredStar(0)}
-                      className="cursor-pointer transition-transform hover:scale-110"
-                    >
-                      <Star
-                        className="w-8 h-8"
-                        fill={
-                          star <= (hoveredStar || reviewRating)
-                            ? colors.primeYellow
-                            : "none"
-                        }
-                        stroke={
-                          star <= (hoveredStar || reviewRating)
-                            ? colors.primeYellow
-                            : colors.gray
-                        }
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Review Text */}
-              <div className="mb-4">
-                <label className="block text-sm font-semibold mb-2" style={{ color: colors.black }}>
-                  Your Review
-                </label>
-                <textarea
-                  value={reviewText}
-                  onChange={(e) => setReviewText(e.target.value)}
-                  placeholder="Share your experience with this astrologer..."
-                  className="w-full border border-gray-300 rounded-lg p-4 text-sm resize-none focus:outline-none focus:ring-2"
-                  style={{
-                    color: colors.darkGray,
-                    minHeight: "120px",
-                  }}
-                />
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3">
+                Reviews
+              </p>
+              {isLoggedIn && !showReviewForm && (
                 <Button
                   variant="primary"
-                  onClick={handleSubmitReview}
-                  disabled={submittingReview || !reviewText.trim()}
+                  size="sm"
+                  onClick={() => setShowReviewForm(true)}
                   customColors={{
                     backgroundColor: colors.primeYellow,
                     textColor: colors.black,
                   }}
                 >
-                  {submittingReview ? "Submitting..." : "Submit Review"}
+                  Write Review
                 </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setShowReviewForm(false);
-                    setReviewText("");
-                    setReviewRating(5);
-                  }}
-                  disabled={submittingReview}
-                >
-                  Cancel
-                </Button>
-              </div>
+              )}
             </div>
-          )}
 
-          {/* Reviews List */}
-          {reviewsLoading ? (
-            <ReviewsSkeleton />
-          ) : reviews.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-600">No reviews yet. Be the first to review!</p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {reviews.map((review) => (
-                <div
-                  key={review.id}
-                  className="flex gap-4 pb-6 border-b border-gray-200 last:border-0"
+            {/* Review Form */}
+            {showReviewForm && (
+              <div
+                className="mb-8 p-6 rounded-xl border-2 border-gray-200"
+                style={{ backgroundColor: colors.offYellow }}
+              >
+                <h3
+                  className="text-lg font-bold mb-4"
+                  style={{ color: colors.black }}
                 >
-                  <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold shrink-0">
-                    {review.user?.fullName?.charAt(0) || "U"}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold text-gray-900">
-                        {review.user?.fullName || "Anonymous"}
-                      </h3>
-                      <span className="text-sm text-gray-500">
-                        {new Date(review.createdAt).toLocaleDateString(
-                          "en-US",
-                          {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          }
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1 mb-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
+                  Write Your Review
+                </h3>
+
+                {/* Star Rating */}
+                <div className="mb-4">
+                  <label
+                    className="block text-sm font-semibold mb-2"
+                    style={{ color: colors.black }}
+                  >
+                    Rating
+                  </label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => setReviewRating(star)}
+                        onMouseEnter={() => setHoveredStar(star)}
+                        onMouseLeave={() => setHoveredStar(0)}
+                        className="cursor-pointer transition-transform hover:scale-110"
+                      >
                         <Star
-                          key={star}
-                          className={`w-4 h-4 ${
-                            star <= review.rating
-                              ? "fill-yellow-400 text-yellow-400"
-                              : "fill-gray-200 text-gray-200"
-                          }`}
+                          className="w-8 h-8"
+                          fill={
+                            star <= (hoveredStar || reviewRating)
+                              ? colors.primeYellow
+                              : "none"
+                          }
+                          stroke={
+                            star <= (hoveredStar || reviewRating)
+                              ? colors.primeYellow
+                              : colors.gray
+                          }
                         />
-                      ))}
-                    </div>
-                    <p className="text-gray-700">{review.review}</p>
-                    {review.isEdited && (
-                      <p className="text-xs text-gray-500 mt-1">(Edited)</p>
-                    )}
-                    
-                    {/* Astrologer Reply */}
-                    {review.reply && (
-                      <div className="mt-3 p-3 rounded-lg" style={{ backgroundColor: colors.offYellow }}>
-                        <p className="text-xs font-semibold mb-1" style={{ color: colors.black }}>
-                          Astrologer's Reply:
-                        </p>
-                        <p className="text-sm" style={{ color: colors.darkGray }}>
-                          {review.reply}
-                        </p>
-                      </div>
-                    )}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+
+                {/* Review Text */}
+                <div className="mb-4">
+                  <label
+                    className="block text-sm font-semibold mb-2"
+                    style={{ color: colors.black }}
+                  >
+                    Your Review
+                  </label>
+                  <textarea
+                    value={reviewText}
+                    onChange={(e) => setReviewText(e.target.value)}
+                    placeholder="Share your experience with this astrologer..."
+                    className="w-full border border-gray-300 rounded-lg p-4 text-sm resize-none focus:outline-none focus:ring-2"
+                    style={{
+                      color: colors.darkGray,
+                      minHeight: "120px",
+                    }}
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <Button
+                    variant="primary"
+                    onClick={handleSubmitReview}
+                    disabled={submittingReview || !reviewText.trim()}
+                    customColors={{
+                      backgroundColor: colors.primeYellow,
+                      textColor: colors.black,
+                    }}
+                  >
+                    {submittingReview ? "Submitting..." : "Submit Review"}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setShowReviewForm(false);
+                      setReviewText("");
+                      setReviewRating(5);
+                    }}
+                    disabled={submittingReview}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Reviews List */}
+            {reviewsLoading ? (
+              <div className="space-y-6">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="flex gap-4 pb-6 border-b border-gray-200 animate-pulse"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-gray-200 shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-gray-200 rounded w-1/4" />
+                      <div className="h-3 bg-gray-200 rounded w-1/3" />
+                      <div className="h-3 bg-gray-200 rounded w-full" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : reviews.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600">
+                  No reviews yet. Be the first to review!
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {reviews.map((review) => (
+                  <div
+                    key={review.id}
+                    className="flex gap-4 pb-6 border-b border-gray-200 last:border-0"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold shrink-0">
+                      {review.user?.fullName?.charAt(0) || "U"}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-semibold text-gray-900">
+                          {review.user?.fullName || "Anonymous"}
+                        </h3>
+                        <span className="text-sm text-gray-500">
+                          {new Date(review.createdAt).toLocaleDateString(
+                            "en-US",
+                            {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            }
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 mb-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={`w-4 h-4 ${
+                              star <= review.rating
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "fill-gray-200 text-gray-200"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-gray-700">{review.review}</p>
+                      {review.isEdited && (
+                        <p className="text-xs text-gray-500 mt-1">(Edited)</p>
+                      )}
+
+                      {/* Astrologer Reply */}
+                      {review.reply && (
+                        <div
+                          className="mt-3 p-3 rounded-lg"
+                          style={{ backgroundColor: colors.offYellow }}
+                        >
+                          <p
+                            className="text-xs font-semibold mb-1"
+                            style={{ color: colors.black }}
+                          >
+                            Astrologer's Reply:
+                          </p>
+                          <p
+                            className="text-sm"
+                            style={{ color: colors.darkGray }}
+                          >
+                            {review.reply}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Toast */}

@@ -80,8 +80,11 @@ const AIChatPage = () => {
   const [callStatus, setCallStatus] = useState<string>("Connecting...");
   const [isAISpeaking, setIsAISpeaking] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [pendingDeleteSessionId, setPendingDeleteSessionId] = useState<string | null>(null);
-  const [showInsufficientBalanceModal, setShowInsufficientBalanceModal] = useState(false);
+  const [pendingDeleteSessionId, setPendingDeleteSessionId] = useState<
+    string | null
+  >(null);
+  const [showInsufficientBalanceModal, setShowInsufficientBalanceModal] =
+    useState(false);
   const [isChatSessionActive, setIsChatSessionActive] = useState(false);
   const [isVoiceSessionActive, setIsVoiceSessionActive] = useState(false);
 
@@ -94,6 +97,9 @@ const AIChatPage = () => {
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const nextPlayTimeRef = useRef<number>(0);
 
+  const handleBack = () => {
+    router.back();
+  };
   // Wallet integration
   const {
     balance,
@@ -252,7 +258,9 @@ const AIChatPage = () => {
     try {
       await deleteChatSessionAPI(pendingDeleteSessionId);
 
-      const updatedSessions = sessions.filter((s) => s.id !== pendingDeleteSessionId);
+      const updatedSessions = sessions.filter(
+        (s) => s.id !== pendingDeleteSessionId
+      );
       setSessions(updatedSessions);
 
       if (currentSessionId === pendingDeleteSessionId) {
@@ -322,18 +330,20 @@ const AIChatPage = () => {
         console.log("✅ Microphone access granted");
       } catch (micError: any) {
         console.error("Microphone permission error:", micError);
-        
+
         let errorMessage = "Microphone access denied. ";
         if (micError.name === "NotAllowedError") {
-          errorMessage += "Please allow microphone permission in your browser settings.";
+          errorMessage +=
+            "Please allow microphone permission in your browser settings.";
         } else if (micError.name === "NotFoundError") {
           errorMessage += "No microphone found on your device.";
         } else if (micError.name === "NotReadableError") {
-          errorMessage += "Microphone is already in use by another application.";
+          errorMessage +=
+            "Microphone is already in use by another application.";
         } else {
           errorMessage += micError.message || "Unknown error";
         }
-        
+
         showToast(errorMessage, "error");
         setIsConnecting(false);
         setIsVoiceSessionActive(false);
@@ -358,18 +368,24 @@ const AIChatPage = () => {
 
       // Connect to backend WebSocket proxy (handles OpenAI auth)
       const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      
+
       // Derive WebSocket host from API URL
       let wsHost = "localhost:6001";
       if (process.env.NEXT_PUBLIC_API_URL) {
-        wsHost = process.env.NEXT_PUBLIC_API_URL.replace(/^https?:\/\//, '').replace(/\/api$/, '');
+        wsHost = process.env.NEXT_PUBLIC_API_URL.replace(
+          /^https?:\/\//,
+          ""
+        ).replace(/\/api$/, "");
       } else if (process.env.NEXT_PUBLIC_API_BASE_URL) {
-        wsHost = process.env.NEXT_PUBLIC_API_BASE_URL.replace(/^https?:\/\//, '').replace(/\/api$/, '');
-      } else if (!window.location.origin.includes('localhost')) {
+        wsHost = process.env.NEXT_PUBLIC_API_BASE_URL.replace(
+          /^https?:\/\//,
+          ""
+        ).replace(/\/api$/, "");
+      } else if (!window.location.origin.includes("localhost")) {
         // Use current origin if on production
         wsHost = window.location.host;
       }
-      
+
       const wsUrl = `${wsProtocol}//${wsHost}/api/ai-voice-ws`;
       console.log("Connecting to backend WebSocket:", wsUrl);
 
@@ -407,12 +423,12 @@ const AIChatPage = () => {
         // Stop voice session and timer (always call to ensure cleanup)
         setIsVoiceSessionActive(false);
         stopVoiceTimer();
-        
+
         // Auto cleanup if closed unexpectedly
         if (isCallActive) {
           handleEndCall();
         }
-        
+
         showToast("Voice session ended", "info");
       };
 
@@ -431,7 +447,7 @@ const AIChatPage = () => {
         mediaStreamRef.current.getTracks().forEach((track) => track.stop());
         mediaStreamRef.current = null;
       }
-      
+
       // Stop voice session and timer on error
       if (isVoiceSessionActive) {
         setIsVoiceSessionActive(false);
@@ -847,13 +863,13 @@ const AIChatPage = () => {
     e.preventDefault();
 
     if (messageText.trim() === "") return;
-    
+
     // Require active chat session
     if (!isChatSessionActive) {
       showToast("Please start chat session first", "error");
       return;
     }
-    
+
     if (!currentSessionId) {
       // Create a new session if none exists
       await handleNewChat();
@@ -934,7 +950,10 @@ const AIChatPage = () => {
     }
     setIsChatSessionActive(true);
     startChatTimer();
-    showToast("Chat session started. ₹10 will be deducted per minute.", "success");
+    showToast(
+      "Chat session started. ₹10 will be deducted per minute.",
+      "success"
+    );
   };
 
   // Stop chat session
@@ -951,11 +970,14 @@ const AIChatPage = () => {
       showToast("Insufficient balance to start voice call", "error");
       return;
     }
-    
+
     setIsVoiceSessionActive(true);
     startVoiceTimer();
-    showToast("Voice session started. ₹15 will be deducted per minute.", "success");
-    
+    showToast(
+      "Voice session started. ₹15 will be deducted per minute.",
+      "success"
+    );
+
     // Now start the actual voice call
     await handleStartCall();
   };
@@ -984,12 +1006,13 @@ const AIChatPage = () => {
         >
           {/* Mobile close + title */}
           <div className="flex items-center justify-between mb-2 lg:hidden">
-            <Link href="/" className="">
-              <button className="p-2 flex gap-2 hover:bg-gray-100 rounded-full transition-colors">
-                <ArrowLeft size={24} style={{ color: colors.darkGray }} />
-                <span className="text-sm"> Back</span>
-              </button>
-            </Link>
+            <button
+              onClick={handleBack}
+              className="p-2 flex gap-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <ArrowLeft size={24} style={{ color: colors.darkGray }} />
+              <span className="text-sm">Back</span>
+            </button>
 
             <button
               type="button"
@@ -1046,7 +1069,7 @@ const AIChatPage = () => {
               <span className="font-semibold text-sm">New Chat</span>
             </button>
 
-            <div
+            {/* <div
               className="w-full p-4 rounded-lg text-center"
               style={{
                 backgroundColor: colors.offYellow,
@@ -1062,7 +1085,7 @@ const AIChatPage = () => {
                   ? "Voice session active. Click 'Stop Voice' in header to end." 
                   : "Click 'Start Voice' button in header to begin voice call."}
               </p>
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -1142,12 +1165,11 @@ const AIChatPage = () => {
                 <MessageSquare size={24} style={{ color: colors.darkGray }} />
               </button>
 
-              <Link href="/" className="hidden lg:block">
-                <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+        
+                <button onClick={handleBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                   <ArrowLeft size={24} style={{ color: colors.darkGray }} />
                 </button>
-              </Link>
-
+             
               <div className="hidden md:flex items-center gap-3">
                 <div className="relative">
                   <div
@@ -1184,11 +1206,15 @@ const AIChatPage = () => {
               {/* Start/Stop Chat Button */}
               {currentSessionId && (
                 <button
-                  onClick={isChatSessionActive ? handleStopChat : handleStartChat}
+                  onClick={
+                    isChatSessionActive ? handleStopChat : handleStartChat
+                  }
                   disabled={!isChatSessionActive && !hasSufficientBalance(10)}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    backgroundColor: isChatSessionActive ? "#EF4444" : colors.primeGreen,
+                    backgroundColor: isChatSessionActive
+                      ? "#EF4444"
+                      : colors.primeGreen,
                     color: colors.white,
                   }}
                 >
@@ -1203,11 +1229,17 @@ const AIChatPage = () => {
               {isChatting && (
                 <div
                   className="flex items-center gap-2 px-3 py-2 rounded-lg"
-                  style={{ backgroundColor: colors.offYellow, border: `2px solid ${colors.primeYellow}` }}
+                  style={{
+                    backgroundColor: colors.offYellow,
+                    border: `2px solid ${colors.primeYellow}`,
+                  }}
                 >
                   <Clock size={16} style={{ color: colors.darkGray }} />
                   <div className="flex flex-col">
-                    <span className="text-xs font-medium" style={{ color: colors.darkGray }}>
+                    <span
+                      className="text-xs font-medium"
+                      style={{ color: colors.darkGray }}
+                    >
                       {chatDuration}
                     </span>
                     <span className="text-xs" style={{ color: colors.gray }}>
@@ -1221,11 +1253,17 @@ const AIChatPage = () => {
               {isVoiceCalling && (
                 <div
                   className="flex items-center gap-2 px-3 py-2 rounded-lg"
-                  style={{ backgroundColor: colors.offYellow, border: `2px solid ${colors.primeYellow}` }}
+                  style={{
+                    backgroundColor: colors.offYellow,
+                    border: `2px solid ${colors.primeYellow}`,
+                  }}
                 >
                   <Phone size={16} style={{ color: colors.darkGray }} />
                   <div className="flex flex-col">
-                    <span className="text-xs font-medium" style={{ color: colors.darkGray }}>
+                    <span
+                      className="text-xs font-medium"
+                      style={{ color: colors.darkGray }}
+                    >
                       {voiceDuration}
                     </span>
                     <span className="text-xs" style={{ color: colors.gray }}>
@@ -1238,11 +1276,17 @@ const AIChatPage = () => {
               {/* Start/Stop Voice Call Button */}
               {currentSessionId && (
                 <button
-                  onClick={isVoiceSessionActive ? handleStopVoiceSession : handleStartVoiceSession}
+                  onClick={
+                    isVoiceSessionActive
+                      ? handleStopVoiceSession
+                      : handleStartVoiceSession
+                  }
                   disabled={!isVoiceSessionActive && !hasSufficientBalance(15)}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    backgroundColor: isVoiceSessionActive ? "#EF4444" : "#8B5CF6",
+                    backgroundColor: isVoiceSessionActive
+                      ? "#EF4444"
+                      : "#8B5CF6",
                     color: colors.white,
                   }}
                 >
@@ -1260,7 +1304,10 @@ const AIChatPage = () => {
                   style={{ backgroundColor: colors.primeYellow }}
                 >
                   <WalletIcon size={18} style={{ color: colors.white }} />
-                  <span className="font-semibold" style={{ color: colors.white }}>
+                  <span
+                    className="font-semibold"
+                    style={{ color: colors.white }}
+                  >
                     ₹{balance.toFixed(2)}
                   </span>
                 </div>
@@ -1496,12 +1543,12 @@ const AIChatPage = () => {
               >
                 <Clock size={18} style={{ color: colors.primeYellow }} />
                 <p className="text-sm">
-                  Click <strong>"Start Chat"</strong> button above to begin your session.
-                  You'll be charged ₹10 per minute.
+                  Click <strong>"Start Chat"</strong> button above to begin your
+                  session. You'll be charged ₹10 per minute.
                 </p>
               </div>
             )}
-            
+
             {/* Insufficient Balance Warning */}
             {!hasSufficientBalance(10) && (
               <div
@@ -1525,7 +1572,7 @@ const AIChatPage = () => {
                 </p>
               </div>
             )}
-            
+
             <form onSubmit={handleSendMessage} className="flex gap-2">
               <input
                 type="text"
@@ -1542,17 +1589,27 @@ const AIChatPage = () => {
                 className="flex-1 px-4 py-3 rounded-xl border focus:outline-none focus:border-2 transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                 style={{
                   borderColor: colors.gray + "40",
-                  backgroundColor: currentSessionId && isChatSessionActive ? colors.white : "#F3F4F6",
+                  backgroundColor:
+                    currentSessionId && isChatSessionActive
+                      ? colors.white
+                      : "#F3F4F6",
                   color: colors.darkGray,
                 }}
               />
               <button
                 type="submit"
-                disabled={!inputMessage.trim() || !currentSessionId || isTyping || !isChatSessionActive}
+                disabled={
+                  !inputMessage.trim() ||
+                  !currentSessionId ||
+                  isTyping ||
+                  !isChatSessionActive
+                }
                 className="px-4 py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
                 style={{
                   backgroundColor:
-                    inputMessage.trim() && currentSessionId && isChatSessionActive
+                    inputMessage.trim() &&
+                    currentSessionId &&
+                    isChatSessionActive
                       ? colors.primeYellow
                       : colors.gray,
                   color: colors.white,
@@ -1696,8 +1753,8 @@ const AIChatPage = () => {
               </h3>
 
               <p className="text-sm mb-6" style={{ color: colors.gray }}>
-                You don't have enough balance to continue chatting with AI Astrologer.
-                Please recharge your wallet to continue.
+                You don't have enough balance to continue chatting with AI
+                Astrologer. Please recharge your wallet to continue.
               </p>
 
               <div className="flex gap-3 w-full">
