@@ -15,7 +15,7 @@ import { Suspense } from "react";
 function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, isLoggedIn } = useAuth();
+  const { login, isLoggedIn, loading: authLoading } = useAuth();
   const { toast, showToast, hideToast } = useToast();
   const [mobile, setMobile] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -24,8 +24,12 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // Wait for auth context to finish loading before redirecting
+    if (authLoading) return;
+    
     if (isLoggedIn) {
-      router.push("/profile");
+      const redirectPath = searchParams.get("redirect") || "/profile";
+      router.push(redirectPath);
       return;
     }
     if (typeof window !== "undefined") {
@@ -37,10 +41,11 @@ function LoginPage() {
         return;
       }
       if (middlewareToken) {
-        router.push("/profile");
+        const redirectPath = searchParams.get("redirect") || "/profile";
+        router.push(redirectPath);
       }
     }
-  }, [isLoggedIn, router]);
+  }, [isLoggedIn, router, authLoading, searchParams]);
 
   useEffect(() => {
     if (step === "otp" && resendTimer > 0) {
@@ -126,6 +131,22 @@ function LoginPage() {
       setLoading(false);
     }
   };
+
+  // Show loading while auth context initializes
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="h-16 w-16 animate-spin rounded-full border-4 border-gray-200 border-t-yellow-400"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="h-8 w-8 rounded-full bg-yellow-400/20"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex items-center justify-center p-4 sm:p-6 lg:p-10">

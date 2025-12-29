@@ -69,6 +69,7 @@ export function RouteProtection({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [lastPathname, setLastPathname] = useState('');
 
   // Check auth status
   const authStatus = useMemo(() => {
@@ -167,13 +168,21 @@ export function RouteProtection({ children }: { children: ReactNode }) {
     return { checking: false, authorized: true, shouldRedirect: false, redirectTo: '' };
   }, [pathname]);
 
+  // Reset redirecting state when pathname changes
+  useEffect(() => {
+    if (pathname !== lastPathname) {
+      setLastPathname(pathname);
+      setIsRedirecting(false);
+    }
+  }, [pathname, lastPathname]);
+
   // Handle redirects
   useEffect(() => {
-    if (authStatus.shouldRedirect && authStatus.redirectTo) {
+    if (authStatus.shouldRedirect && authStatus.redirectTo && !isRedirecting) {
       setIsRedirecting(true);
       router.replace(authStatus.redirectTo);
     }
-  }, [authStatus, router]);
+  }, [authStatus, router, isRedirecting]);
 
   // Listen for auth changes
   useEffect(() => {
