@@ -92,8 +92,12 @@ export default function LiveChatsPage() {
   const router = useRouter();
   const { showToast, toastProps, hideToast } = useToast();
   const [chatSessions, setChatSessions] = useState<ChatSessionSummary[]>([]);
-  const [requestSessions, setRequestSessions] = useState<ChatSessionSummary[]>([]);
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [requestSessions, setRequestSessions] = useState<ChatSessionSummary[]>(
+    []
+  );
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
+    null
+  );
   const [messages, setMessages] = useState<ChatMessageDto[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>("chats");
   const [searchQuery, setSearchQuery] = useState("");
@@ -168,8 +172,16 @@ export default function LiveChatsPage() {
     const fetchSessions = async () => {
       try {
         const [approvedRes, pendingRes] = await Promise.all([
-          getAstrologerChatSessions({ requestStatus: "approved", page: 1, limit: 100 }),
-          getAstrologerChatSessions({ requestStatus: "pending", page: 1, limit: 100 }),
+          getAstrologerChatSessions({
+            requestStatus: "approved",
+            page: 1,
+            limit: 100,
+          }),
+          getAstrologerChatSessions({
+            requestStatus: "pending",
+            page: 1,
+            limit: 100,
+          }),
         ]);
 
         const chats = approvedRes.sessions || [];
@@ -198,11 +210,11 @@ export default function LiveChatsPage() {
     };
 
     if (openMenuId) {
-      document.addEventListener('click', handleClickOutside);
+      document.addEventListener("click", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener("click", handleClickOutside);
     };
   }, [openMenuId]);
 
@@ -236,12 +248,15 @@ export default function LiveChatsPage() {
     // Mark messages as read when opening chat
     socket.emit("mark_read", { sessionId: selectedSessionId });
 
-    const handleNewMessage = (payload: { sessionId: string; message: ChatMessageDto }) => {
+    const handleNewMessage = (payload: {
+      sessionId: string;
+      message: ChatMessageDto;
+    }) => {
       if (payload.sessionId !== selectedSessionId) return;
-      
+
       setMessages((prev) => {
         // Check if message already exists to avoid duplicates
-        if (prev.some(m => m.id === payload.message.id)) {
+        if (prev.some((m) => m.id === payload.message.id)) {
           return prev;
         }
         return [...prev, payload.message];
@@ -253,14 +268,21 @@ export default function LiveChatsPage() {
       }
     };
 
-    const handleTyping = (payload: { sessionId: string; from: "user" | "astrologer"; isTyping: boolean }) => {
+    const handleTyping = (payload: {
+      sessionId: string;
+      from: "user" | "astrologer";
+      isTyping: boolean;
+    }) => {
       if (payload.sessionId !== selectedSessionId) return;
       if (payload.from === "user") {
         setIsTypingUser(payload.isTyping);
       }
     };
 
-    const handleChatUpdated = (payload: { sessionId: string; session: ChatSessionSummary }) => {
+    const handleChatUpdated = (payload: {
+      sessionId: string;
+      session: ChatSessionSummary;
+    }) => {
       setChatSessions((prev) =>
         prev.map((s) =>
           s.id === payload.sessionId
@@ -287,7 +309,10 @@ export default function LiveChatsPage() {
       );
     };
 
-    const handleMessagesRead = (payload: { sessionId: string; readerRole: "user" | "astrologer" }) => {
+    const handleMessagesRead = (payload: {
+      sessionId: string;
+      readerRole: "user" | "astrologer";
+    }) => {
       if (payload.sessionId !== selectedSessionId) return;
 
       setMessages((prev) =>
@@ -308,12 +333,18 @@ export default function LiveChatsPage() {
       );
     };
 
-    const handleUnreadUpdate = (payload: { sessionId: string; unreadCount: number; viewerRole: "user" | "astrologer" }) => {
+    const handleUnreadUpdate = (payload: {
+      sessionId: string;
+      unreadCount: number;
+      viewerRole: "user" | "astrologer";
+    }) => {
       if (payload.viewerRole !== "astrologer") return;
 
       setChatSessions((prev) =>
         prev.map((s) =>
-          s.id === payload.sessionId ? { ...s, unreadCount: payload.unreadCount } : s
+          s.id === payload.sessionId
+            ? { ...s, unreadCount: payload.unreadCount }
+            : s
         )
       );
     };
@@ -324,7 +355,10 @@ export default function LiveChatsPage() {
       console.log("[Astrologer] Set incomingCall state:", payload.callSession);
     };
 
-    const handleCallEnded = (payload: { callSession: CallSession; endedBy: string }) => {
+    const handleCallEnded = (payload: {
+      callSession: CallSession;
+      endedBy: string;
+    }) => {
       console.log("[Astrologer] Received call:ended event:", payload);
       setActiveCall(null);
       showToast(`Call ended by ${payload.endedBy}`, "info");
@@ -347,7 +381,7 @@ export default function LiveChatsPage() {
       socket.off("unread:update", handleUnreadUpdate);
       socket.off("call:incoming", handleIncomingCall);
       socket.off("call:ended", handleCallEnded);
-      
+
       // Clean up typing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -462,9 +496,16 @@ export default function LiveChatsPage() {
               messageType: "text",
               replyToMessageId: replyTo?.id,
             },
-            (response: { success: boolean; error?: string; message?: ChatMessageDto }) => {
+            (response: {
+              success: boolean;
+              error?: string;
+              message?: ChatMessageDto;
+            }) => {
               if (!response?.success && response?.error) {
-                console.error("Failed to send message via socket:", response.error);
+                console.error(
+                  "Failed to send message via socket:",
+                  response.error
+                );
                 shouldFallbackToHttp = true;
               } else if (response?.success) {
                 shouldFallbackToHttp = false;
@@ -486,7 +527,10 @@ export default function LiveChatsPage() {
         // Optimistically append the sent message from HTTP response so the
         // astrologer immediately sees their message in the UI.
         if (response?.success && response.chatMessage) {
-          setMessages((prev) => [...prev, response.chatMessage as ChatMessageDto]);
+          setMessages((prev) => [
+            ...prev,
+            response.chatMessage as ChatMessageDto,
+          ]);
         }
       }
 
@@ -506,8 +550,12 @@ export default function LiveChatsPage() {
     try {
       await approveChatRequest(sessionId);
       setRequestSessions((prev) => prev.filter((s) => s.id !== sessionId));
-      const updatedReq = await getAstrologerChatSessions({ requestStatus: "pending" });
-      const updatedChats = await getAstrologerChatSessions({ requestStatus: "approved" });
+      const updatedReq = await getAstrologerChatSessions({
+        requestStatus: "pending",
+      });
+      const updatedChats = await getAstrologerChatSessions({
+        requestStatus: "approved",
+      });
       setRequestSessions(updatedReq.sessions || []);
       setChatSessions(updatedChats.sessions || []);
     } catch (error) {
@@ -554,7 +602,10 @@ export default function LiveChatsPage() {
       }
     } catch (error: any) {
       console.error("Failed to accept call", error);
-      showToast(error?.response?.data?.message || "Failed to accept call", "error");
+      showToast(
+        error?.response?.data?.message || "Failed to accept call",
+        "error"
+      );
     }
   };
 
@@ -573,48 +624,51 @@ export default function LiveChatsPage() {
   };
 
   return (
-    <div className="flex  h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden">
       {/* Left Panel - Chat List */}
       <div
-        className={`fixed inset-y-0 left-0 z-30 w-80 sm:w-96 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-300 lg:static lg:translate-x-0 lg:z-auto ${
+        className={`fixed inset-y-0 left-0 z-30 w-full sm:w-80 md:w-96 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-300 lg:static lg:translate-x-0 lg:z-auto ${
           showSidebar ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         {/* Header */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
+        <div className="p-3 sm:p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                className="p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
                 aria-label="Go back"
               >
-                <IoMdArrowBack className="w-5 h-5  text-gray-700" />
+                <IoMdArrowBack className="w-5 h-5 text-gray-700" />
               </button>
-              <h2 className="text-2xl font-bold" style={{ color: colors.black }}>
+              <h2
+                className="text-xl sm:text-2xl font-bold truncate"
+                style={{ color: colors.black }}
+              >
                 Live Chats
               </h2>
             </div>
             <button
               type="button"
               onClick={() => setShowSidebar(false)}
-              className="lg:hidden p-2 rounded-full hover:bg-gray-100 transition-colors"
+              className="lg:hidden p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
               aria-label="Close sidebar"
             >
-              <RxCross2  className="w-5 h-5 rotate-90 text-gray-700" />
+              <RxCross2 className="w-5 h-5 rotate-90 text-gray-700" />
             </button>
           </div>
 
           {/* Search Bar */}
           <div className="relative">
-            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
-              placeholder="Search conversations..."
+              placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#FFD700]"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#FFD700]"
             />
           </div>
         </div>
@@ -623,7 +677,7 @@ export default function LiveChatsPage() {
         <div className="flex border-b border-gray-200">
           <button
             onClick={() => setActiveTab("chats")}
-            className={`flex-1 py-3 text-center font-medium transition-colors ${
+            className={`flex-1 py-2.5 sm:py-3 text-center text-sm sm:text-base font-medium transition-colors ${
               activeTab === "chats"
                 ? "text-gray-900 border-b-2 border-[#FFD700] bg-yellow-50"
                 : "text-gray-600 hover:text-gray-900"
@@ -631,14 +685,14 @@ export default function LiveChatsPage() {
           >
             Chats
             {chatSessions.filter((s) => s.unreadCount > 0).length > 0 && (
-              <span className="ml-2 px-2 py-0.5 bg-[#FFD700] text-xs rounded-full">
+              <span className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 bg-[#FFD700] text-[10px] sm:text-xs rounded-full">
                 {chatSessions.reduce((acc, s) => acc + (s.unreadCount || 0), 0)}
               </span>
             )}
           </button>
           <button
             onClick={() => setActiveTab("requests")}
-            className={`flex-1 py-3 text-center font-medium transition-colors ${
+            className={`flex-1 py-2.5 sm:py-3 text-center text-sm sm:text-base font-medium transition-colors ${
               activeTab === "requests"
                 ? "text-gray-900 border-b-2 border-[#FFD700] bg-yellow-50"
                 : "text-gray-600 hover:text-gray-900"
@@ -646,7 +700,7 @@ export default function LiveChatsPage() {
           >
             Requests
             {requestSessions.length > 0 && (
-              <span className="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
+              <span className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 bg-red-500 text-white text-[10px] sm:text-xs rounded-full">
                 {requestSessions.length}
               </span>
             )}
@@ -662,15 +716,15 @@ export default function LiveChatsPage() {
                 <div
                   key={session.id}
                   onClick={() => setSelectedSessionId(session.id)}
-                  className={`p-4 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 ${
+                  className={`p-3 sm:p-4 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 ${
                     selectedSessionId === session.id ? "bg-yellow-50" : ""
                   }`}
                 >
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-2 sm:gap-3">
                     {/* Avatar */}
-                    <div className="relative">
-                      <div className="w-12 h-12 rounded-full bg-linear-to-br from-yellow-200 to-yellow-300 flex items-center justify-center">
-                        <span className="text-lg font-semibold text-gray-700">
+                    <div className="relative flex-shrink-0">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-linear-to-br from-yellow-200 to-yellow-300 flex items-center justify-center">
+                        <span className="text-base sm:text-lg font-semibold text-gray-700">
                           {(session.user?.fullName || "?").charAt(0)}
                         </span>
                       </div>
@@ -682,12 +736,14 @@ export default function LiveChatsPage() {
                     {/* Chat Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start mb-1">
-                        <h4 className="font-semibold text-gray-900 truncate">
+                        <h4 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
                           {session.user?.fullName || "User"}
                         </h4>
-                        <span className="text-xs text-gray-500 ml-2 shrink-0">
+                        <span className="text-[10px] sm:text-xs text-gray-500 ml-2 shrink-0">
                           {session.lastMessageAt
-                            ? new Date(session.lastMessageAt).toLocaleTimeString([], {
+                            ? new Date(
+                                session.lastMessageAt
+                              ).toLocaleTimeString([], {
                                 hour: "2-digit",
                                 minute: "2-digit",
                               })
@@ -709,67 +765,65 @@ export default function LiveChatsPage() {
                 </div>
               ))
             ) : (
-              <div className="p-8 text-center text-gray-500">
+              <div className="p-6 sm:p-8 text-center text-gray-500 text-sm sm:text-base">
                 No chats found
               </div>
             )
-          ) : (
-            // Requests List
-            filteredRequests.length > 0 ? (
-              filteredRequests.map((session) => (
-                <div
-                  key={session.id}
-                  className="p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-start gap-3">
-                    {/* Avatar */}
-                    <div className="w-12 h-12 rounded-full bg-linear-to-br from-blue-200 to-blue-300 flex items-center justify-center">
-                      <span className="text-lg font-semibold text-gray-700">
-                        {(session.user?.fullName || "?").charAt(0)}
+          ) : // Requests List
+          filteredRequests.length > 0 ? (
+            filteredRequests.map((session) => (
+              <div
+                key={session.id}
+                className="p-3 sm:p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-start gap-2 sm:gap-3">
+                  {/* Avatar */}
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-linear-to-br from-blue-200 to-blue-300 flex items-center justify-center flex-shrink-0">
+                    <span className="text-base sm:text-lg font-semibold text-gray-700">
+                      {(session.user?.fullName || "?").charAt(0)}
+                    </span>
+                  </div>
+
+                  {/* Request Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start mb-1">
+                      <h4 className="font-semibold text-gray-900">
+                        {session.user?.fullName || "User"}
+                      </h4>
+                      <span className="text-xs text-gray-500 ml-2">
+                        {session.startTime
+                          ? new Date(session.startTime).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : ""}
                       </span>
                     </div>
-
-                    {/* Request Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="font-semibold text-gray-900">
-                          {session.user?.fullName || "User"}
-                        </h4>
-                        <span className="text-xs text-gray-500 ml-2">
-                          {session.startTime
-                            ? new Date(session.startTime).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                            : ""}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 mb-2">
-                        {session.lastMessagePreview || "New chat request"}
-                      </p>
-                      <div className="flex gap-2">
-                        <button
-                          className="px-3 py-1 bg-[#FFD700] text-sm font-medium rounded hover:bg-yellow-500 transition-colors"
-                          onClick={() => handleAcceptRequest(session.id)}
-                        >
-                          Accept
-                        </button>
-                        <button
-                          className="px-3 py-1 bg-gray-200 text-sm font-medium rounded hover:bg-gray-300 transition-colors"
-                          onClick={() => handleDeclineRequest(session.id)}
-                        >
-                          Decline
-                        </button>
-                      </div>
+                    <p className="text-sm text-gray-600 mb-2">
+                      {session.lastMessagePreview || "New chat request"}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        className="px-2.5 sm:px-3 py-1 bg-[#FFD700] text-xs sm:text-sm font-medium rounded hover:bg-yellow-500 transition-colors"
+                        onClick={() => handleAcceptRequest(session.id)}
+                      >
+                        Accept
+                      </button>
+                      <button
+                        className="px-2.5 sm:px-3 py-1 bg-gray-200 text-xs sm:text-sm font-medium rounded hover:bg-gray-300 transition-colors"
+                        onClick={() => handleDeclineRequest(session.id)}
+                      >
+                        Decline
+                      </button>
                     </div>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="p-8 text-center text-gray-500">
-                No pending requests
               </div>
-            )
+            ))
+          ) : (
+            <div className="p-6 sm:p-8 text-center text-gray-500 text-sm sm:text-base">
+              No pending requests
+            </div>
           )}
         </div>
       </div>
@@ -787,131 +841,154 @@ export default function LiveChatsPage() {
         {selectedUser && selectedSession ? (
           <>
             {/* Chat Header */}
-            <div className="border-b border-gray-200 p-4">
+            <div className="border-b border-gray-200 p-3 sm:p-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                   {/* Mobile: open sidebar */}
                   <button
                     type="button"
                     onClick={() => setShowSidebar(true)}
-                    className="lg:hidden p-2 rounded-full hover:bg-gray-100 transition-colors"
+                    className="lg:hidden p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
                     aria-label="Open chat list"
                   >
                     <GiHamburgerMenu className="w-5 h-5 text-gray-800" />
                   </button>
                   {/* Avatar */}
-                  <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-linear-to-br from-yellow-200 to-yellow-300 flex items-center justify-center">
-                      <span className="text-lg font-semibold text-gray-700">
+                  <div className="relative flex-shrink-0">
+                    <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-linear-to-br from-yellow-200 to-yellow-300 flex items-center justify-center">
+                      <span className="text-base sm:text-lg font-semibold text-gray-700">
                         {(selectedUser.name || "?").charAt(0)}
                       </span>
                     </div>
                     {selectedUser.online && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                      <div className="absolute bottom-0 right-0 w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full border-2 border-white"></div>
                     )}
                   </div>
 
                   {/* User Info */}
-                  <div>
-                    <h3 className="font-semibold text-gray-900">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
                       {selectedUser.name || "User"}
                     </h3>
-                    <p className="text-sm text-gray-500">
-                        {selectedUser.online ? "Online" : "Offline"}
+                    <p className="text-xs sm:text-sm text-gray-500">
+                      {selectedUser.online ? "Online" : "Offline"}
                     </p>
                   </div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex items-center gap-4">
-                  <button className="p-2 cursor-pointer hover:bg-yellow-200 rounded-full transition-colors" title="Voice Call">
-                    <FiPhone className="w-5 h-5 text-gray-700" />
+                <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                  <button
+                    className="p-1.5 sm:p-2 cursor-pointer hover:bg-yellow-200 rounded-full transition-colors"
+                    title="Voice Call"
+                  >
+                    <FiPhone className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
                   </button>
-                  <button className="p-2 cursor-pointer hover:bg-yellow-200 rounded-full transition-colors" title="Video Call">
-                    <FiVideo className="w-5 h-5 text-gray-700" />
+                  <button
+                    className="p-1.5 sm:p-2 cursor-pointer hover:bg-yellow-200 rounded-full transition-colors"
+                    title="Video Call"
+                  >
+                    <FiVideo className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
                   </button>
-                  
                 </div>
               </div>
             </div>
 
             {/* Chat Messages Area */}
-            <div 
-              className="flex-1 overflow-y-auto p-6">
-
-             
-             
+            <div className="flex-1 overflow-y-auto p-6">
               <div className="max-w-4xl mx-auto space-y-4 relative z-10">
                 {groupMessagesByDate(messages).map((group) => (
                   <div key={group.dateKey}>
                     <div className="flex justify-center mb-4">
                       <div className="bg-white/80 backdrop-blur-sm px-3 py-1 rounded-lg shadow-sm">
-                        <p className="text-xs text-gray-600 font-medium">{group.label}</p>
+                        <p className="text-xs text-gray-600 font-medium">
+                          {group.label}
+                        </p>
                       </div>
                     </div>
 
                     {group.items.map((message) => {
                       const isAstrologer = message.senderType === "astrologer";
                       const repliedTo = message.replyToMessageId
-                        ? messages.find((m) => m.id === message.replyToMessageId) || null
+                        ? messages.find(
+                            (m) => m.id === message.replyToMessageId
+                          ) || null
                         : null;
 
                       return (
                         <div
                           key={message.id}
-                          className={`flex ${isAstrologer ? "justify-end" : "justify-start"} mb-3`}
+                          className={`flex ${
+                            isAstrologer ? "justify-end" : "justify-start"
+                          } mb-3`}
                         >
                           <div
                             className={`max-w-[70%] rounded-lg shadow-sm ${
-                              message.messageType === "image" ? "p-0 overflow-hidden" : "px-4 py-3"
+                              message.messageType === "image"
+                                ? "p-0 overflow-hidden"
+                                : "px-4 py-3"
                             } ${
-                              isAstrologer ? "bg-[#FFD700] text-gray-900" : " text-gray-900"
+                              isAstrologer
+                                ? "bg-[#FFD700] text-gray-900"
+                                : " text-gray-900"
                             }`}
                           >
                             {repliedTo && (
                               <div className="mb-1 px-2 py-1 text-[11px] rounded bg-black text-gray-700">
                                 <span className="font-semibold mr-1">
-                                  Replying to {repliedTo.senderType === "astrologer" ? "You" : selectedUser?.name || "User"}
+                                  Replying to{" "}
+                                  {repliedTo.senderType === "astrologer"
+                                    ? "You"
+                                    : selectedUser?.name || "User"}
                                 </span>
                                 <span className="truncate block max-w-[220px]">
-                                  {repliedTo.messageType === "image" ? "[Image]" : (repliedTo.message || "(message)")}
+                                  {repliedTo.messageType === "image"
+                                    ? "[Image]"
+                                    : repliedTo.message || "(message)"}
                                 </span>
                               </div>
                             )}
 
-                            {message.messageType === "image" && message.fileUrl ? (
+                            {message.messageType === "image" &&
+                            message.fileUrl ? (
                               <img
                                 src={message.fileUrl}
                                 alt="Sent image"
                                 className="rounded-lg max-w-[250px] max-h-[250px] w-auto h-auto cursor-pointer hover:opacity-90 transition object-cover block"
-                                onClick={() => window.open(message.fileUrl || "", "_blank")}
+                                onClick={() =>
+                                  window.open(message.fileUrl || "", "_blank")
+                                }
                                 onError={(e) => {
-                                  e.currentTarget.src = "/images/image-error.png";
+                                  e.currentTarget.src =
+                                    "/images/image-error.png";
                                 }}
                               />
                             ) : (
                               <p className="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">
-                                {message.isDeleted ? "This message was deleted" : message.message}
+                                {message.isDeleted
+                                  ? "This message was deleted"
+                                  : message.message}
                               </p>
                             )}
                             <div className="flex items-center justify-between gap-2 mt-1">
                               <div className="flex items-center gap-1">
                                 <span className="text-xs text-gray-600">
-                                  {new Date(message.createdAt).toLocaleTimeString([], {
+                                  {new Date(
+                                    message.createdAt
+                                  ).toLocaleTimeString([], {
                                     hour: "2-digit",
                                     minute: "2-digit",
                                   })}
                                 </span>
-                                {isAstrologer && (
-                                  message.isRead ? (
+                                {isAstrologer &&
+                                  (message.isRead ? (
                                     <div className="flex text-blue-500">
                                       <FiCheck className="w-3 h-3 -mr-1" />
                                       <FiCheck className="w-3 h-3" />
                                     </div>
                                   ) : (
                                     <FiCheck className="w-3 h-3 text-gray-400" />
-                                  )
-                                )}
+                                  ))}
                               </div>
                               {!message.isDeleted && (
                                 <div className="relative">
@@ -919,7 +996,11 @@ export default function LiveChatsPage() {
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setOpenMenuId(openMenuId === message.id ? null : message.id);
+                                      setOpenMenuId(
+                                        openMenuId === message.id
+                                          ? null
+                                          : message.id
+                                      );
                                     }}
                                     className="p-1 hover:bg-gray-200 rounded-full transition"
                                     aria-label="Message options"
@@ -942,7 +1023,9 @@ export default function LiveChatsPage() {
                                         <button
                                           type="button"
                                           onClick={() => {
-                                            handleCopyMessage(message.message || null);
+                                            handleCopyMessage(
+                                              message.message || null
+                                            );
                                             setOpenMenuId(null);
                                           }}
                                           className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition"
@@ -977,11 +1060,15 @@ export default function LiveChatsPage() {
             </div>
 
             {/* Message Input Area */}
-            <div className=" border-t border-gray-200 p-4 relative">              {/* Image Preview Modal */}
+            <div className=" border-t border-gray-200 p-4 relative">
+              {" "}
+              {/* Image Preview Modal */}
               {imagePreview && (
                 <div className="mb-3 bg-white border border-gray-200 rounded-lg p-3 shadow-lg">
                   <div className="flex justify-between items-center mb-2">
-                    <p className="text-sm font-semibold text-gray-700">Send Image</p>
+                    <p className="text-sm font-semibold text-gray-700">
+                      Send Image
+                    </p>
                     <button
                       type="button"
                       onClick={handleCancelImage}
@@ -1012,13 +1099,16 @@ export default function LiveChatsPage() {
                   </div>
                 </div>
               )}
-
-              {/* Reply Preview */}              {replyTo && (
+              {/* Reply Preview */}{" "}
+              {replyTo && (
                 <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-full max-w-4xl px-3">
                   <div className="bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-xs flex justify-between items-start">
                     <div>
                       <p className="font-semibold text-gray-700 mb-0.5">
-                        Replying to {replyTo.senderType === "astrologer" ? "You" : selectedUser?.name || "User"}
+                        Replying to{" "}
+                        {replyTo.senderType === "astrologer"
+                          ? "You"
+                          : selectedUser?.name || "User"}
                       </p>
                       <p className="text-gray-600 truncate max-w-xs">
                         {replyTo.message || "(message)"}
@@ -1035,8 +1125,10 @@ export default function LiveChatsPage() {
                   </div>
                 </div>
               )}
-
-              <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+              <form
+                onSubmit={handleSendMessage}
+                className="flex items-center gap-2"
+              >
                 {/* Hidden file input */}
                 <input
                   ref={fileInputRef}
@@ -1078,9 +1170,13 @@ export default function LiveChatsPage() {
                     className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-colors disabled:opacity-50"
                     title="Send message"
                   >
-                    <FiSend className={`w-5 h-5 ${
-                      messageInput.trim() ? "text-[#FFD700] hover:text-yellow-600" : "text-gray-400"
-                    }`} />
+                    <FiSend
+                      className={`w-5 h-5 ${
+                        messageInput.trim()
+                          ? "text-[#FFD700] hover:text-yellow-600"
+                          : "text-gray-400"
+                      }`}
+                    />
                   </button>
                 </div>
               </form>
@@ -1088,15 +1184,32 @@ export default function LiveChatsPage() {
           </>
         ) : (
           // No Chat Selected
-          <div className="flex-1 flex items-center justify-center bg-linear-to-br from-yellow-50 to-orange-50">
-            <div className="text-center">
-              <div className="text-8xl mb-4">💬</div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                Welcome to Live Chats
-              </h3>
-              <p className="text-gray-600">
-                Select a conversation to start chatting with your clients
-              </p>
+          <div className="flex-1 flex bg-linear-to-br from-yellow-50 to-orange-50 p-4">
+            <button
+                type="button"
+                onClick={() => setShowSidebar(true)}
+                className="lg:hidden mb-4 p-3 h-12 bg-white rounded-full shadow-md hover:shadow-lg transition-all"
+                aria-label="Open chat list"
+              >
+                <GiHamburgerMenu className="w-6 h-6 text-gray-800" />
+              </button>
+            <div className="flex-1 flex items-center justify-center bg-linear-to-br from-yellow-50 to-orange-50 p-4">
+              
+              <div className="text-center max-w-md">
+                {/* Mobile hamburger to open sidebar when no chat selected */}
+
+                <div className="text-6xl sm:text-7xl md:text-8xl mb-3 sm:mb-4">
+                  💬
+                </div>
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+                  Welcome to Live Chats
+                </h3>
+                <p className="text-sm sm:text-base text-gray-600 px-4">
+                  {chatSessions.length === 0 && requestSessions.length === 0
+                    ? "No chats or requests yet. Waiting for clients..."
+                    : "Select a conversation to start chatting with your clients"}
+                </p>
+              </div>
             </div>
           </div>
         )}
@@ -1104,15 +1217,17 @@ export default function LiveChatsPage() {
 
       {/* Incoming Call Modal */}
       {incomingCall && (
-        <div className="fixed inset-0 bg-white/30 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
+        <div className="fixed inset-0 bg-white/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-5 sm:p-6 w-full max-w-sm sm:max-w-md shadow-xl">
             <div className="text-center">
-              <FiPhone className="w-16 h-16 mx-auto mb-4 text-green-500 animate-pulse" />
-              <h3 className="text-xl font-bold mb-2">Incoming {incomingCall.callType} Call</h3>
-              <p className="text-gray-600 mb-6">
+              <FiPhone className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-green-500 animate-pulse" />
+              <h3 className="text-lg sm:text-xl font-bold mb-2">
+                Incoming {incomingCall.callType} Call
+              </h3>
+              <p className="text-sm sm:text-base text-gray-600 mb-5 sm:mb-6">
                 {incomingCall.user?.fullName || "User"} is calling you
               </p>
-              <div className="flex gap-3 justify-center">
+              <div className="flex gap-2 sm:gap-3 justify-center">
                 <button
                   onClick={() => handleRejectCall(incomingCall.id)}
                   className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
@@ -1133,9 +1248,9 @@ export default function LiveChatsPage() {
 
       {/* Active Call Component */}
       {activeCall && activeCall.status !== "rejected" && (
-        <AgoraCall 
-          callSession={activeCall} 
-          onCallEnd={() => setActiveCall(null)} 
+        <AgoraCall
+          callSession={activeCall}
+          onCallEnd={() => setActiveCall(null)}
         />
       )}
       {toastProps.isVisible && (

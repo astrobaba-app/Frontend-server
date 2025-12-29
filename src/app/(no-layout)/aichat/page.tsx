@@ -15,6 +15,8 @@ import {
   MicOff,
   AlertCircle,
 } from "lucide-react";
+import { CiMicrophoneOn } from "react-icons/ci";
+import { GiHamburgerMenu } from "react-icons/gi";
 import { RxCross2 } from "react-icons/rx";
 import Link from "next/link";
 import Image from "next/image";
@@ -991,12 +993,12 @@ const AIChatPage = () => {
   };
 
   return (
-    <div className="flex min-h-screen lg:h-screen bg-gradient-to-br from-gray-50 via-white to-yellow-50 overflow-hidden">
+    <div className="flex min-h-screen  lg:h-screen bg-gradient-to-br from-gray-50 via-white to-yellow-50 overflow-hidden">
       {/* Sidebar - Chat Sessions */}
       <div
         className={`${
           showSidebar ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0 fixed lg:relative w-72 sm:w-80 h-full bg-white/95 border-r shadow-xl transition-transform duration-300 ease-out z-20 flex flex-col backdrop-blur`}
+        } lg:translate-x-0 fixed lg:relative w-72   sm:w-80 h-full bg-white/95 border-r shadow-xl transition-transform duration-300 ease-out z-20 flex flex-col backdrop-blur`}
         style={{ borderColor: colors.gray + "20" }}
       >
         {/* Sidebar Header */}
@@ -1069,23 +1071,7 @@ const AIChatPage = () => {
               <span className="font-semibold text-sm">New Chat</span>
             </button>
 
-            {/* <div
-              className="w-full p-4 rounded-lg text-center"
-              style={{
-                backgroundColor: colors.offYellow,
-                border: `2px solid ${colors.primeYellow}`,
-              }}
-            >
-              <Phone size={32} className="mx-auto mb-2" style={{ color: colors.primeYellow }} />
-              <p className="text-sm font-medium mb-1" style={{ color: colors.darkGray }}>
-                Voice Call Feature
-              </p>
-              <p className="text-xs" style={{ color: colors.gray }}>
-                {isVoiceSessionActive 
-                  ? "Voice session active. Click 'Stop Voice' in header to end." 
-                  : "Click 'Start Voice' button in header to begin voice call."}
-              </p>
-            </div> */}
+           
           </div>
         </div>
 
@@ -1162,11 +1148,11 @@ const AIChatPage = () => {
                 onClick={() => setShowSidebar(!showSidebar)}
                 className="lg:hidden p-2 hover:bg-gray-100 rounded-full transition-colors"
               >
-                <MessageSquare size={24} style={{ color: colors.darkGray }} />
+                <GiHamburgerMenu  size={24} style={{ color: colors.darkGray }} />
               </button>
 
         
-                <button onClick={handleBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <button onClick={handleBack} className="p-2 hidden md:flex hover:bg-gray-100 rounded-full transition-colors">
                   <ArrowLeft size={24} style={{ color: colors.darkGray }} />
                 </button>
              
@@ -1210,7 +1196,7 @@ const AIChatPage = () => {
                     isChatSessionActive ? handleStopChat : handleStartChat
                   }
                   disabled={!isChatSessionActive && !hasSufficientBalance(10)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     backgroundColor: isChatSessionActive
                       ? "#EF4444"
@@ -1218,9 +1204,10 @@ const AIChatPage = () => {
                     color: colors.white,
                   }}
                 >
-                  <Clock size={18} />
-                  <span className="font-medium text-sm">
-                    {isChatSessionActive ? "Stop Chat" : "Start Chat"}
+                  <Clock size={16} className="sm:w-[18px] sm:h-[18px]" />
+                  <span className="font-medium text-xs sm:text-sm">
+                    {isChatSessionActive ? "Stop" : "Start"}
+                    <span className="hidden sm:inline"> Chat</span>
                   </span>
                 </button>
               )}
@@ -1228,21 +1215,21 @@ const AIChatPage = () => {
               {/* Chat Timer */}
               {isChatting && (
                 <div
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                  className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg"
                   style={{
                     backgroundColor: colors.offYellow,
-                    border: `2px solid ${colors.primeYellow}`,
+                    border: `1.5px solid ${colors.primeYellow}`,
                   }}
                 >
-                  <Clock size={16} style={{ color: colors.darkGray }} />
+                  <Clock size={14} className="sm:w-4 sm:h-4" style={{ color: colors.darkGray }} />
                   <div className="flex flex-col">
                     <span
-                      className="text-xs font-medium"
+                      className="text-[10px] sm:text-xs font-medium leading-tight"
                       style={{ color: colors.darkGray }}
                     >
                       {chatDuration}
                     </span>
-                    <span className="text-xs" style={{ color: colors.gray }}>
+                    <span className="text-[10px] sm:text-xs leading-tight" style={{ color: colors.gray }}>
                       ₹{chatCost.toFixed(2)}
                     </span>
                   </div>
@@ -1252,21 +1239,21 @@ const AIChatPage = () => {
               {/* Voice Timer */}
               {isVoiceCalling && (
                 <div
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                  className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg"
                   style={{
                     backgroundColor: colors.offYellow,
-                    border: `2px solid ${colors.primeYellow}`,
+                    border: `1.5px solid ${colors.primeYellow}`,
                   }}
                 >
-                  <Phone size={16} style={{ color: colors.darkGray }} />
+                  <Phone size={14} className="sm:w-4 sm:h-4" style={{ color: colors.darkGray }} />
                   <div className="flex flex-col">
                     <span
-                      className="text-xs font-medium"
+                      className="text-[10px] sm:text-xs font-medium leading-tight"
                       style={{ color: colors.darkGray }}
                     >
                       {voiceDuration}
                     </span>
-                    <span className="text-xs" style={{ color: colors.gray }}>
+                    <span className="text-[10px] sm:text-xs leading-tight" style={{ color: colors.gray }}>
                       ₹{voiceCost.toFixed(2)}
                     </span>
                   </div>
@@ -1282,7 +1269,7 @@ const AIChatPage = () => {
                       : handleStartVoiceSession
                   }
                   disabled={!isVoiceSessionActive && !hasSufficientBalance(15)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     backgroundColor: isVoiceSessionActive
                       ? "#EF4444"
@@ -1290,9 +1277,10 @@ const AIChatPage = () => {
                     color: colors.white,
                   }}
                 >
-                  <Phone size={18} />
-                  <span className="font-medium text-sm">
-                    {isVoiceSessionActive ? "Stop Voice" : "Start Voice"}
+                  <CiMicrophoneOn size={16} className="sm:w-[18px] sm:h-[18px]" />
+                  <span className="font-medium text-xs sm:text-sm">
+                    {isVoiceSessionActive ? "Stop" : "Start"}
+                    <span className="hidden sm:inline"> Voice</span>
                   </span>
                 </button>
               )}
@@ -1300,12 +1288,12 @@ const AIChatPage = () => {
               {/* Wallet Balance */}
               <Link href="/profile/wallet">
                 <div
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg hover:opacity-80 transition-opacity cursor-pointer"
+                  className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:opacity-80 transition-opacity cursor-pointer"
                   style={{ backgroundColor: colors.primeYellow }}
                 >
-                  <WalletIcon size={18} style={{ color: colors.white }} />
+                  <WalletIcon size={16} className="sm:w-[18px] sm:h-[18px]" style={{ color: colors.white }} />
                   <span
-                    className="font-semibold"
+                    className="font-semibold text-xs sm:text-sm"
                     style={{ color: colors.white }}
                   >
                     ₹{balance.toFixed(2)}
@@ -1384,7 +1372,7 @@ const AIChatPage = () => {
                     }`}
                   >
                     <div
-                      className={`flex gap-2 max-w-[85%] md:max-w-[70%] ${
+                      className={`flex gap-1.5 sm:gap-2 max-w-[90%] sm:max-w-[85%] md:max-w-[75%] lg:max-w-[70%] ${
                         message.role === "user"
                           ? "flex-row-reverse"
                           : "flex-row"
@@ -1394,20 +1382,21 @@ const AIChatPage = () => {
                       <div className="shrink-0">
                         {message.role === "assistant" ? (
                           <div
-                            className="w-10 h-10 rounded-full flex items-center justify-center"
+                            className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center"
                             style={{ backgroundColor: colors.primeYellow }}
                           >
                             <Sparkles
-                              size={20}
+                              size={16}
+                              className="sm:w-[18px] sm:h-[18px] md:w-5 md:h-5"
                               style={{ color: colors.white }}
                             />
                           </div>
                         ) : (
                           <div
-                            className="w-10 h-10 rounded-full flex items-center justify-center"
+                            className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center"
                             style={{ backgroundColor: colors.gray }}
                           >
-                            <span className="text-white font-semibold text-sm">
+                            <span className="text-white font-semibold text-xs sm:text-sm">
                               {user?.fullName?.[0]?.toUpperCase() || "U"}
                             </span>
                           </div>
@@ -1415,9 +1404,9 @@ const AIChatPage = () => {
                       </div>
 
                       {/* Message Bubble */}
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <div
-                          className="px-4 py-3 rounded-2xl shadow-sm"
+                          className="px-3 py-2 sm:px-4 sm:py-3 rounded-2xl shadow-sm"
                           style={{
                             backgroundColor:
                               message.role === "user"
@@ -1429,12 +1418,12 @@ const AIChatPage = () => {
                                 : colors.darkGray,
                           }}
                         >
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                          <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words">
                             {message.content}
                           </p>
                         </div>
                         <p
-                          className={`text-xs mt-1 ${
+                          className={`text-[10px] sm:text-xs mt-1 ${
                             message.role === "user" ? "text-right" : "text-left"
                           }`}
                           style={{ color: colors.gray }}
@@ -1449,20 +1438,20 @@ const AIChatPage = () => {
                 {/* Typing Indicator - AI is typing */}
                 {isTyping && (
                   <div className="flex justify-start animate-fade-in">
-                    <div className="flex gap-3 items-end">
+                    <div className="flex gap-1.5 sm:gap-2 items-end">
                       <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shrink-0"
                         style={{ backgroundColor: colors.primeYellow }}
                       >
-                        <Sparkles size={16} style={{ color: colors.white }} />
+                        <Sparkles size={14} className="sm:w-4 sm:h-4" style={{ color: colors.white }} />
                       </div>
                       <div
-                        className="px-4 py-3 rounded-2xl"
+                        className="px-3 py-2 sm:px-4 sm:py-3 rounded-2xl"
                         style={{ backgroundColor: colors.white }}
                       >
                         <div className="flex gap-1 items-center">
                           <span
-                            className="w-2 h-2 rounded-full animate-bounce"
+                            className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full animate-bounce"
                             style={{
                               backgroundColor: colors.darkGray,
                               animationDelay: "0ms",
@@ -1470,7 +1459,7 @@ const AIChatPage = () => {
                             }}
                           ></span>
                           <span
-                            className="w-2 h-2 rounded-full animate-bounce"
+                            className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full animate-bounce"
                             style={{
                               backgroundColor: colors.darkGray,
                               animationDelay: "200ms",
@@ -1478,7 +1467,7 @@ const AIChatPage = () => {
                             }}
                           ></span>
                           <span
-                            className="w-2 h-2 rounded-full animate-bounce"
+                            className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full animate-bounce"
                             style={{
                               backgroundColor: colors.darkGray,
                               animationDelay: "400ms",
@@ -1534,15 +1523,15 @@ const AIChatPage = () => {
             {/* Chat Session Warning */}
             {!isChatSessionActive && currentSessionId && (
               <div
-                className="mb-3 p-3 rounded-lg border flex items-center gap-2"
+                className="mb-2 sm:mb-3 p-2 sm:p-3 rounded-lg border flex items-start sm:items-center gap-2"
                 style={{
                   backgroundColor: "#FEF9E7",
                   borderColor: colors.primeYellow,
                   color: colors.darkGray,
                 }}
               >
-                <Clock size={18} style={{ color: colors.primeYellow }} />
-                <p className="text-sm">
+                <Clock size={16} className="sm:w-[18px] sm:h-[18px] flex-shrink-0 mt-0.5 sm:mt-0" style={{ color: colors.primeYellow }} />
+                <p className="text-xs sm:text-sm">
                   Click <strong>"Start Chat"</strong> button above to begin your
                   session. You'll be charged ₹10 per minute.
                 </p>
@@ -1552,15 +1541,15 @@ const AIChatPage = () => {
             {/* Insufficient Balance Warning */}
             {!hasSufficientBalance(10) && (
               <div
-                className="mb-3 p-3 rounded-lg border flex items-center gap-2"
+                className="mb-2 sm:mb-3 p-2 sm:p-3 rounded-lg border flex items-start sm:items-center gap-2"
                 style={{
                   backgroundColor: "#FEF2F2",
                   borderColor: "#FCA5A5",
                   color: "#991B1B",
                 }}
               >
-                <AlertCircle size={18} />
-                <p className="text-sm">
+                <AlertCircle size={16} className="sm:w-[18px] sm:h-[18px] flex-shrink-0 mt-0.5 sm:mt-0" />
+                <p className="text-xs sm:text-sm">
                   Insufficient balance. Please{" "}
                   <Link
                     href="/profile/wallet"
@@ -1573,20 +1562,20 @@ const AIChatPage = () => {
               </div>
             )}
 
-            <form onSubmit={handleSendMessage} className="flex gap-2">
+            <form onSubmit={handleSendMessage} className="flex gap-1.5 sm:gap-2">
               <input
                 type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 placeholder={
                   !hasSufficientBalance(10)
-                    ? "Insufficient balance to send message..."
+                    ? "Insufficient balance..."
                     : !isChatSessionActive
                     ? "Click 'Start Chat' to begin..."
                     : "Message AI Astrologer..."
                 }
                 disabled={!currentSessionId || isTyping || !isChatSessionActive}
-                className="flex-1 px-4 py-3 rounded-xl border focus:outline-none focus:border-2 transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="flex-1 px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl border focus:outline-none focus:border-2 transition-all disabled:bg-gray-100 disabled:cursor-not-allowed text-sm sm:text-base"
                 style={{
                   borderColor: colors.gray + "40",
                   backgroundColor:
@@ -1604,7 +1593,7 @@ const AIChatPage = () => {
                   isTyping ||
                   !isChatSessionActive
                 }
-                className="px-4 py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
+                className="px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 flex-shrink-0"
                 style={{
                   backgroundColor:
                     inputMessage.trim() &&
@@ -1615,7 +1604,7 @@ const AIChatPage = () => {
                   color: colors.white,
                 }}
               >
-                <Send size={20} />
+                <Send size={18} className="sm:w-5 sm:h-5" />
               </button>
             </form>
           </div>
@@ -1633,20 +1622,20 @@ const AIChatPage = () => {
       {/* Voice Call Modal */}
       {isCallActive && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4"
           style={{ backgroundColor: "rgba(0, 0, 0, 0.85)" }}
         >
           <div
-            className="rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl"
+            className="rounded-2xl p-5 sm:p-6 md:p-8 max-w-md w-full shadow-2xl"
             style={{ backgroundColor: colors.white }}
           >
             {/* AI Avatar */}
-            <div className="flex flex-col items-center mb-6">
+            <div className="flex flex-col items-center mb-5 sm:mb-6">
               <div
-                className="w-24 h-24 rounded-full flex items-center justify-center mb-4 relative"
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center mb-3 sm:mb-4 relative"
                 style={{ backgroundColor: colors.primeYellow }}
               >
-                <Sparkles size={48} style={{ color: colors.white }} />
+                <Sparkles size={40} className="sm:w-12 sm:h-12" style={{ color: colors.white }} />
                 <div
                   className="absolute inset-0 rounded-full opacity-75"
                   style={{
@@ -1656,16 +1645,16 @@ const AIChatPage = () => {
                 ></div>
               </div>
               <h3
-                className="text-xl font-bold mb-1"
+                className="text-lg sm:text-xl font-bold mb-1"
                 style={{ color: colors.darkGray }}
               >
                 AI Astrologer
               </h3>
-              <p className="text-sm mb-2" style={{ color: colors.gray }}>
+              <p className="text-xs sm:text-sm mb-2" style={{ color: colors.gray }}>
                 {callStatus}
               </p>
               <p
-                className="text-2xl font-mono font-semibold"
+                className="text-xl sm:text-2xl font-mono font-semibold"
                 style={{ color: colors.primeYellow }}
               >
                 {formatCallDuration(callDuration)}
@@ -1673,9 +1662,9 @@ const AIChatPage = () => {
             </div>
 
             {/* Call Status */}
-            <div className="text-center mb-6">
+            <div className="text-center mb-5 sm:mb-6">
               <p
-                className="text-sm font-medium"
+                className="text-xs sm:text-sm font-medium"
                 style={{ color: isMuted ? "#EF4444" : colors.primeGreen }}
               >
                 {isMuted ? "🔇 Microphone Muted" : "🎤 Microphone Active"}
@@ -1683,37 +1672,37 @@ const AIChatPage = () => {
             </div>
 
             {/* Call Controls */}
-            <div className="flex justify-center gap-4">
+            <div className="flex justify-center gap-3 sm:gap-4">
               {/* Mute Button */}
               <button
                 onClick={handleToggleMute}
-                className="p-4 rounded-full transition-all hover:scale-110"
+                className="p-3 sm:p-4 rounded-full transition-all hover:scale-110 active:scale-95"
                 style={{
                   backgroundColor: isMuted ? "#EF4444" : colors.gray,
                   color: colors.white,
                 }}
                 title={isMuted ? "Unmute" : "Mute"}
               >
-                {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
+                {isMuted ? <MicOff size={20} className="sm:w-6 sm:h-6" /> : <Mic size={20} className="sm:w-6 sm:h-6" />}
               </button>
 
               {/* End Call Button */}
               <button
                 onClick={handleEndCall}
-                className="p-4 rounded-full transition-all hover:scale-110"
+                className="p-3 sm:p-4 rounded-full transition-all hover:scale-110 active:scale-95"
                 style={{ backgroundColor: "#EF4444", color: colors.white }}
                 title="End Call"
               >
-                <PhoneOff size={24} />
+                <PhoneOff size={20} className="sm:w-6 sm:h-6" />
               </button>
             </div>
 
             {/* Info */}
             <div
-              className="mt-6 p-3 rounded-lg"
+              className="mt-5 sm:mt-6 p-2.5 sm:p-3 rounded-lg"
               style={{ backgroundColor: colors.bg }}
             >
-              <p className="text-xs text-center" style={{ color: colors.gray }}>
+              <p className="text-[10px] sm:text-xs text-center" style={{ color: colors.gray }}>
                 🎙️ Real-time voice conversation powered by OpenAI
               </p>
             </div>
@@ -1732,35 +1721,35 @@ const AIChatPage = () => {
 
       {/* Insufficient Balance Modal */}
       {showInsufficientBalanceModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
           <div
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-in"
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-5 sm:p-6 animate-fade-in"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex flex-col items-center text-center">
               <div
-                className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+                className="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mb-3 sm:mb-4"
                 style={{ backgroundColor: "#FEF2F2" }}
               >
-                <AlertCircle size={32} style={{ color: "#EF4444" }} />
+                <AlertCircle size={28} className="sm:w-8 sm:h-8" style={{ color: "#EF4444" }} />
               </div>
 
               <h3
-                className="text-xl font-bold mb-2"
+                className="text-lg sm:text-xl font-bold mb-2"
                 style={{ color: colors.darkGray }}
               >
                 Insufficient Balance
               </h3>
 
-              <p className="text-sm mb-6" style={{ color: colors.gray }}>
+              <p className="text-xs sm:text-sm mb-5 sm:mb-6" style={{ color: colors.gray }}>
                 You don't have enough balance to continue chatting with AI
                 Astrologer. Please recharge your wallet to continue.
               </p>
 
-              <div className="flex gap-3 w-full">
+              <div className="flex gap-2 sm:gap-3 w-full">
                 <button
                   onClick={() => setShowInsufficientBalanceModal(false)}
-                  className="flex-1 px-4 py-3 rounded-xl border hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl border hover:bg-gray-50 transition-colors text-sm sm:text-base"
                   style={{
                     borderColor: colors.gray,
                     color: colors.darkGray,
@@ -1770,7 +1759,7 @@ const AIChatPage = () => {
                 </button>
                 <Link href="/profile/wallet" className="flex-1">
                   <button
-                    className="w-full px-4 py-3 rounded-xl hover:opacity-90 transition-opacity"
+                    className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl hover:opacity-90 transition-opacity text-sm sm:text-base"
                     style={{
                       backgroundColor: colors.primeYellow,
                       color: colors.white,
