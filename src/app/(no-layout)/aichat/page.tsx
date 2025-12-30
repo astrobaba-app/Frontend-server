@@ -1053,7 +1053,7 @@ const AIChatPage = () => {
                 className="text-md font-semibold"
                 style={{ color: colors.primeGreen }}
               >
-                ₹50/min
+                ₹10/min
               </p>
             </div>
           </div>

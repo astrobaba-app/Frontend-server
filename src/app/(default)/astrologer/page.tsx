@@ -59,12 +59,12 @@ const LANGUAGES = [
 // Hardcoded AI Astrologer
 const AI_ASTROLOGER: Astrologer = {
   id: "ai-astrologer",
-  fullName: "AI Astro Guide",
+  fullName: "AI Astrologer",
   photo: null,
-  yearsOfExperience: 10,
-  pricePerMinute: "20",
+  yearsOfExperience: 3,
+  pricePerMinute: "10",
   rating: "4.9",
-  totalConsultations: 5420,
+  totalConsultations: 150,
   bio: "Your 24/7 AI-powered astrology companion. Get instant answers to your astrology questions using advanced artificial intelligence. Available anytime, anywhere!",
   skills: ["Vedic", "Tarot", "Numerology", "Palmistry"],
   languages: ["Hindi", "English"],
