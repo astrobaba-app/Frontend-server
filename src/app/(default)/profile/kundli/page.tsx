@@ -39,6 +39,7 @@ export default function FreeKundliPage() {
     placeOfBirth: "",
     latitude: "",
     longitude: "",
+    dontKnowTime: false,
   });
 
   const [placeSuggestions, setPlaceSuggestions] = useState<
@@ -92,6 +93,7 @@ export default function FreeKundliPage() {
           placeOfBirth: profileUser.placeOfBirth || "",
           latitude: "",
           longitude: "",
+          dontKnowTime: false,
         });
         setFetchFromProfile(true);
         setShowForm(true);
@@ -117,7 +119,7 @@ export default function FreeKundliPage() {
       !formData.fullName ||
       !formData.gender ||
       !formData.dateOfbirth ||
-      !formData.timeOfbirth ||
+      (!formData.timeOfbirth && !formData.dontKnowTime) ||
       !formData.placeOfBirth ||
       !formData.latitude
     ) {
@@ -132,6 +134,7 @@ export default function FreeKundliPage() {
       setSubmitting(true);
       const requestData = {
         ...formData,
+        timeOfbirth: formData.dontKnowTime ? "00:00" : formData.timeOfbirth,
         latitude: Number(formData.latitude),
         longitude: Number(formData.longitude),
       };
@@ -151,6 +154,7 @@ export default function FreeKundliPage() {
           placeOfBirth: "",
           latitude: "",
           longitude: "",
+          dontKnowTime: false,
         });
 
         const historyResponse = await getAllKundlis();
@@ -310,25 +314,54 @@ export default function FreeKundliPage() {
               {isStep3 ? "Enter your Birth Date" : "Enter your Birth Time"}
             </Heading>
           </div>
-          <Input
-            label={isStep3 ? "Date of Birth" : "Birth Time"}
-            type={isStep3 ? "date" : "time"}
-            required
-            value={isStep3 ? formData.dateOfbirth : formData.timeOfbirth}
-            onChange={(e) =>
-              setFormData({ 
-                ...formData, 
-                [isStep3 ? "dateOfbirth" : "timeOfbirth"]: e.target.value 
-              })
-            }
-          />
+          <div className="space-y-4">
+            <Input
+              label={isStep3 ? "Date of Birth" : "Birth Time"}
+              type={isStep3 ? "date" : "time"}
+              required={!isStep3 ? !formData.dontKnowTime : true}
+              value={isStep3 ? formData.dateOfbirth : formData.timeOfbirth}
+              onChange={(e) =>
+                setFormData({ 
+                  ...formData, 
+                  [isStep3 ? "dateOfbirth" : "timeOfbirth"]: e.target.value 
+                })
+              }
+              disabled={!isStep3 && formData.dontKnowTime}
+            />
+            {!isStep3 && (
+              <>
+                <div className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    id="dont-know-time"
+                    checked={formData.dontKnowTime}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setFormData({ 
+                        ...formData, 
+                        dontKnowTime: checked,
+                        timeOfbirth: checked ? "" : formData.timeOfbirth
+                      });
+                    }}
+                    className="w-4 h-4 mt-1"
+                  />
+                  <label htmlFor="dont-know-time" className="text-sm text-gray-700">
+                    Don't know time of birth
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Note: Without time of birth, we can still answer all queries with 80% accuracy prediction
+                </p>
+              </>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
             <Button onClick={handleBack} variant="secondary" fullWidth size="lg">
               Back
             </Button>
             <Button
               onClick={handleNext}
-              disabled={isStep3 ? !formData.dateOfbirth : !formData.timeOfbirth}
+              disabled={isStep3 ? !formData.dateOfbirth : (!formData.timeOfbirth && !formData.dontKnowTime)}
               fullWidth
               size="lg"
             >

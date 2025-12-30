@@ -275,13 +275,13 @@ function KundliMatchingPage() {
       const requestData: KundliMatchingRequest = {
         girlName: girlData.name,
         girlDateOfBirth: girlData.dob,
-        girlTimeOfBirth: girlData.dontKnowTime ? "12:00" : girlData.timeOfBirth,
+        girlTimeOfBirth: girlData.dontKnowTime ? "00:00" : girlData.timeOfBirth,
         girlPlaceOfBirth: girlData.birthLocation,
         girlLatitude,
         girlLongitude,
         boyName: boyData.name,
         boyDateOfBirth: boyData.dob,
-        boyTimeOfBirth: boyData.dontKnowTime ? "12:00" : boyData.timeOfBirth,
+        boyTimeOfBirth: boyData.dontKnowTime ? "00:00" : boyData.timeOfBirth,
         boyPlaceOfBirth: boyData.birthLocation,
         boyLatitude,
         boyLongitude,
@@ -419,7 +419,14 @@ function KundliMatchingPage() {
                       type="checkbox"
                       id="girl-dont-know"
                       checked={girlData.dontKnowTime}
-                      onChange={(e) => setGirlData({ ...girlData, dontKnowTime: e.target.checked })}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setGirlData({ 
+                          ...girlData, 
+                          dontKnowTime: checked,
+                          timeOfBirth: checked ? "" : girlData.timeOfBirth
+                        });
+                      }}
                       className="w-4 h-4"
                     />
                     <label htmlFor="girl-dont-know" className="text-sm" style={{ color: colors.gray }}>
@@ -521,7 +528,14 @@ function KundliMatchingPage() {
                       type="checkbox"
                       id="boy-dont-know"
                       checked={boyData.dontKnowTime}
-                      onChange={(e) => setBoyData({ ...boyData, dontKnowTime: e.target.checked })}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setBoyData({ 
+                          ...boyData, 
+                          dontKnowTime: checked,
+                          timeOfBirth: checked ? "" : boyData.timeOfBirth
+                        });
+                      }}
                       className="w-4 h-4"
                     />
                     <label htmlFor="boy-dont-know" className="text-sm" style={{ color: colors.gray }}>
