@@ -1,7 +1,3 @@
-/**
- * AI Chat Wallet Integration Hook
- * Handles wallet balance tracking, per-minute deductions, and balance checks
- */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getWalletBalance } from '@/utils/wallet';
@@ -50,13 +46,22 @@ export const useAIChatWallet = ({
    */
   const fetchBalance = useCallback(async () => {
     try {
+      console.log('[PRODUCTION DEBUG FRONTEND] Fetching wallet balance...');
       setIsLoading(true);
       const walletData = await getWalletBalance();
+      console.log('[PRODUCTION DEBUG FRONTEND] Wallet balance fetched:', {
+        balance: walletData.balance,
+        totalRecharge: walletData.totalRecharge,
+        totalSpent: walletData.totalSpent
+      });
       setBalance(walletData.balance);
       onBalanceUpdate?.(walletData.balance);
       setError(null);
     } catch (err: any) {
-      console.error('Failed to fetch wallet balance:', err);
+      console.error('[PRODUCTION DEBUG FRONTEND] Failed to fetch wallet balance:', {
+        error: err.message,
+        stack: err.stack
+      });
       setError(err.message || 'Failed to fetch balance');
     } finally {
       setIsLoading(false);
@@ -68,7 +73,24 @@ export const useAIChatWallet = ({
    */
   const deductFromWallet = async (deduction: WalletDeduction): Promise<boolean> => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6001/api';
+      // Use NEXT_PUBLIC_API_BASE_URL for consistency with rest of codebase
+      const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6001/api';
+      console.log('[PRODUCTION DEBUG FRONTEND] Deducting from wallet:', {
+        amount: deduction.amount,
+        type: deduction.type,
+        minutes: deduction.minutes,
+        apiUrl: API_URL,
+        endpoint: `${API_URL}/wallet/ai-deduct`,
+        hasAPI_BASE_URL: !!process.env.NEXT_PUBLIC_API_BASE_URL,
+        hasAPI_URL: !!process.env.NEXT_PUBLIC_API_URL
+      });
+      
+      const requestBody = {
+        amount: deduction.amount,
+        type: deduction.type,
+        minutes: deduction.minutes,
+      };
+      console.log('[PRODUCTION DEBUG FRONTEND] Request body:', JSON.stringify(requestBody));
       
       const response = await fetch(`${API_URL}/wallet/ai-deduct`, {
         method: 'POST',
@@ -76,19 +98,26 @@ export const useAIChatWallet = ({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          amount: deduction.amount,
-          type: deduction.type,
-          minutes: deduction.minutes,
-        }),
+        body: JSON.stringify(requestBody),
       });
+
+      console.log('[PRODUCTION DEBUG FRONTEND] Response status:', response.status);
+      console.log('[PRODUCTION DEBUG FRONTEND] Response ok:', response.ok);
 
       if (!response.ok) {
         const error = await response.json();
+        console.error('[PRODUCTION DEBUG FRONTEND] Deduction failed:', {
+          status: response.status,
+          error: error
+        });
         throw new Error(error.message || 'Failed to deduct from wallet');
       }
 
       const data = await response.json();
+      console.log('[PRODUCTION DEBUG FRONTEND] Deduction successful:', {
+        newBalance: data.newBalance,
+        transaction: data.transaction
+      });
       
       // Update local balance
       setBalance(data.newBalance);
@@ -97,7 +126,11 @@ export const useAIChatWallet = ({
       console.log(`✓ Deducted ₹${deduction.amount} for ${deduction.type} (${deduction.minutes} min)`);
       return true;
     } catch (err: any) {
-      console.error('Wallet deduction error:', err);
+      console.error('[PRODUCTION DEBUG FRONTEND] Wallet deduction error:', {
+        message: err.message,
+        stack: err.stack,
+        deduction
+      });
       return false;
     }
   };
@@ -113,20 +146,31 @@ export const useAIChatWallet = ({
    * Start chat timer
    */
   const startChatTimer = useCallback(() => {
-    if (isChatting) return; // Already running
+    if (isChatting) {
+      console.log('[PRODUCTION DEBUG FRONTEND] Chat timer already running');
+      return; // Already running
+    }
     
-    console.log('Starting chat timer...');
+    console.log('[PRODUCTION DEBUG FRONTEND] Starting chat timer...', {
+      currentBalance: balance,
+      pricePerMinute: AI_CHAT_PRICE_PER_MINUTE,
+      hasSufficientBalance: balance >= AI_CHAT_PRICE_PER_MINUTE
+    });
     setIsChatting(true);
     setChatMinutes(0);
     lastChatDeductionRef.current = 0;
 
     // Check initial balance
     if (!checkSufficientBalance(AI_CHAT_PRICE_PER_MINUTE)) {
-      console.log('Insufficient balance to start chat');
+      console.error('[PRODUCTION DEBUG FRONTEND] Insufficient balance to start chat:', {
+        balance,
+        required: AI_CHAT_PRICE_PER_MINUTE
+      });
       onInsufficientBalance?.();
       return;
     }
 
+    console.log('[PRODUCTION DEBUG FRONTEND] Chat timer started successfully');
     // Start timer - tick every second
     chatTimerRef.current = setInterval(() => {
       setChatMinutes((prevMinutes) => {
@@ -135,10 +179,16 @@ export const useAIChatWallet = ({
 
         // Check if we've completed a new minute
         if (completedMinutes > lastChatDeductionRef.current) {
+          console.log('[PRODUCTION DEBUG FRONTEND] Completed minute:', {
+            completedMinutes,
+            lastDeduction: lastChatDeductionRef.current,
+            currentBalance: balance
+          });
           lastChatDeductionRef.current = completedMinutes;
 
           // Check balance before deduction
           if (checkSufficientBalance(AI_CHAT_PRICE_PER_MINUTE)) {
+            console.log('[PRODUCTION DEBUG FRONTEND] Triggering chat deduction for minute:', completedMinutes);
             // Deduct for the completed minute
             deductFromWallet({
               amount: AI_CHAT_PRICE_PER_MINUTE,
@@ -147,7 +197,10 @@ export const useAIChatWallet = ({
             });
           } else {
             // Insufficient balance
-            console.log('Insufficient balance during chat');
+            console.error('[PRODUCTION DEBUG FRONTEND] Insufficient balance during chat:', {
+              balance,
+              required: AI_CHAT_PRICE_PER_MINUTE
+            });
             stopChatTimer();
             onInsufficientBalance?.();
           }
@@ -162,7 +215,10 @@ export const useAIChatWallet = ({
    * Stop chat timer
    */
   const stopChatTimer = useCallback(() => {
-    console.log('Stopping chat timer...');
+    console.log('[PRODUCTION DEBUG FRONTEND] Stopping chat timer...', {
+      chatMinutes,
+      alreadyDeducted: lastChatDeductionRef.current
+    });
     setIsChatting(false);
     
     if (chatTimerRef.current) {
@@ -176,36 +232,59 @@ export const useAIChatWallet = ({
     const alreadyDeducted = lastChatDeductionRef.current;
     const remainingMinutes = totalMinutesUsed - alreadyDeducted;
 
+    console.log('[PRODUCTION DEBUG FRONTEND] Final chat deduction calculation:', {
+      totalMinutesUsed,
+      alreadyDeducted,
+      remainingMinutes,
+      currentBalance: balance,
+      costForRemaining: AI_CHAT_PRICE_PER_MINUTE * remainingMinutes
+    });
+
     if (remainingMinutes > 0 && balance >= (AI_CHAT_PRICE_PER_MINUTE * remainingMinutes)) {
+      console.log('[PRODUCTION DEBUG FRONTEND] Triggering final chat deduction');
       deductFromWallet({
         amount: AI_CHAT_PRICE_PER_MINUTE * remainingMinutes,
         type: 'chat',
         minutes: totalMinutesUsed,
       });
+    } else {
+      console.log('[PRODUCTION DEBUG FRONTEND] No final chat deduction needed or insufficient balance');
     }
 
     setChatMinutes(0);
     lastChatDeductionRef.current = 0;
+    console.log('[PRODUCTION DEBUG FRONTEND] Chat timer stopped');
   }, [chatMinutes, balance]);
 
   /**
    * Start voice call timer
    */
   const startVoiceTimer = useCallback(() => {
-    if (isVoiceCalling) return; // Already running
+    if (isVoiceCalling) {
+      console.log('[PRODUCTION DEBUG FRONTEND] Voice timer already running');
+      return; // Already running
+    }
     
-    console.log('Starting voice timer...');
+    console.log('[PRODUCTION DEBUG FRONTEND] Starting voice timer...', {
+      currentBalance: balance,
+      pricePerMinute: AI_VOICE_PRICE_PER_MINUTE,
+      hasSufficientBalance: balance >= AI_VOICE_PRICE_PER_MINUTE
+    });
     setIsVoiceCalling(true);
     setVoiceMinutes(0);
     lastVoiceDeductionRef.current = 0;
 
     // Check initial balance
     if (!checkSufficientBalance(AI_VOICE_PRICE_PER_MINUTE)) {
-      console.log('Insufficient balance to start voice call');
+      console.error('[PRODUCTION DEBUG FRONTEND] Insufficient balance to start voice call:', {
+        balance,
+        required: AI_VOICE_PRICE_PER_MINUTE
+      });
       onInsufficientBalance?.();
       return;
     }
 
+    console.log('[PRODUCTION DEBUG FRONTEND] Voice timer started successfully');
     // Start timer
     voiceTimerRef.current = setInterval(() => {
       setVoiceMinutes((prevMinutes) => {
@@ -213,16 +292,25 @@ export const useAIChatWallet = ({
         const completedMinutes = Math.floor(newMinutes);
 
         if (completedMinutes > lastVoiceDeductionRef.current) {
+          console.log('[PRODUCTION DEBUG FRONTEND] Completed voice minute:', {
+            completedMinutes,
+            lastDeduction: lastVoiceDeductionRef.current,
+            currentBalance: balance
+          });
           lastVoiceDeductionRef.current = completedMinutes;
 
           if (checkSufficientBalance(AI_VOICE_PRICE_PER_MINUTE)) {
+            console.log('[PRODUCTION DEBUG FRONTEND] Triggering voice deduction for minute:', completedMinutes);
             deductFromWallet({
               amount: AI_VOICE_PRICE_PER_MINUTE,
               type: 'voice',
               minutes: completedMinutes,
             });
           } else {
-            console.log('Insufficient balance during voice call');
+            console.error('[PRODUCTION DEBUG FRONTEND] Insufficient balance during voice call:', {
+              balance,
+              required: AI_VOICE_PRICE_PER_MINUTE
+            });
             stopVoiceTimer();
             onInsufficientBalance?.();
           }
@@ -237,7 +325,10 @@ export const useAIChatWallet = ({
    * Stop voice call timer
    */
   const stopVoiceTimer = useCallback(() => {
-    console.log('Stopping voice timer...');
+    console.log('[PRODUCTION DEBUG FRONTEND] Stopping voice timer...', {
+      voiceMinutes,
+      alreadyDeducted: lastVoiceDeductionRef.current
+    });
     setIsVoiceCalling(false);
     
     if (voiceTimerRef.current) {
@@ -251,16 +342,28 @@ export const useAIChatWallet = ({
     const alreadyDeducted = lastVoiceDeductionRef.current;
     const remainingMinutes = totalMinutesUsed - alreadyDeducted;
 
+    console.log('[PRODUCTION DEBUG FRONTEND] Final voice deduction calculation:', {
+      totalMinutesUsed,
+      alreadyDeducted,
+      remainingMinutes,
+      currentBalance: balance,
+      costForRemaining: AI_VOICE_PRICE_PER_MINUTE * remainingMinutes
+    });
+
     if (remainingMinutes > 0 && balance >= (AI_VOICE_PRICE_PER_MINUTE * remainingMinutes)) {
+      console.log('[PRODUCTION DEBUG FRONTEND] Triggering final voice deduction');
       deductFromWallet({
         amount: AI_VOICE_PRICE_PER_MINUTE * remainingMinutes,
         type: 'voice',
         minutes: totalMinutesUsed,
       });
+    } else {
+      console.log('[PRODUCTION DEBUG FRONTEND] No final voice deduction needed or insufficient balance');
     }
 
     setVoiceMinutes(0);
     lastVoiceDeductionRef.current = 0;
+    console.log('[PRODUCTION DEBUG FRONTEND] Voice timer stopped');
   }, [voiceMinutes, balance]);
 
   /**

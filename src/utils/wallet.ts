@@ -58,6 +58,10 @@ export interface RazorpayOrderResponse {
  * Fetch wallet balance
  */
 export const getWalletBalance = async (): Promise<WalletBalance> => {
+  console.log('[PRODUCTION DEBUG FRONTEND] getWalletBalance called');
+  console.log('[PRODUCTION DEBUG FRONTEND] API_BASE_URL:', API_BASE_URL);
+  console.log('[PRODUCTION DEBUG FRONTEND] Full URL:', `${API_BASE_URL}/wallet/balance`);
+  
   const response = await fetch(`${API_BASE_URL}/wallet/balance`, {
     method: 'GET',
     credentials: 'include',
@@ -66,11 +70,22 @@ export const getWalletBalance = async (): Promise<WalletBalance> => {
     },
   });
 
+  console.log('[PRODUCTION DEBUG FRONTEND] getWalletBalance response status:', response.status);
+  
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[PRODUCTION DEBUG FRONTEND] getWalletBalance failed:', {
+      status: response.status,
+      errorText
+    });
     throw new Error('Failed to fetch wallet balance');
   }
 
   const data = await response.json();
+  console.log('[PRODUCTION DEBUG FRONTEND] getWalletBalance success:', {
+    balance: data.wallet?.balance,
+    hasWallet: !!data.wallet
+  });
   return data.wallet;
 };
 
