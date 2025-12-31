@@ -10,6 +10,13 @@ export interface UserProfile {
   dateOfbirth?: string | null;
   timeOfbirth?: string | null;
   placeOfBirth?: string | null;
+  latitude?: string | null;
+  longitude?: string | null;
+  currentAddress?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  pincode?: string | null;
 }
 
 export interface VerifyOtpSuccessData {
