@@ -12,6 +12,8 @@ import { useToast } from "@/hooks/useToast";
 import { FcGoogle } from "react-icons/fc";
 import { Button } from "@/components/atoms";
 import { Suspense } from "react";
+import Link from "next/link";
+import ContactModal from "@/components/modals/ContactModal";
 function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -23,10 +25,16 @@ function LoginPage() {
   const [resendTimer, setResendTimer] = useState(0);
   const [loading, setLoading] = useState(false);
 
+  const [isContactOpen, setIsContactOpen] = useState(false);
+
+  const handleContactClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsContactOpen(true);
+  };
   useEffect(() => {
     // Wait for auth context to finish loading before redirecting
     if (authLoading) return;
-    
+
     if (isLoggedIn) {
       const redirectPath = searchParams.get("redirect") || "/profile";
       router.push(redirectPath);
@@ -35,7 +43,7 @@ function LoginPage() {
     if (typeof window !== "undefined") {
       const astrologerToken = localStorage.getItem("token_astrologer");
       const middlewareToken = localStorage.getItem("token_middleware");
-      
+
       if (astrologerToken) {
         router.push("/astrologer/dashboard");
         return;
@@ -96,14 +104,14 @@ function LoginPage() {
     setLoading(true);
     try {
       const response = await verifyOtp(otpString);
-      
+
       // Store middlewareToken and user id in localStorage
       if (typeof window !== "undefined") {
         localStorage.setItem("token_middleware", response.middlewareToken);
         localStorage.setItem("user_id", response.user.id.toString());
         window.dispatchEvent(new Event("auth_change"));
       }
-      
+
       login(response.user, response.token, response.middlewareToken);
       sessionStorage.setItem("loginSuccess", "true");
       const redirectPath = searchParams.get("redirect") || "/";
@@ -265,19 +273,19 @@ function LoginPage() {
 
                 <p className="text-[11px] sm:text-xs text-center text-gray-500 leading-relaxed px-2">
                   By proceeding, you agree to our{" "}
-                  <a
-                    href="#"
+                  <Link
+                    href="/policies/terms_conditions"
                     className="text-blue-600 font-medium hover:underline"
                   >
                     Terms
-                  </a>{" "}
+                  </Link>{" "}
                   &{" "}
-                  <a
-                    href="#"
+                  <Link 
+                    href="/policies/privacy"
                     className="text-blue-600 font-medium hover:underline"
                   >
                     Privacy Policy
-                  </a>
+                  </Link>
                 </p>
               </div>
             ) : (
@@ -342,14 +350,21 @@ function LoginPage() {
 
             <p className="mt-8 md:mt-10 text-center text-xs sm:text-sm text-gray-500">
               Having trouble?{" "}
-              <a href="#" className="text-blue-600 font-medium hover:underline">
+              <a
+                href="#"
+                onClick={handleContactClick}
+                className="text-blue-600 font-medium"
+              >
                 Contact Support
               </a>
             </p>
           </div>
         </div>
       </div>
-
+      <ContactModal
+        isOpen={isContactOpen}
+        onClose={() => setIsContactOpen(false)}
+      />
       {toast.show && (
         <Toast message={toast.message} type={toast.type} onClose={hideToast} />
       )}
@@ -357,11 +372,10 @@ function LoginPage() {
   );
 }
 
-
 export default function Login() {
   return (
     <Suspense fallback={<div>Loading Astrologers...</div>}>
       <LoginPage />
     </Suspense>
   );
-} 
+}

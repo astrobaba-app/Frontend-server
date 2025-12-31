@@ -112,7 +112,9 @@ const AstrologerCard: React.FC<OurAstrologerCardProps> = ({
             <p className="text-sm text-gray-600 leading-snug line-clamp-1">
               {specialties.join(", ")} ...
             </p>
-            <p className="text-sm text-gray-600 mt-1">{languages.join(", ")}</p>
+            <p className="text-sm text-gray-600 leading-snug line-clamp-1">
+              {languages.join(", ")}...
+            </p>
             <p className="text-sm text-gray-600 mt-1">Exp: {experience}</p>
 
             <div className="flex justify-between items-center mt-3">
@@ -135,14 +137,21 @@ const AstrologerCard: React.FC<OurAstrologerCardProps> = ({
           </div>
         </div>
 
-        <div className="mt-3">
-          {isCallMode ? (
+        <div className="mt-3 flex gap-2">
+          <Link
+            href={
+              id
+                ? `/chat?astrologerId=${id}&mode=${
+                    isCallMode ? "call" : "chat"
+                  }`
+                : "/chat"
+            }
+            className="w-full"
+          >
             <Button
               onClick={(e) => {
-                if (onCallClick) {
-                  e.preventDefault();
-                  onCallClick(e);
-                }
+                if (isCallMode && onCallClick) onCallClick(e);
+                if (!isCallMode && onChatClick) onChatClick(e);
               }}
               variant="custom"
               size="md"
@@ -156,61 +165,14 @@ const AstrologerCard: React.FC<OurAstrologerCardProps> = ({
                 paddingBottom: "0.5rem",
               }}
               icon={
-                <span role="img" aria-label="call">
-                  <IoCallSharp />
+                <span role="img" aria-label={isCallMode ? "call" : "chat"}>
+                  {isCallMode ? <IoCallSharp /> : <IoChatbubblesSharp />}
                 </span>
               }
             >
-              Call
+              {isCallMode ? "Call" : "Chat"}
             </Button>
-          ) : onChatClick ? (
-            <Button
-              onClick={(e) => {
-                e.preventDefault();
-                onChatClick(e);
-              }}
-              variant="custom"
-              size="md"
-              className="shadow-lg w-full"
-              customColors={{
-                backgroundColor: colors.primeYellow,
-                textColor: colors.white,
-              }}
-              customStyles={{
-                paddingTop: "0.5rem",
-                paddingBottom: "0.5rem",
-              }}
-              icon={
-                <span role="img" aria-label="chat">
-                  <IoChatbubblesSharp />
-                </span>
-              }
-            >
-              Chat
-            </Button>
-          ) : (
-            <Button
-              href={id ? `/chat?astrologerId=${id}` : "/chat"}
-              variant="custom"
-              size="md"
-              className="shadow-lg w-full"
-              customColors={{
-                backgroundColor: colors.primeYellow,
-                textColor: colors.white,
-              }}
-              customStyles={{
-                paddingTop: "0.5rem",
-                paddingBottom: "0.5rem",
-              }}
-              icon={
-                <span role="img" aria-label="chat">
-                  <IoChatbubblesSharp />
-                </span>
-              }
-            >
-              Chat
-            </Button>
-          )}
+          </Link>
         </div>
       </div>
     </div>

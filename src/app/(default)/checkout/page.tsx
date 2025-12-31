@@ -563,6 +563,10 @@ const CheckoutPage = () => {
                       className="col-span-2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
                     />
                   </div>
+                  <p className="text-sm mt-5 font-italic text-center">
+                    Read our <Link href="/policies/shipping_delivery" className="text-blue-500">Shipping & Delivery Policy</Link>
+                  </p>
+                  
                 </div>
               )}
 
@@ -573,7 +577,7 @@ const CheckoutPage = () => {
                 size="md"
                 onClick={handleContinueToPayment}
                 disabled={processing}
-                className="bg-linear-to-r from-yellow-500 to-orange-500 text-white py-3 rounded-lg font-bold hover:shadow-lg transition-shadow"
+                className="bg-yellow-400 text-white py-3 rounded-lg font-bold hover:shadow-lg transition-shadow"
               >
                 Continue to Payment
               </Button>

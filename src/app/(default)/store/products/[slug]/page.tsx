@@ -22,6 +22,8 @@ import Toast from "@/components/atoms/Toast";
 // ⚠️ IMPORT YOUR REUSABLE BUTTON HERE
 
 import Button from "@/components/atoms/Button";
+import Link from "next/link";
+import ProductDetailSkeleton from "@/components/skeletons/ProductDetailSkeleton";
 
 // ⚠️ Note: Adjust the import path if your file location is different
 
@@ -231,11 +233,10 @@ export default function ProductDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        {/* The existing loader is fine, but you could also use your Button's loading state */}
-
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
-      </div>
+      <>
+      <ProductDetailSkeleton />
+      </>
+      
     );
   }
 
@@ -316,7 +317,11 @@ export default function ProductDetailPage() {
                       : "border-gray-300"
                   }`}
                 >
-                  <img src={img || "/images/placeholder.png"} alt="" className="object-cover w-full h-full" />
+                  <img
+                    src={img || "/images/placeholder.png"}
+                    alt=""
+                    className="object-cover w-full h-full"
+                  />
                 </button>
               ))}
             </div>
@@ -326,7 +331,9 @@ export default function ProductDetailPage() {
         {/* RIGHT: Info */}
 
         <div>
-          <h1 className="text-xl md:text-2xl font-bold mb-2 md:mb-3">{product.productName}</h1>
+          <h1 className="text-xl md:text-2xl font-bold mb-2 md:mb-3">
+            {product.productName}
+          </h1>
 
           {/* Price */}
 
@@ -337,7 +344,9 @@ export default function ProductDetailPage() {
               </span>
             )}
 
-            <span className="text-xl md:text-2xl font-bold">Rs.{displayPrice}</span>
+            <span className="text-xl md:text-2xl font-bold">
+              Rs.{displayPrice}
+            </span>
 
             {discount > 0 && (
               <span className="text-sm md:text-base text-green-600 font-semibold">
@@ -391,7 +400,9 @@ export default function ProductDetailPage() {
 
           <div className="space-y-3 md:space-y-4">
             <div>
-              <h3 className="font-semibold mb-2 text-sm md:text-base">Product Description</h3>
+              <h3 className="font-semibold mb-2 text-sm md:text-base">
+                Product Description
+              </h3>
 
               <p className="text-sm md:text-base text-gray-600 leading-relaxed">
                 {product.description}
@@ -448,6 +459,9 @@ export default function ProductDetailPage() {
                   </span>
                 </p>
               )}
+              <Link href="/policies/cancellation_refund" className="text-yellow-600 text-sm md:text-base">
+                Cancellation & Refund Policy
+              </Link>
             </div>
           </div>
         </div>
@@ -457,7 +471,9 @@ export default function ProductDetailPage() {
 
       <div className="mt-8 md:mt-16">
         <div className="flex items-center justify-between mb-3 md:mb-4">
-          <h2 className="font-semibold text-base md:text-lg">Reviews ({reviews.length})</h2>
+          <h2 className="font-semibold text-base md:text-lg">
+            Reviews ({reviews.length})
+          </h2>
 
           {totalReviews > 0 && (
             <div className="text-xs md:text-sm text-gray-600">
@@ -533,11 +549,7 @@ export default function ProductDetailPage() {
       </div>
 
       {toast.show && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={hideToast}
-        />
+        <Toast message={toast.message} type={toast.type} onClose={hideToast} />
       )}
     </div>
   );

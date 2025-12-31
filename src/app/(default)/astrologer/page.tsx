@@ -65,10 +65,47 @@ const AI_ASTROLOGER: Astrologer = {
   pricePerMinute: "10",
   rating: "4.9",
   totalConsultations: 150,
-  bio: "Your 24/7 AI-powered astrology companion. Get instant answers to your astrology questions using advanced artificial intelligence. Available anytime, anywhere!",
-  skills: ["Vedic", "Tarot", "Numerology", "Palmistry"],
-  languages: ["Hindi", "English"],
-  categories: ["Love", "Career", "Health", "Finance"],
+  bio: "Your 24/7 AI-powered astrology companion. Get instant answers to your astrology questions using advanced artificial intelligence. I'm trained on thousands of astrological texts and can provide personalized readings, predictions, and guidance on love, career, health, and more. Available anytime, anywhere - no waiting required!",
+  skills: [
+    "Vedic",
+    "KP",
+    "Numerology",
+    "Tarot",
+    "Palmistry",
+    "Vastu",
+    "Prashna",
+    "Nadi",
+    "Lal Kitab",
+    "Face Reading",
+  ],
+  languages: [
+    "Hindi",
+    "English",
+    "Bengali",
+    "Tamil",
+    "Telugu",
+    "Marathi",
+    "Gujarati",
+    "Kannada",
+    "Malayalam",
+    "Punjabi",
+    "Odia",
+    "Urdu",
+  ],
+  categories: [
+    "Love",
+    "Relationship",
+    "Education",
+    "Health",
+    "Career",
+    "Finance",
+    "Marriage",
+    "Family",
+    "Business",
+    "Legal",
+    "Travel",
+    "Spiritual",
+  ],
   isOnline: true,
 };
 
@@ -326,8 +363,6 @@ function AstrologersPage() {
           </div>
         </div>
 
-        {/* Categories Row with Filter Button */}
-        {/* Categories Row with Filter Button */}
         <div className="mb-6 flex items-center gap-2 sm:gap-3 px-2">
           {/* Filter Button */}
           <button
@@ -570,9 +605,6 @@ function AstrologersPage() {
             </div>
           </div>
         )}
-
-        {/* Ai astrologers Card */}
-
 
         {/* Astrologers Grid (TOP SECTION) */}
         {topAstrologers.length > 0 && (

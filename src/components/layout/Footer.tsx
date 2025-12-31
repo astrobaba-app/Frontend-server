@@ -32,16 +32,16 @@ interface SocialMediaIconProps {
 
 // --- 2. CONSTANTS ---
 const QUICK_LINKS: LinkItem[] = [
-  { name: "About us", href: "/about" },
-  { name: "Terms & Conditions", href: "/terms" },
-  { name: "Privacy Policy", href: "/privacy" },
-  { name: "Chat with Astrologer", href: "/chat" },
+  { name: "Cancellation & Refund Policy", href: "/policies/cancellation_refund" },
+  { name: "Terms & Conditions", href: "/policies/terms_conditions" },
+  { name: "Privacy Policy", href: "/policies/privacy" },
+  { name: "Shipping Policy", href: "/policies/shipping_delivery" },
 ];
 
 const CONTACT_INFO = {
-  address: "IIEST SHIBPUR, Howrah, West Bengal",
+  address: "Goa, India",
   phone: "+91 4567891234",
-  email: "contact@astrobaba.live",
+  email: " team@graho.in",
 };
 
 const SOCIAL_MEDIA: Social[] = [
