@@ -15,6 +15,13 @@ export interface UpdateProfileData {
   dateOfbirth?: string;
   timeOfbirth?: string;
   placeOfBirth?: string;
+  latitude?: string;
+  longitude?: string;
+  currentAddress?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  pincode?: string;
 }
 
 export const getProfile = async (): Promise<ProfileResponse> => {

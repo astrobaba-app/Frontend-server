@@ -13,6 +13,7 @@ import {
   setDefaultAddress,
   StoreAddress,
 } from "@/store/api/store";
+import { getStates, getCitiesByState } from "@/store/api/location";
 import { getWalletBalance } from "@/utils/wallet";
 import Button from "@/components/atoms/Button";
 import { COUNTRIES } from "@/constants/countries";
@@ -65,6 +66,10 @@ const CheckoutPage = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
 
+  const [states, setStates] = useState<string[]>([]);
+  const [cities, setCities] = useState<string[]>([]);
+  const [loadingCities, setLoadingCities] = useState(false);
+
   // Calculate order summary
   const hasPhysicalProducts = cartItems.some((item) => item.productType === "physical");
   const subtotal = totalPrice;
@@ -92,6 +97,20 @@ const CheckoutPage = () => {
     };
 
     fetchAddresses();
+  }, []);
+
+  useEffect(() => {
+    const loadStates = async () => {
+      try {
+        const response = await getStates();
+        if (response.success && response.states) {
+          setStates(response.states);
+        }
+      } catch (error) {
+        console.error("Failed to load states:", error);
+      }
+    };
+    loadStates();
   }, []);
 
   useEffect(() => {
@@ -125,6 +144,29 @@ const CheckoutPage = () => {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleStateChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const state = e.target.value;
+    setNewAddress((prev) => ({ ...prev, state, city: "" }));
+    
+    if (!state) {
+      setCities([]);
+      return;
+    }
+
+    try {
+      setLoadingCities(true);
+      const response = await getCitiesByState(state);
+      if (response.success && response.cities) {
+        setCities(response.cities);
+      }
+    } catch (error) {
+      console.error("Failed to load cities:", error);
+      setCities([]);
+    } finally {
+      setLoadingCities(false);
+    }
   };
 
   const handleSelectSavedAddress = async (id: string) => {
@@ -514,45 +556,57 @@ const CheckoutPage = () => {
                       className="col-span-2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
                     />
 
-                    <input
-                      type="text"
+                    <select
+                      name="state"
+                      value={newAddress.state}
+                      onChange={handleStateChange}
+                      className="col-span-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    >
+                      <option value="">Select State *</option>
+                      {states.map((state) => (
+                        <option key={state} value={state}>
+                          {state}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
                       name="city"
-                      placeholder="City *"
                       value={newAddress.city}
                       onChange={handleAddressChange}
-                      className="col-span-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                    />
-
-                    <input
-                      type="text"
-                      name="state"
-                      placeholder="State *"
-                      value={newAddress.state}
-                      onChange={handleAddressChange}
-                      className="col-span-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                    />
+                      disabled={!newAddress.state || loadingCities}
+                      className="col-span-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:bg-gray-100"
+                    >
+                      <option value="">
+                        {loadingCities ? "Loading cities..." : newAddress.state ? "Select City *" : "Select State First"}
+                      </option>
+                      {cities.map((city) => (
+                        <option key={city} value={city}>
+                          {city}
+                        </option>
+                      ))}
+                    </select>
 
                     <input
                       type="text"
                       name="pincode"
                       placeholder="Pincode *"
                       value={newAddress.pincode}
-                      onChange={handleAddressChange}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                        setNewAddress((prev) => ({ ...prev, pincode: value }));
+                      }}
+                      maxLength={6}
                       className="col-span-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
                     />
 
-                    <select
+                    <input
+                      type="text"
                       name="country"
-                      value={newAddress.country}
-                      onChange={handleAddressChange}
-                      className="col-span-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                    >
-                      {COUNTRIES.map((c) => (
-                        <option key={c.code} value={c.name}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
+                      value="India"
+                      disabled
+                      className="col-span-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+                    />
 
                     <input
                       type="text"

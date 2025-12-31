@@ -6,9 +6,11 @@ import Input from "@/components/atoms/Input";
 import Select from "@/components/atoms/Select";
 import Button from "@/components/atoms/Button";
 import { getProfile, updateProfile } from "@/store/api/auth/profile";
+import { getStates, getCitiesByState } from "@/store/api/location";
 import { useToast } from "@/hooks/useToast";
 import Toast from "@/components/atoms/Toast";
 import { useAuth } from "@/contexts/AuthContext";
+import api from "@/store/api";
 
 export default function MyProfilePage() {
   const { user, isLoggedIn } = useAuth();
@@ -17,8 +19,74 @@ export default function MyProfilePage() {
   const [formData, setFormData] = useState({
     name: "", gender: "", day: "", month: "", year: "",
     hour: "", minute: "", ampm: "AM", birthPlace: "",
+    latitude: "", longitude: "",
     address: "", city: "", state: "", country: "", pincode: "",
   });
+
+  const [placeSuggestions, setPlaceSuggestions] = useState<
+    {
+      description: string;
+      placeId: string;
+    }[]
+  >([]);
+  const [isLoadingPlaces, setIsLoadingPlaces] = useState(false);
+
+  const [states, setStates] = useState<string[]>([]);
+  const [cities, setCities] = useState<string[]>([]);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const birthPlaceRef = React.useRef<HTMLDivElement>(null);
+
+  // Fetch states on component mount
+  useEffect(() => {
+    const loadStates = async () => {
+      try {
+        const response = await getStates();
+        if (response.success && response.states) {
+          setStates(response.states);
+        }
+      } catch (error) {
+        console.error("Failed to load states:", error);
+      }
+    };
+    loadStates();
+  }, []);
+
+  // Handle click outside for birth place suggestions
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (birthPlaceRef.current && !birthPlaceRef.current.contains(event.target as Node)) {
+        setPlaceSuggestions([]);
+      }
+    };
+
+    if (placeSuggestions.length > 0) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [placeSuggestions]);
+
+  // Function to fetch cities for a state
+  const fetchCitiesForState = async (state: string) => {
+    if (!state) {
+      setCities([]);
+      return;
+    }
+    try {
+      setLoadingCities(true);
+      const response = await getCitiesByState(state);
+      if (response.success && response.cities) {
+        setCities(response.cities);
+      }
+    } catch (error) {
+      console.error("Failed to load cities:", error);
+      setCities([]);
+    } finally {
+      setLoadingCities(false);
+    }
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -59,7 +127,19 @@ export default function MyProfilePage() {
             year: dateObj ? dateObj.getFullYear().toString() : "",
             hour, minute, ampm,
             birthPlace: p.placeOfBirth || "",
+            latitude: p.latitude || "",
+            longitude: p.longitude || "",
+            address: p.currentAddress || "",
+            city: p.city || "",
+            state: p.state || "",
+            country: p.country || "India",
+            pincode: p.pincode || "",
           }));
+
+          // Load cities if state is already set
+          if (p.state) {
+            fetchCitiesForState(p.state);
+          }
         }
       } catch (error) {
         showToast("Failed to load profile", "error");
@@ -70,6 +150,13 @@ export default function MyProfilePage() {
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate pincode
+    if (formData.pincode && !/^[1-9][0-9]{5}$/.test(formData.pincode)) {
+      showToast("Invalid pincode. Must be 6 digits", "error");
+      return;
+    }
+
     try {
       // Validate and construct date of birth
       let dateOfbirth: string | undefined;
@@ -103,11 +190,75 @@ export default function MyProfilePage() {
         dateOfbirth,
         timeOfbirth,
         placeOfBirth: formData.birthPlace,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        currentAddress: formData.address,
+        city: formData.city,
+        state: formData.state,
+        country: formData.country,
+        pincode: formData.pincode,
       });
 
       if (response.success) showToast("Profile updated successfully!", "success");
+    } catch (error: any) {
+      showToast(error?.message || "Update failed", "error");
+    }
+  };
+
+  const handleStateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newState = e.target.value;
+    setFormData({ ...formData, state: newState, city: "" });
+    fetchCitiesForState(newState);
+  };
+
+  const fetchPlaceSuggestions = async (query: string) => {
+    if (!query || query.trim().length < 2) {
+      setPlaceSuggestions([]);
+      return;
+    }
+    try {
+      setIsLoadingPlaces(true);
+      const res = await api.get("/maps/autocomplete", {
+        params: { input: query.trim() },
+      });
+      const data = res.data;
+      if (data.status === "OK") {
+        const suggestions = data.predictions.map((p: any) => ({
+          description: p.description,
+          placeId: p.place_id,
+        }));
+        setPlaceSuggestions(suggestions);
+      } else {
+        setPlaceSuggestions([]);
+      }
     } catch (error) {
-      showToast("Update failed", "error");
+      setPlaceSuggestions([]);
+    } finally {
+      setIsLoadingPlaces(false);
+    }
+  };
+
+  const handleSelectPlaceSuggestion = async (
+    placeId: string,
+    description: string
+  ) => {
+    try {
+      setIsLoadingPlaces(true);
+      const res = await api.get("/maps/details", { params: { placeId } });
+      const location = res.data.result?.geometry?.location;
+      if (location) {
+        setFormData((prev) => ({
+          ...prev,
+          birthPlace: description,
+          latitude: String(location.lat),
+          longitude: String(location.lng),
+        }));
+      }
+      setPlaceSuggestions([]);
+    } catch (error) {
+      showToast("Failed to fetch place details", "error");
+    } finally {
+      setIsLoadingPlaces(false);
     }
   };
 
@@ -160,7 +311,38 @@ export default function MyProfilePage() {
               </Select>
             </div>
 
-            <Input label="Birth Place" required value={formData.birthPlace} onChange={(e) => setFormData({ ...formData, birthPlace: e.target.value })} placeholder="City, State" />
+            <div className="relative" ref={birthPlaceRef}>
+              <Input 
+                label="Birth Place" 
+                required 
+                value={formData.birthPlace} 
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFormData({ 
+                    ...formData, 
+                    birthPlace: value,
+                    latitude: "",
+                    longitude: "",
+                  });
+                  fetchPlaceSuggestions(value);
+                }} 
+                placeholder="Mumbai, India" 
+              />
+              {placeSuggestions.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-xl max-h-60 overflow-auto">
+                  {placeSuggestions.map((s) => (
+                    <button
+                      key={s.placeId}
+                      type="button"
+                      onClick={() => handleSelectPlaceSuggestion(s.placeId, s.description)}
+                      className="w-full text-left px-4 py-3 text-sm hover:bg-indigo-50 active:bg-indigo-100 border-b last:border-0 transition-colors"
+                    >
+                      {s.description}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <hr className="border-gray-100" />
@@ -169,11 +351,46 @@ export default function MyProfilePage() {
           <div className="space-y-4">
             <Heading level={3} className="text-lg font-semibold text-gray-800">Current Address</Heading>
             <Input label="Street Address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="House no, Street" />
-            <div className="grid grid-cols-2 gap-4">
-              <Input label="City" value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
-              <Input label="State" value={formData.state} onChange={(e) => setFormData({ ...formData, state: e.target.value })} />
-              <Input label="Country" value={formData.country} onChange={(e) => setFormData({ ...formData, country: e.target.value })} />
-              <Input label="Pincode" value={formData.pincode} onChange={(e) => setFormData({ ...formData, pincode: e.target.value })} />
+            
+            <div className="grid grid-cols-1 gap-4">
+              <Input label="Country" value="India" disabled className="bg-gray-50" />
+              
+              <Select 
+                label="State" 
+                value={formData.state} 
+                onChange={handleStateChange}
+              >
+                <option value="">Select State</option>
+                {states.map((state) => (
+                  <option key={state} value={state}>{state}</option>
+                ))}
+              </Select>
+
+              <Select 
+                label="City" 
+                value={formData.city} 
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                disabled={!formData.state || loadingCities}
+              >
+                <option value="">
+                  {loadingCities ? "Loading cities..." : formData.state ? "Select City" : "Select State First"}
+                </option>
+                {cities.map((city) => (
+                  <option key={city} value={city}>{city}</option>
+                ))}
+              </Select>
+
+              <Input 
+                label="Pincode" 
+                value={formData.pincode} 
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                  setFormData({ ...formData, pincode: value });
+                }} 
+                placeholder="6-digit pincode"
+                maxLength={6}
+                pattern="[0-9]{6}"
+              />
             </div>
           </div>
 
