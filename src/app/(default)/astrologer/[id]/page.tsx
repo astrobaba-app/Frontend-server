@@ -21,58 +21,92 @@ import { useToast } from "@/hooks/useToast";
 import Toast from "@/components/atoms/Toast";
 import Button from "@/components/atoms/Button";
 
-// Hardcoded AI Astrologer data
-const AI_ASTROLOGER: Astrologer = {
-  id: "ai-astrologer",
-  fullName: "AI Astrologer",
-  photo: null,
-  yearsOfExperience: 3,
-  pricePerMinute: "10",
-  rating: "4.9",
-  totalConsultations: 15420,
-  bio: "Your 24/7 AI-powered astrology companion. Get instant answers to your astrology questions using advanced artificial intelligence. I'm trained on thousands of astrological texts and can provide personalized readings, predictions, and guidance on love, career, health, and more. Available anytime, anywhere - no waiting required!",
-  skills: [
-    "Vedic",
-    "KP",
-    "Numerology",
-    "Tarot",
-    "Palmistry",
-    "Vastu",
-    "Prashna",
-    "Nadi",
-    "Lal Kitab",
-    "Face Reading",
-  ],
-  languages: [
-    "Hindi",
-    "English",
-    "Bengali",
-    "Tamil",
-    "Telugu",
-    "Marathi",
-    "Gujarati",
-    "Kannada",
-    "Malayalam",
-    "Punjabi",
-    "Odia",
-    "Urdu",
-  ],
-  categories: [
-    "Love",
-    "Relationship",
-    "Education",
-    "Health",
-    "Career",
-    "Finance",
-    "Marriage",
-    "Family",
-    "Business",
-    "Legal",
-    "Travel",
-    "Spiritual",
-  ],
-  isOnline: true,
-  followersCount: 15420,
+// Hardcoded AI Astrologers data
+const AI_ASTROLOGERS: Record<string, Astrologer> = {
+  "ai-astrologer-devansh": {
+    id: "ai-astrologer-devansh",
+    fullName: "Acharya Devansh Sharma",
+    photo: null,
+    yearsOfExperience: 12,
+    pricePerMinute: "10",
+    rating: "4.9",
+    totalConsultations: 5420,
+    bio: "Acharya Devansh Sharma is a traditional AI Vedic astrologer known for logical, timing-accurate predictions. His readings focus on long-term life direction, career decisions, education choices, and resolving complex family or legal situations through precise planetary analysis.",
+    skills: ["Vedic", "KP", "Nadi", "Prashna"],
+    languages: [
+      "Hindi",
+      "English",
+      "Bengali",
+      "Tamil",
+      "Telugu",
+      "Marathi",
+      "Gujarati",
+      "Kannada",
+      "Malayalam",
+      "Punjabi",
+      "Odia",
+      "Urdu",
+    ],
+    categories: ["Career", "Education", "Family", "Legal"],
+    isOnline: true,
+    followersCount: 8250,
+  },
+  "ai-astrologer-ritika": {
+    id: "ai-astrologer-ritika",
+    fullName: "Ritika Mehra",
+    photo: null,
+    yearsOfExperience: 9,
+    pricePerMinute: "10",
+    rating: "4.8",
+    totalConsultations: 6180,
+    bio: "Ritika Mehra is an AI relationship and tarot expert who blends intuitive insights with astrological patterns. She is widely trusted for love, marriage, and emotional clarity readings, helping people navigate confusion, attachment, and relationship decisions with compassion.",
+    skills: ["Tarot", "Face Reading"],
+    languages: [
+      "Hindi",
+      "English",
+      "Bengali",
+      "Tamil",
+      "Telugu",
+      "Marathi",
+      "Gujarati",
+      "Kannada",
+      "Malayalam",
+      "Punjabi",
+      "Odia",
+      "Urdu",
+    ],
+    categories: ["Love", "Relationship", "Marriage", "Family"],
+    isOnline: true,
+    followersCount: 9320,
+  },
+  "ai-astrologer-arjun": {
+    id: "ai-astrologer-arjun",
+    fullName: "Pandit Arjun Iyer",
+    photo: null,
+    yearsOfExperience: 11,
+    pricePerMinute: "10",
+    rating: "4.9",
+    totalConsultations: 7890,
+    bio: "Pandit Arjun Iyer our AI astrologer specializes in wealth patterns, health indicators, and energy alignment through numerology, palmistry, and vastu. His readings are practical, solution-oriented, and focused on removing financial and energetic blockages.",
+    skills: ["Numerology", "Palmistry", "Vastu"],
+    languages: [
+      "Hindi",
+      "English",
+      "Bengali",
+      "Tamil",
+      "Telugu",
+      "Marathi",
+      "Gujarati",
+      "Kannada",
+      "Malayalam",
+      "Punjabi",
+      "Odia",
+      "Urdu",
+    ],
+    categories: ["Finance", "Health", "Business"],
+    isOnline: true,
+    followersCount: 7650,
+  },
 };
 
 export default function AstrologerDetailPage() {
@@ -101,9 +135,9 @@ export default function AstrologerDetailPage() {
       if (hasFetched.current) return;
       hasFetched.current = true;
 
-      // Handle AI Astrologer specially
-      if (id === "ai-astrologer") {
-        setAstrologer(AI_ASTROLOGER);
+      // Handle AI Astrologers specially
+      if (id.startsWith("ai-astrologer-") && AI_ASTROLOGERS[id]) {
+        setAstrologer(AI_ASTROLOGERS[id]);
         setLoading(false);
         setReviewsLoading(false);
         return;
@@ -183,8 +217,8 @@ export default function AstrologerDetailPage() {
 
   const handleChatClick = () => {
     if (!id) return;
-    // Redirect to AI chat for AI astrologer
-    if (id === "ai-astrologer") {
+    // Redirect to AI chat for AI astrologers
+    if (id.startsWith("ai-astrologer-")) {
       router.push("/aichat");
       return;
     }
@@ -192,8 +226,8 @@ export default function AstrologerDetailPage() {
   };
 
   const handleCallClick = () => {
-    // Redirect to AI chat for AI astrologer
-    if (id === "ai-astrologer") {
+    // Redirect to AI chat for AI astrologers
+    if (id.startsWith("ai-astrologer-")) {
       router.push("/aichat");
       return;
     }
@@ -271,7 +305,7 @@ export default function AstrologerDetailPage() {
                   </div>
                 )}
                 {/* Rating Badge (Moved to Avatar based on image) */}
-                {id !== "ai-astrologer" && (
+                {!id.startsWith("ai-astrologer-") && (
                   <div className="absolute -bottom-2 left-7 flex items-center bg-white   px-2 py-0.5 border-3 rounded-md border-yellow-400">
                     <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
                     <span className="text-sm font-bold text-gray-800 ml-1">
@@ -281,7 +315,7 @@ export default function AstrologerDetailPage() {
                 )}
               </div>
               {/* Followers Badge */}
-              {id !== "ai-astrologer" && (
+              {!id.startsWith("ai-astrologer-") && (
                 <div className="absolute -top-2 -right-2 bg-linear-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg border-2 border-white">
                   {astrologer.followersCount || 0}
                 </div>
@@ -312,7 +346,7 @@ export default function AstrologerDetailPage() {
                     ₹ {astrologer.pricePerMinute}
                   </span>
                   <span className="text-gray-500 ml-1">/min</span>
-                  {id !== "ai-astrologer" && (
+                  {!id.startsWith("ai-astrologer-") && (
                     <span className="text-gray-500 ml-3">
                       ({ratingStats?.total || 0} reviews)
                     </span>
@@ -320,7 +354,7 @@ export default function AstrologerDetailPage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  {isLoggedIn && id !== "ai-astrologer" && (
+                  {isLoggedIn && !id.startsWith("ai-astrologer-") && (
                     <Button
                       variant={isFollowing ? "secondary" : "primary"}
                       size="sm"
@@ -380,7 +414,7 @@ export default function AstrologerDetailPage() {
           )}
         </div>
         {/* Reviews Section */}
-        {id !== "ai-astrologer" && (
+        {!id.startsWith("ai-astrologer-") && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
             <div className="flex justify-between items-center mb-6">
               <p

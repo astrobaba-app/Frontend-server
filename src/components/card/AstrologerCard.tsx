@@ -50,25 +50,24 @@ const AstrologerCard: React.FC<OurAstrologerCardProps> = ({
 
   const specialties = Array.isArray(topics) ? topics : [];
 
-  const getStatusBadge = () => {
-    switch (status) {
-      case "available":
-        return (
-          <div className="absolute top-3 right-3 px-3 py-1 text-xs font-medium rounded-full border border-green-500 bg-white text-green-600">
-            Available
-          </div>
-        );
-      case "offline":
-        return (
-          <div className="absolute top-3 right-3 px-3 py-1 text-xs font-medium rounded-full border border-gray-400 bg-white text-gray-600">
-            Offline
-          </div>
-        );
+const getStatusBadge = () => {
+  if (status === "wait") return null;
 
-      default:
-        return null;
-    }
+  const statusStyles = {
+    available: "border-green-500 text-green-600",
+    offline: "border-gray-400 text-gray-600",
   };
+
+  return (
+    <div 
+      className={`absolute top-2 right-2 px-2 py-0.5 text-[10px] sm:text-xs font-bold rounded-full border bg-white z-10 ${
+        statusStyles[status as keyof typeof statusStyles] || ""
+      }`}
+    >
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </div>
+  );
+};
 
   const photoStyle = photo
     ? {
@@ -82,7 +81,7 @@ const AstrologerCard: React.FC<OurAstrologerCardProps> = ({
     <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden relative">
       {getStatusBadge()}
 
-      <div className="p-4">
+      <div className="p-4 mt-3">
         <div className="flex items-start gap-3 mb-3">
           <div className="shrink-0 relative">
             <div
