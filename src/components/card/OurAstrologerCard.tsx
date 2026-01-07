@@ -156,7 +156,6 @@ const OurAstrologerCard: React.FC<OurAstrologerCardProps> = ({
           </div>
 
           <Button
-            href={`/astrologer/${astrologer.id}`} // Link to detail page
             variant="custom"
             size="md"
             className="w-full"
