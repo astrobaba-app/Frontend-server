@@ -344,11 +344,13 @@ function AstrologersPage() {
               mode={mode}
               onCallClick={(e) => {
                 e?.preventDefault();
-                router.push("/aichat");
+                e?.stopPropagation();
+                router.push(`/aichat?astrologer=${encodeURIComponent(astrologer.fullName)}&photo=${encodeURIComponent(astrologer.photo || '')}`);
               }}
               onChatClick={(e) => {
                 e?.preventDefault();
-                router.push("/aichat");
+                e?.stopPropagation();
+                router.push(`/aichat?astrologer=${encodeURIComponent(astrologer.fullName)}&photo=${encodeURIComponent(astrologer.photo || '')}`);
               }}
             />
           </Link>
@@ -374,7 +376,18 @@ function AstrologersPage() {
             isOnline: astrologer.isOnline,
           }}
           mode={mode}
-          onCallClick={handleCallClick}
+          onCallClick={(e) => {
+            e?.preventDefault();
+            e?.stopPropagation();
+            handleCallClick();
+          }}
+          onChatClick={(e) => {
+            e?.preventDefault();
+            e?.stopPropagation();
+            if (astrologer.id) {
+              router.push(`/chat?astrologerId=${astrologer.id}&mode=chat`);
+            }
+          }}
         />
       </Link>
     );
