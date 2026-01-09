@@ -137,41 +137,35 @@ const getStatusBadge = () => {
         </div>
 
         <div className="mt-3 flex gap-2">
-          <Link
-            href={
-              id
-                ? `/chat?astrologerId=${id}&mode=${
-                    isCallMode ? "call" : "chat"
-                  }`
-                : "/chat"
-            }
-            className="w-full"
-          >
-            <Button
-              onClick={(e) => {
-                if (isCallMode && onCallClick) onCallClick(e);
-                if (!isCallMode && onChatClick) onChatClick(e);
-              }}
-              variant="custom"
-              size="md"
-              className="shadow-lg w-full"
-              customColors={{
-                backgroundColor: colors.primeYellow,
-                textColor: colors.white,
-              }}
-              customStyles={{
-                paddingTop: "0.5rem",
-                paddingBottom: "0.5rem",
-              }}
-              icon={
-                <span role="img" aria-label={isCallMode ? "call" : "chat"}>
-                  {isCallMode ? <IoCallSharp /> : <IoChatbubblesSharp />}
-                </span>
+          <Button
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              if (isCallMode && onCallClick) {
+                onCallClick(e);
+              } else if (!isCallMode && onChatClick) {
+                onChatClick(e);
               }
-            >
-              {isCallMode ? "Call" : "Chat"}
-            </Button>
-          </Link>
+            }}
+            variant="custom"
+            size="md"
+            className="shadow-lg w-full"
+            customColors={{
+              backgroundColor: colors.primeYellow,
+              textColor: colors.white,
+            }}
+            customStyles={{
+              paddingTop: "0.5rem",
+              paddingBottom: "0.5rem",
+            }}
+            icon={
+              <span role="img" aria-label={isCallMode ? "call" : "chat"}>
+                {isCallMode ? <IoCallSharp /> : <IoChatbubblesSharp />}
+              </span>
+            }
+          >
+            {isCallMode ? "Call" : "Chat"}
+          </Button>
         </div>
       </div>
     </div>

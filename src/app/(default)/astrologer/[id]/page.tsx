@@ -26,7 +26,7 @@ const AI_ASTROLOGERS: Record<string, Astrologer> = {
   "ai-astrologer-devansh": {
     id: "ai-astrologer-devansh",
     fullName: "Acharya Devansh Sharma",
-    photo: null,
+    photo: "/images/devansh.jpg",
     yearsOfExperience: 12,
     pricePerMinute: "10",
     rating: "4.9",
@@ -54,7 +54,7 @@ const AI_ASTROLOGERS: Record<string, Astrologer> = {
   "ai-astrologer-ritika": {
     id: "ai-astrologer-ritika",
     fullName: "Ritika Mehra",
-    photo: null,
+    photo: "/images/ritika.jpg",
     yearsOfExperience: 9,
     pricePerMinute: "10",
     rating: "4.8",
@@ -82,7 +82,7 @@ const AI_ASTROLOGERS: Record<string, Astrologer> = {
   "ai-astrologer-arjun": {
     id: "ai-astrologer-arjun",
     fullName: "Pandit Arjun Iyer",
-    photo: null,
+    photo: "/images/arjun.jpg",
     yearsOfExperience: 11,
     pricePerMinute: "10",
     rating: "4.9",
@@ -218,8 +218,8 @@ export default function AstrologerDetailPage() {
   const handleChatClick = () => {
     if (!id) return;
     // Redirect to AI chat for AI astrologers
-    if (id.startsWith("ai-astrologer-")) {
-      router.push("/aichat");
+    if (id.startsWith("ai-astrologer-") && astrologer) {
+      router.push(`/aichat?astrologer=${encodeURIComponent(astrologer.fullName)}&photo=${encodeURIComponent(astrologer.photo || '')}`);
       return;
     }
     router.push(`/chat?astrologerId=${id}`);
@@ -227,8 +227,8 @@ export default function AstrologerDetailPage() {
 
   const handleCallClick = () => {
     // Redirect to AI chat for AI astrologers
-    if (id.startsWith("ai-astrologer-")) {
-      router.push("/aichat");
+    if (id.startsWith("ai-astrologer-") && astrologer) {
+      router.push(`/aichat?astrologer=${encodeURIComponent(astrologer.fullName)}&photo=${encodeURIComponent(astrologer.photo || '')}`);
       return;
     }
     showToast("Call feature coming soon!", "info");
