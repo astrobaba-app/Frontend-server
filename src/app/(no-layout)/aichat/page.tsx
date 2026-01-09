@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, Suspense } from "react";
 import {
   Send,
   ArrowLeft,
@@ -22,7 +22,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { colors } from "@/utils/colors";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   createChatSession,
   sendMessage as sendMessageAPI,
@@ -40,13 +40,21 @@ import Toast from "@/components/atoms/Toast";
 import ConfirmDeleteChatModal from "@/components/modals/ConfirmDeleteChatModal";
 import { useAIChatWallet } from "@/hooks/useAIChatWallet";
 
-// AI Astrologer Info
-const AI_ASTROLOGER_INFO = {
-  name: "AI Astrologer",
-  title: "Your 24/7 Vedic AI Guide",
-  photo: "/images/ai_astrologer.png",
-  isOnline: true,
-  status: "Always Available",
+// AI Astrologer Info - maps full names to display info
+const getAIAstrologerInfo = (fullName: string | null, photo: string | null) => {
+  // Extract first name from full name
+  const firstName =
+    fullName?.split(" ")[fullName.split(" ").length > 2 ? 1 : 0] ||
+    "AI Astrologer";
+
+  return {
+    name: firstName,
+    fullName: fullName || "AI Astrologer",
+    title: "Your 24/7 Vedic AI Guide",
+    photo: photo || "/images/logo.png",
+    isOnline: true,
+    status: "Always Available",
+  };
 };
 
 // Quick Prompt Suggestions
@@ -59,9 +67,13 @@ const PROMPT_SUGGESTIONS = [
   "How can I improve my financial situation?",
 ];
 
-const AIChatPage = () => {
+const AIChatPageContent = () => {
   const { isLoggedIn, loading, user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const astrologerName = searchParams.get("astrologer");
+  const photo = searchParams.get("photo");
+  const AI_ASTROLOGER_INFO = getAIAstrologerInfo(astrologerName, photo);
   const { showToast, toastProps, hideToast } = useToast();
 
   // Chat state
@@ -998,7 +1010,7 @@ const AIChatPage = () => {
       <div
         className={`${
           showSidebar ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0 fixed lg:relative w-72   sm:w-80 h-full bg-white/95 border-r shadow-xl transition-transform duration-300 ease-out z-20 flex flex-col backdrop-blur`}
+        } lg:translate-x-0 fixed lg:relative w-72   sm:w-80 h-full bg-white/95 border-r  transition-transform duration-300 ease-out z-20 flex flex-col backdrop-blur`}
         style={{ borderColor: colors.gray + "20" }}
       >
         {/* Sidebar Header */}
@@ -1028,40 +1040,53 @@ const AIChatPage = () => {
               />
             </button>
           </div>
-          {/* AI Astrologer summary */}
-          <div className="flex flex-col items-center gap-2 text-center">
-            {/* Astrobaba icon / avatar (AB) */}
-            <div
-              className="w-14 h-14 rounded-full flex items-center justify-center overflow-hidden"
-              style={{ backgroundColor: colors.primeYellow }}
+          <div className="flex">
+            <button
+              onClick={handleBack}
+              className="p-2 h-10 hidden md:flex hover:bg-gray-100 rounded-full transition-colors"
             >
-              <span className="text-lg font-bold text-white">AB</span>
-            </div>
+              <ArrowLeft size={24} style={{ color: colors.darkGray }} />
+            </button>
+            {/* AI Astrologer summary */}
+            <div className="flex flex-col items-center gap-2 text-center">
+              {/* Astrologer Photo */}
+              <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-yellow-400">
+                <img
+                  src={AI_ASTROLOGER_INFO.photo}
+                  alt={AI_ASTROLOGER_INFO.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = "/images/logo.png";
+                  }}
+                />
+              </div>
 
-            {/* Text lines under the icon */}
-            <div className="flex flex-col gap-0.5 items-center">
-              <p
-                className="text-lg font-semibold tracking-wide"
-                style={{ color: colors.darkGray }}
-              >
-                AI Astrologer
-              </p>
-              <p className="text-md" style={{ color: colors.gray }}>
-                Live Vedic guidance powered by Graho
-              </p>
-              <p
-                className="text-md font-semibold"
-                style={{ color: colors.primeGreen }}
-              >
-                ₹10/min
-              </p>
+              {/* Text lines under the icon */}
+              <div className="flex flex-col gap-0.5 items-center">
+                <p
+                  className="text-lg font-semibold tracking-wide"
+                  style={{ color: colors.darkGray }}
+                >
+                  {AI_ASTROLOGER_INFO.name}
+                </p>
+                <p className="text-md" style={{ color: colors.gray }}>
+                  Live Vedic guidance powered by Graho
+                </p>
+                <p
+                  className="text-md font-semibold"
+                  style={{ color: colors.primeGreen }}
+                >
+                  ₹10/min
+                </p>
+              </div>
             </div>
           </div>
-          <div className="md:flex gap-2">
+
+          <div className="flex flex-col gap-2">
             <button
               onClick={handleNewChat}
               disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="w-full flex cursor-pointer items-center justify-center gap-2 px-4 py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
               style={{
                 backgroundColor: colors.primeYellow,
                 color: colors.white,
@@ -1071,7 +1096,21 @@ const AIChatPage = () => {
               <span className="font-semibold text-sm">New Chat</span>
             </button>
 
-           
+            {/* Wallet Balance in Sidebar */}
+            <Link href="/profile/wallet">
+              <div
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg hover:opacity-90 transition-opacity cursor-pointer"
+                style={{ backgroundColor: colors.primeGreen }}
+              >
+                <WalletIcon size={20} style={{ color: colors.white }} />
+                <span
+                  className="font-semibold text-sm"
+                  style={{ color: colors.white }}
+                >
+                  ₹{balance.toFixed(2)}
+                </span>
+              </div>
+            </Link>
           </div>
         </div>
 
@@ -1135,34 +1174,33 @@ const AIChatPage = () => {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex flex-col flex-1 min-h-screen lg:h-screen bg-white/90 backdrop-blur-sm">
+      <div className="flex flex-col flex-1 h-screen bg-white/90 backdrop-blur-sm">
         {/* Header */}
         <div
-          className="shadow-sm border-b bg-white/90 backdrop-blur"
+          className="sticky top-0 z-20 shadow-sm border-b bg-white backdrop-blur-md"
           style={{ borderColor: colors.gray + "20" }}
         >
           <div className="px-4 py-3 flex items-center justify-between">
             {/* Left: Menu toggle and AI info */}
-            <div className="flex items-center gap-3 flex-1">
+            <div className="flex items-center md:gap-3 flex-1">
               <button
                 onClick={() => setShowSidebar(!showSidebar)}
                 className="lg:hidden p-2 hover:bg-gray-100 rounded-full transition-colors"
               >
-                <GiHamburgerMenu  size={24} style={{ color: colors.darkGray }} />
+                <GiHamburgerMenu size={24} style={{ color: colors.darkGray }} />
               </button>
 
-        
-                <button onClick={handleBack} className="p-2 hidden md:flex hover:bg-gray-100 rounded-full transition-colors">
-                  <ArrowLeft size={24} style={{ color: colors.darkGray }} />
-                </button>
-             
-              <div className="hidden md:flex items-center gap-3">
-                <div className="relative">
-                  <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: colors.primeYellow }}
-                  >
-                    <Sparkles size={24} style={{ color: colors.white }} />
+              <div className="flex items-center  md:gap-3">
+                <div className="relative hidden sm:block">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white">
+                    <img
+                      src={AI_ASTROLOGER_INFO.photo}
+                      alt={AI_ASTROLOGER_INFO.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/images/logo.png";
+                      }}
+                    />
                   </div>
                   <span
                     className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2"
@@ -1175,12 +1213,15 @@ const AIChatPage = () => {
 
                 <div>
                   <h2
-                    className="font-bold text-lg"
+                    className="font-bold text-sm md:text-lg"
                     style={{ color: colors.darkGray }}
                   >
                     {AI_ASTROLOGER_INFO.name}
                   </h2>
-                  <p className="text-sm" style={{ color: colors.gray }}>
+                  <p
+                    className="text-sm hidden md:block"
+                    style={{ color: colors.gray }}
+                  >
                     {AI_ASTROLOGER_INFO.status}
                   </p>
                 </div>
@@ -1188,7 +1229,7 @@ const AIChatPage = () => {
             </div>
 
             {/* Right: Start/Stop Chat, Wallet and Timer */}
-            <div className="flex items-center gap-3">
+            <div className="flex gap-1 md:gap-3">
               {/* Start/Stop Chat Button */}
               {currentSessionId && (
                 <button
@@ -1221,7 +1262,11 @@ const AIChatPage = () => {
                     border: `1.5px solid ${colors.primeYellow}`,
                   }}
                 >
-                  <Clock size={14} className="sm:w-4 sm:h-4" style={{ color: colors.darkGray }} />
+                  <Clock
+                    size={14}
+                    className="sm:w-4 sm:h-4"
+                    style={{ color: colors.darkGray }}
+                  />
                   <div className="flex flex-col">
                     <span
                       className="text-[10px] sm:text-xs font-medium leading-tight"
@@ -1229,7 +1274,10 @@ const AIChatPage = () => {
                     >
                       {chatDuration}
                     </span>
-                    <span className="text-[10px] sm:text-xs leading-tight" style={{ color: colors.gray }}>
+                    <span
+                      className="text-[10px] sm:text-xs leading-tight"
+                      style={{ color: colors.gray }}
+                    >
                       ₹{chatCost.toFixed(2)}
                     </span>
                   </div>
@@ -1245,7 +1293,11 @@ const AIChatPage = () => {
                     border: `1.5px solid ${colors.primeYellow}`,
                   }}
                 >
-                  <Phone size={14} className="sm:w-4 sm:h-4" style={{ color: colors.darkGray }} />
+                  <Phone
+                    size={14}
+                    className="sm:w-4 sm:h-4"
+                    style={{ color: colors.darkGray }}
+                  />
                   <div className="flex flex-col">
                     <span
                       className="text-[10px] sm:text-xs font-medium leading-tight"
@@ -1253,7 +1305,10 @@ const AIChatPage = () => {
                     >
                       {voiceDuration}
                     </span>
-                    <span className="text-[10px] sm:text-xs leading-tight" style={{ color: colors.gray }}>
+                    <span
+                      className="text-[10px] sm:text-xs leading-tight"
+                      style={{ color: colors.gray }}
+                    >
                       ₹{voiceCost.toFixed(2)}
                     </span>
                   </div>
@@ -1261,7 +1316,7 @@ const AIChatPage = () => {
               )}
 
               {/* Start/Stop Voice Call Button */}
-              {currentSessionId && (
+              {currentSessionId && !isChatSessionActive && (
                 <button
                   onClick={
                     isVoiceSessionActive
@@ -1277,7 +1332,10 @@ const AIChatPage = () => {
                     color: colors.white,
                   }}
                 >
-                  <CiMicrophoneOn size={16} className="sm:w-[18px] sm:h-[18px]" />
+                  <CiMicrophoneOn
+                    size={16}
+                    className="sm:w-[18px] sm:h-[18px]"
+                  />
                   <span className="font-medium text-xs sm:text-sm">
                     {isVoiceSessionActive ? "Stop" : "Start"}
                     <span className="hidden sm:inline"> Voice</span>
@@ -1288,10 +1346,14 @@ const AIChatPage = () => {
               {/* Wallet Balance */}
               <Link href="/profile/wallet">
                 <div
-                  className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:opacity-80 transition-opacity cursor-pointer"
+                  className=" hidden md:flex items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:opacity-80 transition-opacity cursor-pointer"
                   style={{ backgroundColor: colors.primeYellow }}
                 >
-                  <WalletIcon size={16} className="sm:w-[18px] sm:h-[18px]" style={{ color: colors.white }} />
+                  <WalletIcon
+                    size={16}
+                    className="sm:w-[18px] sm:h-[18px]"
+                    style={{ color: colors.white }}
+                  />
                   <span
                     className="font-semibold text-xs sm:text-sm"
                     style={{ color: colors.white }}
@@ -1306,7 +1368,7 @@ const AIChatPage = () => {
 
         {/* Chat Messages Area */}
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+          <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-4">
             {/* Error Message */}
             {error && (
               <div
@@ -1334,10 +1396,12 @@ const AIChatPage = () => {
             {/* No Session Selected */}
             {!currentSessionId && !isLoading && (
               <div className="flex flex-col items-center justify-center h-64 text-center px-4">
-                <Sparkles
-                  size={64}
-                  style={{ color: colors.primeYellow }}
-                  className="mb-4"
+                <Image
+                  src="/images/logo.png"
+                  alt="AI Astrologer Logo"
+                  width={80}
+                  height={80}
+                  priority
                 />
                 <h3
                   className="text-xl font-bold mb-2"
@@ -1382,13 +1446,16 @@ const AIChatPage = () => {
                       <div className="shrink-0">
                         {message.role === "assistant" ? (
                           <div
-                            className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center"
-                            style={{ backgroundColor: colors.primeYellow }}
+                            className="w-10 h-10 sm:w-12 sm:h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center"
+                            style={{ backgroundColor: colors.white }}
                           >
-                            <Sparkles
-                              size={16}
-                              className="sm:w-[18px] sm:h-[18px] md:w-5 md:h-5"
-                              style={{ color: colors.white }}
+                            <Image
+                              src={AI_ASTROLOGER_INFO.photo}
+                              alt="AI Astrologer Logo"
+                              width={80}
+                              height={80}
+                              className="rounded-full"
+                              priority
                             />
                           </div>
                         ) : (
@@ -1443,7 +1510,11 @@ const AIChatPage = () => {
                         className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shrink-0"
                         style={{ backgroundColor: colors.primeYellow }}
                       >
-                        <Sparkles size={14} className="sm:w-4 sm:h-4" style={{ color: colors.white }} />
+                        <Sparkles
+                          size={14}
+                          className="sm:w-4 sm:h-4"
+                          style={{ color: colors.white }}
+                        />
                       </div>
                       <div
                         className="px-3 py-2 sm:px-4 sm:py-3 rounded-2xl"
@@ -1516,10 +1587,10 @@ const AIChatPage = () => {
 
         {/* Input Area - Fixed at bottom like ChatGPT */}
         <div
-          className="border-t bg-white/95 backdrop-blur-sm"
+          className="sticky bottom-0   z-20"
           style={{ borderColor: colors.gray + "20" }}
         >
-          <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          <div className="max-w-4xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3">
             {/* Chat Session Warning */}
             {!isChatSessionActive && currentSessionId && (
               <div
@@ -1530,7 +1601,11 @@ const AIChatPage = () => {
                   color: colors.darkGray,
                 }}
               >
-                <Clock size={16} className="sm:w-[18px] sm:h-[18px] flex-shrink-0 mt-0.5 sm:mt-0" style={{ color: colors.primeYellow }} />
+                <Clock
+                  size={16}
+                  className="sm:w-[18px] sm:h-[18px] flex-shrink-0 mt-0.5 sm:mt-0"
+                  style={{ color: colors.primeYellow }}
+                />
                 <p className="text-xs sm:text-sm">
                   Click <strong>"Start Chat"</strong> button above to begin your
                   session. You'll be charged ₹10 per minute.
@@ -1548,7 +1623,10 @@ const AIChatPage = () => {
                   color: "#991B1B",
                 }}
               >
-                <AlertCircle size={16} className="sm:w-[18px] sm:h-[18px] flex-shrink-0 mt-0.5 sm:mt-0" />
+                <AlertCircle
+                  size={16}
+                  className="sm:w-[18px] sm:h-[18px] flex-shrink-0 mt-0.5 sm:mt-0"
+                />
                 <p className="text-xs sm:text-sm">
                   Insufficient balance. Please{" "}
                   <Link
@@ -1562,7 +1640,7 @@ const AIChatPage = () => {
               </div>
             )}
 
-            <form onSubmit={handleSendMessage} className="flex gap-1.5 sm:gap-2">
+            <form onSubmit={handleSendMessage} className="relative">
               <input
                 type="text"
                 value={inputMessage}
@@ -1575,16 +1653,10 @@ const AIChatPage = () => {
                     : "Message AI Astrologer..."
                 }
                 disabled={!currentSessionId || isTyping || !isChatSessionActive}
-                className="flex-1 px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl border focus:outline-none focus:border-2 transition-all disabled:bg-gray-100 disabled:cursor-not-allowed text-sm sm:text-base"
-                style={{
-                  borderColor: colors.gray + "40",
-                  backgroundColor:
-                    currentSessionId && isChatSessionActive
-                      ? colors.white
-                      : "#F3F4F6",
-                  color: colors.darkGray,
-                }}
+                className="w-full px-4 sm:px-5 py-2.5 sm:py-3 pr-12 sm:pr-14 bg-gray-100 border border-gray-300 rounded-full focus:outline-none text-sm text-gray-900 placeholder-gray-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                autoFocus
               />
+              {/* Send Button Inside Input */}
               <button
                 type="submit"
                 disabled={
@@ -1593,18 +1665,29 @@ const AIChatPage = () => {
                   isTyping ||
                   !isChatSessionActive
                 }
-                className="px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 flex-shrink-0"
+                className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 p-1.5 sm:p-2 rounded-full transition-all duration-200 disabled:opacity-50 flex items-center justify-center"
                 style={{
                   backgroundColor:
                     inputMessage.trim() &&
                     currentSessionId &&
                     isChatSessionActive
                       ? colors.primeYellow
-                      : colors.gray,
-                  color: colors.white,
+                      : "#E5E7EB",
                 }}
+                aria-label="Send message"
               >
-                <Send size={18} className="sm:w-5 sm:h-5" />
+                <Send
+                  size={18}
+                  className="sm:w-5 sm:h-5"
+                  style={{
+                    color:
+                      inputMessage.trim() &&
+                      currentSessionId &&
+                      isChatSessionActive
+                        ? colors.darkGray
+                        : "#9CA3AF",
+                  }}
+                />
               </button>
             </form>
           </div>
@@ -1614,7 +1697,7 @@ const AIChatPage = () => {
       {/* Overlay for mobile sidebar */}
       {showSidebar && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-10 lg:hidden"
+          className="fixed inset-0 backdrop-blur-sm  bg-black/50 z-10 lg:hidden"
           onClick={() => setShowSidebar(false)}
         ></div>
       )}
@@ -1635,7 +1718,11 @@ const AIChatPage = () => {
                 className="w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center mb-3 sm:mb-4 relative"
                 style={{ backgroundColor: colors.primeYellow }}
               >
-                <Sparkles size={40} className="sm:w-12 sm:h-12" style={{ color: colors.white }} />
+                <Sparkles
+                  size={40}
+                  className="sm:w-12 sm:h-12"
+                  style={{ color: colors.white }}
+                />
                 <div
                   className="absolute inset-0 rounded-full opacity-75"
                   style={{
@@ -1650,7 +1737,10 @@ const AIChatPage = () => {
               >
                 AI Astrologer
               </h3>
-              <p className="text-xs sm:text-sm mb-2" style={{ color: colors.gray }}>
+              <p
+                className="text-xs sm:text-sm mb-2"
+                style={{ color: colors.gray }}
+              >
                 {callStatus}
               </p>
               <p
@@ -1683,7 +1773,11 @@ const AIChatPage = () => {
                 }}
                 title={isMuted ? "Unmute" : "Mute"}
               >
-                {isMuted ? <MicOff size={20} className="sm:w-6 sm:h-6" /> : <Mic size={20} className="sm:w-6 sm:h-6" />}
+                {isMuted ? (
+                  <MicOff size={20} className="sm:w-6 sm:h-6" />
+                ) : (
+                  <Mic size={20} className="sm:w-6 sm:h-6" />
+                )}
               </button>
 
               {/* End Call Button */}
@@ -1702,7 +1796,10 @@ const AIChatPage = () => {
               className="mt-5 sm:mt-6 p-2.5 sm:p-3 rounded-lg"
               style={{ backgroundColor: colors.bg }}
             >
-              <p className="text-[10px] sm:text-xs text-center" style={{ color: colors.gray }}>
+              <p
+                className="text-[10px] sm:text-xs text-center"
+                style={{ color: colors.gray }}
+              >
                 🎙️ Real-time voice conversation powered by OpenAI
               </p>
             </div>
@@ -1731,7 +1828,11 @@ const AIChatPage = () => {
                 className="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mb-3 sm:mb-4"
                 style={{ backgroundColor: "#FEF2F2" }}
               >
-                <AlertCircle size={28} className="sm:w-8 sm:h-8" style={{ color: "#EF4444" }} />
+                <AlertCircle
+                  size={28}
+                  className="sm:w-8 sm:h-8"
+                  style={{ color: "#EF4444" }}
+                />
               </div>
 
               <h3
@@ -1741,7 +1842,10 @@ const AIChatPage = () => {
                 Insufficient Balance
               </h3>
 
-              <p className="text-xs sm:text-sm mb-5 sm:mb-6" style={{ color: colors.gray }}>
+              <p
+                className="text-xs sm:text-sm mb-5 sm:mb-6"
+                style={{ color: colors.gray }}
+              >
                 You don't have enough balance to continue chatting with AI
                 Astrologer. Please recharge your wallet to continue.
               </p>
@@ -1782,6 +1886,27 @@ const AIChatPage = () => {
         />
       )}
     </div>
+  );
+};
+
+// Loading fallback component
+const AIChatPageLoading = () => {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="text-center">
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400"></div>
+        <p className="mt-4 text-gray-600">Loading AI Chat...</p>
+      </div>
+    </div>
+  );
+};
+
+// Main component with Suspense boundary
+const AIChatPage = () => {
+  return (
+    <Suspense fallback={<AIChatPageLoading />}>
+      <AIChatPageContent />
+    </Suspense>
   );
 };
 

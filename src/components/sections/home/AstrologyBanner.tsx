@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
-import Button from '../../atoms/Button';
-import { BANNER_SLIDES } from '@/constants/home';
+import React, { useState, useEffect } from "react";
+import Image from "next/image";
+import Button from "../../atoms/Button";
+import { BANNER_SLIDES } from "@/constants/home";
+import Link from "next/dist/client/link";
 
 const AstrologyBannerSlider: React.FC = () => {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -48,13 +49,19 @@ const AstrologyBannerSlider: React.FC = () => {
 
           <div className="relative z-20 flex items-center justify-end min-h-[280px] sm:min-h-[300px] md:min-h-80">
             <div className="w-[60%] sm:w-full md:w-[55%] px-4 py-6 sm:px-6 sm:py-8 md:px-12 md:py-12 text-left">
-              <div key={activeIndex} className="transition-opacity duration-700 ease-in-out">
+              <div
+                key={activeIndex}
+                className="transition-opacity duration-700 ease-in-out"
+              >
                 <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 leading-tight mb-2 sm:mb-3">
                   {currentSlide.question}
                 </h2>
-                <p className="text-gray-500 text-xs sm:text-sm md:text-base lg:text-lg mb-4 sm:mb-6">{currentSlide.subtext}</p>
-
-                <Button>Chat Now</Button>
+                <p className="text-gray-500 text-xs sm:text-sm md:text-base lg:text-lg mb-4 sm:mb-6">
+                  {currentSlide.subtext}
+                </p>
+                <Link href='/astrologer'>
+                  <Button>Chat Now</Button>
+                </Link>
               </div>
             </div>
           </div>
@@ -64,7 +71,9 @@ const AstrologyBannerSlider: React.FC = () => {
               <button
                 key={index}
                 className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full transition-all duration-300 ${
-                  index === activeIndex ? 'bg-[#F0DF20] w-5 sm:w-6' : 'bg-gray-400 hover:bg-gray-500'
+                  index === activeIndex
+                    ? "bg-[#F0DF20] w-5 sm:w-6"
+                    : "bg-gray-400 hover:bg-gray-500"
                 }`}
                 onClick={() => goToSlide(index)}
                 aria-label={`Go to slide ${index + 1}`}

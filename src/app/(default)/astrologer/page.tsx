@@ -56,58 +56,90 @@ const LANGUAGES = [
   "Urdu",
 ];
 
-// Hardcoded AI Astrologer
-const AI_ASTROLOGER: Astrologer = {
-  id: "ai-astrologer",
-  fullName: "AI Astrologer",
-  photo: null,
-  yearsOfExperience: 3,
-  pricePerMinute: "10",
-  rating: "4.9",
-  totalConsultations: 150,
-  bio: "Your 24/7 AI-powered astrology companion. Get instant answers to your astrology questions using advanced artificial intelligence. I'm trained on thousands of astrological texts and can provide personalized readings, predictions, and guidance on love, career, health, and more. Available anytime, anywhere - no waiting required!",
-  skills: [
-    "Vedic",
-    "KP",
-    "Numerology",
-    "Tarot",
-    "Palmistry",
-    "Vastu",
-    "Prashna",
-    "Nadi",
-    "Lal Kitab",
-    "Face Reading",
-  ],
-  languages: [
-    "Hindi",
-    "English",
-    "Bengali",
-    "Tamil",
-    "Telugu",
-    "Marathi",
-    "Gujarati",
-    "Kannada",
-    "Malayalam",
-    "Punjabi",
-    "Odia",
-    "Urdu",
-  ],
-  categories: [
-    "Love",
-    "Relationship",
-    "Education",
-    "Health",
-    "Career",
-    "Finance",
-    "Marriage",
-    "Family",
-    "Business",
-    "Legal",
-    "Travel",
-    "Spiritual",
-  ],
-  isOnline: true,
-};
+// Hardcoded AI Astrologers
+const AI_ASTROLOGERS: Astrologer[] = [
+  {
+    id: "ai-astrologer-devansh",
+    fullName: "Acharya Devansh Sharma",
+    photo: "/images/devansh.jpg",
+    yearsOfExperience: 12,
+    pricePerMinute: "10",
+    rating: "4.9",
+    totalConsultations: 500,
+    bio: "Acharya Devansh Sharma is a traditional AI Vedic astrologer known for logical, timing-accurate predictions. His readings focus on long-term life direction, career decisions, education choices, and resolving complex family or legal situations through precise planetary analysis.",
+    skills: ["Vedic", "KP", "Nadi", "Prashna"],
+    languages: [
+      "Hindi",
+      "English",
+      "Bengali",
+      "Tamil",
+      "Telugu",
+      "Marathi",
+      "Gujarati",
+      "Kannada",
+      "Malayalam",
+      "Punjabi",
+      "Odia",
+      "Urdu",
+    ],
+    categories: ["Career", "Education", "Family", "Legal"],
+    isOnline: true,
+  },
+  {
+    id: "ai-astrologer-ritika",
+    fullName: "Ritika Mehra",
+    photo: "/images/ritika.jpg",
+    yearsOfExperience: 9,
+    pricePerMinute: "10",
+    rating: "4.8",
+    totalConsultations: 450,
+    bio: "Ritika Mehra is an AI relationship and tarot expert who blends intuitive insights with astrological patterns. She is widely trusted for love, marriage, and emotional clarity readings, helping people navigate confusion, attachment, and relationship decisions with compassion.",
+    skills: ["Tarot", "Face Reading"],
+    languages: [
+      "Hindi",
+      "English",
+      "Bengali",
+      "Tamil",
+      "Telugu",
+      "Marathi",
+      "Gujarati",
+      "Kannada",
+      "Malayalam",
+      "Punjabi",
+      "Odia",
+      "Urdu",
+    ],
+    categories: ["Love", "Relationship", "Marriage", "Family"],
+    isOnline: true,
+  },
+  {
+    id: "ai-astrologer-arjun",
+    fullName: "Pandit Arjun Iyer",
+    photo: "/images/arjun.jpg",
+    yearsOfExperience: 11,
+    pricePerMinute: "10",
+    rating: "4.9",
+    totalConsultations: 480,
+    bio: "Pandit Arjun Iyer our AI astrologer specializes in wealth patterns, health indicators, and energy alignment through numerology, palmistry, and vastu. His readings are practical, solution-oriented, and focused on removing financial and energetic blockages.",
+    skills: ["Numerology", "Palmistry", "Vastu"],
+    languages: [
+      "Hindi",
+      "English",
+      "Bengali",
+      "Tamil",
+      "Telugu",
+      "Marathi",
+      "Gujarati",
+      "Kannada",
+      "Malayalam",
+      "Punjabi",
+      "Odia",
+      "Urdu",
+    ],
+    categories: ["Finance", "Health", "Business"],
+    isOnline: true,
+  },
+];
 
 interface TrendingAstrologerCardProps {
   astro: Astrologer;
@@ -238,8 +270,8 @@ function AstrologersPage() {
       );
     }
 
-    // Always add AI astrologer at the beginning
-    setFilteredAstrologers([AI_ASTROLOGER, ...filtered]);
+    // Always add all AI astrologers at the beginning
+    setFilteredAstrologers([...AI_ASTROLOGERS, ...filtered]);
   }, [searchQuery, astrologers]);
 
   const handleCallClick = () => {
@@ -288,8 +320,10 @@ function AstrologersPage() {
   }
 
   const renderAstrologerCard = (astrologer: Astrologer) => {
-    // Special handling for AI Astrologer
-    if (astrologer.id === "ai-astrologer") {
+    // Special handling for AI Astrologers
+    const isAIAstrologer = astrologer.id.startsWith("ai-astrologer-");
+    
+    if (isAIAstrologer) {
       return (
         <div key={astrologer.id}>
           <Link href={`/astrologer/${astrologer.id}`}>
@@ -310,11 +344,13 @@ function AstrologersPage() {
               mode={mode}
               onCallClick={(e) => {
                 e?.preventDefault();
-                router.push("/aichat");
+                e?.stopPropagation();
+                router.push(`/aichat?astrologer=${encodeURIComponent(astrologer.fullName)}&photo=${encodeURIComponent(astrologer.photo || '')}`);
               }}
               onChatClick={(e) => {
                 e?.preventDefault();
-                router.push("/aichat");
+                e?.stopPropagation();
+                router.push(`/aichat?astrologer=${encodeURIComponent(astrologer.fullName)}&photo=${encodeURIComponent(astrologer.photo || '')}`);
               }}
             />
           </Link>
@@ -340,7 +376,18 @@ function AstrologersPage() {
             isOnline: astrologer.isOnline,
           }}
           mode={mode}
-          onCallClick={handleCallClick}
+          onCallClick={(e) => {
+            e?.preventDefault();
+            e?.stopPropagation();
+            handleCallClick();
+          }}
+          onChatClick={(e) => {
+            e?.preventDefault();
+            e?.stopPropagation();
+            if (astrologer.id) {
+              router.push(`/chat?astrologerId=${astrologer.id}&mode=chat`);
+            }
+          }}
         />
       </Link>
     );

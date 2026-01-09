@@ -36,7 +36,7 @@ function LoginPage() {
     if (authLoading) return;
 
     if (isLoggedIn) {
-      const redirectPath = searchParams.get("redirect") || "/profile";
+      const redirectPath = searchParams.get("redirect") || "/astrologer";
       router.push(redirectPath);
       return;
     }
@@ -49,7 +49,7 @@ function LoginPage() {
         return;
       }
       if (middlewareToken) {
-        const redirectPath = searchParams.get("redirect") || "/profile";
+        const redirectPath = searchParams.get("redirect") || "/astrologer";
         router.push(redirectPath);
       }
     }

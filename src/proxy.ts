@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   // Let client-side RouteProtection handle all auth checks
   // Server middleware only handles static optimizations
   return NextResponse.next();

@@ -860,8 +860,8 @@ function ChatPage() {
       <div className="flex-1 flex justify-center items-stretch px-0 lg:px-0">
         <div className="w-full max-w-5xl h-full lg:my-4 lg:border-2 lg:border-[#F0DF20] lg:rounded-xl bg-transparent flex flex-col overflow-hidden">
           {/* Header - Back, Astrologer, Time, Balance, Call */}
-          <div className="px-3 sm:px-6 py-2.5 sm:py-4 flex items-center justify-between sticky top-0 z-10" style={{ backgroundColor: colors.primeYellow }}>
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="px-2 sm:px-6 py-4 sm:py-4 flex items-center justify-between sticky top-0 z-10 gap-1 sm:gap-2" style={{ backgroundColor: colors.primeYellow }}>
+            <div className="flex items-center gap-1 sm:gap-3 shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -871,22 +871,22 @@ function ChatPage() {
                     router.push('/');
                   }
                 }}
-                className="p-1.5 sm:p-2 hidden md:block   rounded-full hover:bg-yellow-200/80 transition-colors"
+                className="p-1 sm:p-2 hidden md:block rounded-full hover:bg-yellow-200/80 transition-colors"
                 aria-label="Go back"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-900" />
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-900" />
               </button>
               <button
                 type="button"
                 onClick={() => setShowSidebar(true)}
-                className="lg:hidden p-1.5 sm:p-2 rounded-full hover:bg-yellow-200/80 transition-colors"
+                className="lg:hidden p-1 sm:p-2 rounded-full hover:bg-yellow-200/80 transition-colors shrink-0"
                 aria-label="Open sidebar"
               >
-                <GiHamburgerMenu className="w-5 h-5 text-gray-900" />
+                <GiHamburgerMenu className="w-4 h-4 sm:w-5 sm:h-5 text-gray-900" />
               </button>
               {astrologerInfo && (
-                <div className="hidden md:flex flex-row items-center gap-2 min-w-0">
-                  <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white">
+                <div className="flex flex-row items-center gap-2 min-w-0">
+                  <div className="hidden sm:block w-10 h-10 rounded-full overflow-hidden shrink-0 border border-white">
                     <img
                       src={astrologerInfo.photo}
                       alt={astrologerInfo.name}
@@ -894,7 +894,7 @@ function ChatPage() {
                     />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{astrologerInfo.name}</p>
+                    <p className="text-sm md:text-base font-semibold text-gray-900 truncate">{astrologerInfo.name}</p>
                     <p className="text-[11px] text-green-700 truncate">Online</p>
                   </div>
                 </div>
@@ -902,7 +902,7 @@ function ChatPage() {
             </div>
 
             {/* Right Side: Start/Stop Chat, Timer, Wallet, Call Buttons */}
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <div className="flex items-center gap-1 sm:gap-3 shrink-0 flex-wrap justify-end">
               {/* Start/Stop Chat Button */}
               {selectedSession && (
                 <button
@@ -923,56 +923,63 @@ function ChatPage() {
                     }
                   }}
                   disabled={!isChatSessionActive && !hasSufficientBalance(pricePerMinute)}
-                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold"
+                  className="flex items-center gap-0.5 sm:gap-1.5 px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-[10px] sm:text-xs font-semibold shrink-0"
                   style={{
                     backgroundColor: isChatSessionActive ? "#EF4444" : colors.primeGreen,
                     color: colors.white,
                   }}
                 >
-                  <Clock size={14} />
-                  <span>{isChatSessionActive ? "Stop" : "Start"}</span>
+                  <Clock size={16} className="sm:w-3.5 sm:h-3.5" />
+                  <span className="whitespace-nowrap text-sm">{isChatSessionActive ? "Stop" : "Start"}</span>
                 </button>
               )}
 
-              {/* Chat Timer */}
+              {/* Timer and Cost Combined */}
               {isChatting && (
                 <div
-                  className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium"
-                  style={{ backgroundColor: colors.offYellow, border: `1px solid ${colors.primeYellow}` }}
+                  className="flex items-center gap-0.5 sm:gap-1.5 px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-lg shrink-0 border-2"
+                  style={{ backgroundColor: colors.offYellow, borderColor: colors.primeYellow }}
                 >
-                  <Clock size={14} style={{ color: colors.darkGray }} />
-                  <span style={{ color: colors.darkGray }}>{chatDuration}</span>
-                  <span style={{ color: colors.gray }}>|</span>
-                  <span style={{ color: colors.darkGray }}>₹{chatCost.toFixed(2)}</span>
+                  <Clock size={12} className="sm:w-4 sm:h-4" style={{ color: colors.darkGray }} />
+                  <div className="flex flex-col leading-tight">
+                    <span style={{ color: colors.darkGray }} className="text-[10px] sm:text-xs font-semibold">{chatDuration}</span>
+                    <span style={{ color: colors.gray }} className="text-[9px] sm:text-[10px]">₹{chatCost.toFixed(2)}</span>
+                  </div>
                 </div>
               )}
 
-              {/* Wallet Balance */}
-              <Link href="/profile/wallet" className="flex items-center gap-1 text-xs sm:text-sm font-semibold text-green-700 hover:bg-yellow-200/80 px-2 py-1 rounded transition-colors">
-                <TfiWallet className="w-4 h-4" />
-                <span className="hidden sm:inline">Balance:</span>
-                <span>₹{balance.toFixed(2)}</span>
+              {/* Wallet Balance - Hidden on Mobile */}
+              <Link 
+                href="/profile/wallet" 
+                className="hidden sm:flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-sm font-bold text-gray-900 hover:bg-yellow-200/80 px-1 sm:px-2 py-0.5 sm:py-1 rounded transition-colors shrink-0 border border-gray-900"
+              >
+                <TfiWallet className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="whitespace-nowrap">₹{balance.toFixed(2)}</span>
               </Link>
 
-              {/* Call Buttons */}
-              <button
-                type="button"
-                onClick={() => handleInitiateCall("audio")}
-                disabled={isInitiatingCall || !selectedSession}
-                className="p-1.5 sm:p-2 hover:bg-yellow-200/80 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Audio Call"
-              >
-                <Phone className="sm:w-6 sm:h-6 h-4 w-4  text-gray-900" />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleInitiateCall("video")}
-                disabled={isInitiatingCall || !selectedSession}
-                className="p-1.5 sm:p-2 hover:bg-yellow-200/80 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Video Call"
-              >
-                <Video className="sm:w-6 sm:h-6 h-4 w-4  text-gray-900" />
-              </button>
+              {/* Call and Video Call Buttons */}
+              {selectedSession && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleInitiateCall("audio")}
+                    disabled={isInitiatingCall}
+                    className="p-1 sm:p-2 hover:bg-yellow-200/80 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                    title="Audio Call"
+                  >
+                    <Phone className="w-5 h-5 sm:w-5 sm:h-5 text-gray-900" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleInitiateCall("video")}
+                    disabled={isInitiatingCall}
+                    className="p-1 sm:p-2 hover:bg-yellow-200/80 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                    title="Video Call"
+                  >
+                    <Video className="w-6 h-6 sm:w-5 sm:h-5 text-gray-900" />
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
