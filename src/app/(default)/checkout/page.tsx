@@ -39,7 +39,7 @@ interface FormAddress {
 
 const CheckoutPage = () => {
   const router = useRouter();
-  const { cartItems, totalPrice, fetchCart, fetchCartCount } = useCart();
+  const { cartItems, totalPrice, shippingCharges, taxAmount, totalAmount, fetchCart, fetchCartCount } = useCart();
 
   const [step, setStep] = useState(1); // 1: Address, 2: Payment
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
@@ -70,12 +70,9 @@ const CheckoutPage = () => {
   const [cities, setCities] = useState<string[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
 
-  // Calculate order summary
+  // Calculate order summary (charges come from backend)
   const hasPhysicalProducts = cartItems.some((item) => item.productType === "physical");
   const subtotal = totalPrice;
-  const shippingCharges = hasPhysicalProducts && subtotal < 500 ? 50 : 0;
-  const taxAmount = parseFloat(((subtotal + shippingCharges) * 0.18).toFixed(2));
-  const totalAmount = parseFloat((subtotal + shippingCharges + taxAmount).toFixed(2));
 
   useEffect(() => {
     const fetchAddresses = async () => {
@@ -673,7 +670,7 @@ const CheckoutPage = () => {
                   </span>
                 </div>
                 <div className="flex justify-between text-gray-600">
-                  <span>Tax (18% GST)</span>
+                  <span>Tax</span>
                   <span>₹{taxAmount.toFixed(2)}</span>
                 </div>
               </div>

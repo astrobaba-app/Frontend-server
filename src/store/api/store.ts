@@ -74,6 +74,49 @@ export const addProductReview = async (
   }
 };
 
+export const getMyProductReviews = async (params?: any) => {
+  try {
+    const response = await api.get("/store/reviews/my-reviews", { params });
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const updateProductReview = async (
+  reviewId: string,
+  payload: { rating?: number; title?: string; review?: string; images?: string[] }
+) => {
+  try {
+    const response = await api.put(`/store/reviews/${reviewId}`, payload);
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const deleteProductReview = async (reviewId: string) => {
+  try {
+    const response = await api.delete(`/store/reviews/${reviewId}`);
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const checkUserProductReview = async (productId: string) => {
+  try {
+    const response = await api.get(`/store/reviews/products/${productId}/my-review`);
+    return response.data;
+  } catch (error: any) {
+    // Return null if no review found (404)
+    if (error.response?.status === 404) {
+      return { success: true, review: null };
+    }
+    throw error.response?.data || error.message;
+  }
+};
+
 // ==================== CART ====================
 
 export const addToCart = async (productId: string, quantity: number) => {
