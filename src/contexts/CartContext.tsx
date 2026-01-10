@@ -17,9 +17,12 @@ interface CartContextType {
   cartCount: number;
   loading: boolean;
   error: string | null;
-  fetchCart: () => Promise<void>;
+  fetchCart: () => Promise<any>;
   fetchCartCount: () => Promise<void>;
   totalPrice: number;
+  shippingCharges: number;
+  taxAmount: number;
+  totalAmount: number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -29,6 +32,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [cartCount, setCartCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [shippingCharges, setShippingCharges] = useState(0);
+  const [taxAmount, setTaxAmount] = useState(0);
+  const [totalAmount, setTotalAmount] = useState(0);
 
   const fetchCart = async () => {
     try {
@@ -48,11 +54,26 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         images: item.product?.images || [],
         productType: item.product?.productType || "physical",
       }));
-
       setCartItems(items);
+      const summary = apiCart?.summary || {};
+      setShippingCharges(Number(summary.shippingCharges || 0));
+      setTaxAmount(Number(summary.taxAmount || 0));
+      setTotalAmount(Number(summary.totalAmount || 0));
+      
+      // Return the data for error handling without triggering state updates
+      return {
+        items,
+        summary: {
+          subtotal: summary.subtotal || 0,
+          shippingCharges: Number(summary.shippingCharges || 0),
+          taxAmount: Number(summary.taxAmount || 0),
+          totalAmount: Number(summary.totalAmount || 0),
+        }
+      };
     } catch (err: any) {
       console.error("Error fetching cart:", err);
       setError(err?.message || "Failed to fetch cart");
+      return null;
     } finally {
       setLoading(false);
     }
@@ -87,6 +108,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         fetchCart,
         fetchCartCount,
         totalPrice,
+        shippingCharges,
+        taxAmount,
+        totalAmount,
       }}
     >
       {children}

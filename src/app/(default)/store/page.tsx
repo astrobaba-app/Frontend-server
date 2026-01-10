@@ -93,6 +93,7 @@ export default function StorePage() {
                 slug={product.slug}
                 productName={product.productName}
                 price={product.price}
+                discountPrice={product.discountPrice}
                 images={product.images}
                 averageRating={product.averageRating}
                 totalReviews={product.totalReviews}

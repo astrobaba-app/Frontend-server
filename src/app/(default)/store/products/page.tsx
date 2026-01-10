@@ -10,6 +10,7 @@ interface Product {
   slug: string;
   productName: string;
   price: number;
+  discountPrice?: number;
   images?: string[];
   productType: string;
   averageRating?: number;
@@ -116,6 +117,7 @@ export default function ProductsPage() {
                   slug={product.slug}
                   productName={product.productName}
                   price={product.price}
+                  discountPrice={product.discountPrice}
                   images={product.images}
                   averageRating={product.averageRating}
                   totalReviews={product.totalReviews}

@@ -8,7 +8,6 @@ import { useCart } from "@/contexts/CartContext";
 import {
   updateCartQuantity,
   removeFromCart,
-  addProductReview,
 } from "@/store/api/store";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";
@@ -26,6 +25,9 @@ const CartPage = () => {
     error,
     fetchCart,
     totalPrice,
+    shippingCharges,
+    taxAmount,
+    totalAmount,
     fetchCartCount,
   } = useCart();
   const [updating, setUpdating] = useState(false);
@@ -33,32 +35,28 @@ const CartPage = () => {
   const { isLoggedIn } = useAuth();
   const { toast, showToast, hideToast } = useToast();
 
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(
-    null
-  );
-  const [newRating, setNewRating] = useState<number>(5);
-  const [newTitle, setNewTitle] = useState("");
-  const [newReviewText, setNewReviewText] = useState("");
-  const [submittingReview, setSubmittingReview] = useState(false);
   const [displayItems, setDisplayItems] = useState(cartItems);
   const [displayTotal, setDisplayTotal] = useState(totalPrice);
+  const [displayShipping, setDisplayShipping] = useState(shippingCharges);
+  const [displayTax, setDisplayTax] = useState(taxAmount);
+  const [displayTotalAmount, setDisplayTotalAmount] = useState(totalAmount);
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
   const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
 
   useEffect(() => {
+    // Only fetch on initial mount
     fetchCart();
   }, []);
 
   useEffect(() => {
-    if (cartItems.length > 0 && !selectedProductId) {
-      setSelectedProductId(cartItems[0].productId);
-    }
-  }, [cartItems, selectedProductId]);
-
-  useEffect(() => {
+    // Sync display states with context only when context changes from external sources
+    // (not from our local updates)
     setDisplayItems(cartItems);
     setDisplayTotal(totalPrice);
-  }, [cartItems, totalPrice]);
+    setDisplayShipping(shippingCharges);
+    setDisplayTax(taxAmount);
+    setDisplayTotalAmount(totalAmount);
+  }, [cartItems, totalPrice, shippingCharges, taxAmount, totalAmount]);
 
   const handleUpdateQuantity = async (
     cartItemId: string,
@@ -68,24 +66,50 @@ const CartPage = () => {
 
     try {
       setUpdating(true);
+      
+      // Calculate new totals locally for immediate update
+      const updatedItems = displayItems.map((item) =>
+        item._id === cartItemId ? { ...item, quantity: newQuantity } : item
+      );
+      
+      const newSubtotal = updatedItems.reduce((sum, item) => {
+        const price = item.discountPrice || item.price;
+        return sum + price * item.quantity;
+      }, 0);
+      
+      // Determine if physical products exist
+      const hasPhysical = updatedItems.some(
+        (item) => item.productType === "physical"
+      );
+      
+      // Get env values from current context or use defaults
+      const SHIPPING_CHARGE = shippingCharges;
+      const currentShipping = hasPhysical ? SHIPPING_CHARGE : 0;
+      const currentTax = parseFloat(((newSubtotal + currentShipping) * (taxAmount / (totalPrice + shippingCharges))).toFixed(2));
+      const currentTotal = parseFloat((newSubtotal + currentShipping + currentTax).toFixed(2));
+      
+      // Update all display states immediately
+      setDisplayItems(updatedItems);
+      setDisplayTotal(newSubtotal);
+      setDisplayShipping(currentShipping);
+      setDisplayTax(currentTax);
+      setDisplayTotalAmount(currentTotal);
+
       await updateCartQuantity(cartItemId, newQuantity);
-
-      setDisplayItems((prev) => {
-        const updated = prev.map((item) =>
-          item._id === cartItemId ? { ...item, quantity: newQuantity } : item
-        );
-        const newTotal = updated.reduce((sum, item) => {
-          const price = item.discountPrice || item.price;
-          return sum + price * item.quantity;
-        }, 0);
-        setDisplayTotal(newTotal);
-        return updated;
-      });
-
       await fetchCartCount();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error updating quantity:", err);
-      showToast("Failed to update quantity", "error");
+      const errorMessage = err?.message || err?.response?.data?.message || "Failed to update quantity";
+      showToast(errorMessage, "error");
+      // Revert to backend state on error
+      const cartData = await fetchCart();
+      if (cartData) {
+        setDisplayItems(cartData.items || []);
+        setDisplayTotal(cartData.summary?.subtotal || 0);
+        setDisplayShipping(cartData.summary?.shippingCharges || 0);
+        setDisplayTax(cartData.summary?.taxAmount || 0);
+        setDisplayTotalAmount(cartData.summary?.totalAmount || 0);
+      }
     } finally {
       setUpdating(false);
     }
@@ -101,23 +125,48 @@ const CartPage = () => {
 
     try {
       setUpdating(true);
+      
+      // Calculate new totals locally for immediate update
+      const updatedItems = displayItems.filter((item) => item._id !== pendingRemoveId);
+      
+      const newSubtotal = updatedItems.reduce((sum, item) => {
+        const price = item.discountPrice || item.price;
+        return sum + price * item.quantity;
+      }, 0);
+      
+      // Determine if physical products exist
+      const hasPhysical = updatedItems.some(
+        (item) => item.productType === "physical"
+      );
+      
+      // Get env values from current context or use defaults
+      const SHIPPING_CHARGE = shippingCharges;
+      const currentShipping = hasPhysical ? SHIPPING_CHARGE : 0;
+      const currentTax = parseFloat(((newSubtotal + currentShipping) * (taxAmount / (totalPrice + shippingCharges))).toFixed(2));
+      const currentTotal = parseFloat((newSubtotal + currentShipping + currentTax).toFixed(2));
+      
+      // Update all display states immediately
+      setDisplayItems(updatedItems);
+      setDisplayTotal(newSubtotal);
+      setDisplayShipping(currentShipping);
+      setDisplayTax(currentTax);
+      setDisplayTotalAmount(currentTotal);
+
       await removeFromCart(pendingRemoveId);
-
-      setDisplayItems((prev) => {
-        const updated = prev.filter((item) => item._id !== pendingRemoveId);
-        const newTotal = updated.reduce((sum, item) => {
-          const price = item.discountPrice || item.price;
-          return sum + price * item.quantity;
-        }, 0);
-        setDisplayTotal(newTotal);
-        return updated;
-      });
-
       await fetchCartCount();
       showToast("Product removed from cart", "success");
     } catch (err) {
       console.error("Error removing item:", err);
       showToast("Failed to remove item", "error");
+      // Revert to backend state on error
+      const cartData = await fetchCart();
+      if (cartData) {
+        setDisplayItems(cartData.items || []);
+        setDisplayTotal(cartData.summary?.subtotal || 0);
+        setDisplayShipping(cartData.summary?.shippingCharges || 0);
+        setDisplayTax(cartData.summary?.taxAmount || 0);
+        setDisplayTotalAmount(cartData.summary?.totalAmount || 0);
+      }
     } finally {
       setUpdating(false);
       setIsRemoveModalOpen(false);
@@ -127,43 +176,6 @@ const CartPage = () => {
 
   const handleImageError = (cartItemId: string) => {
     setImageErrors((prev) => ({ ...prev, [cartItemId]: true }));
-  };
-
-  const handleSubmitReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!selectedProductId) return;
-
-    if (!isLoggedIn) {
-      showToast("Please login to write a review", "error");
-      router.push("/auth/login?redirect=/cart");
-      return;
-    }
-
-    if (!newRating || !newReviewText.trim()) {
-      showToast("Please provide rating and review text", "error");
-      return;
-    }
-
-    try {
-      setSubmittingReview(true);
-      await addProductReview(selectedProductId, {
-        rating: newRating,
-        title: newTitle || undefined,
-        review: newReviewText,
-      });
-      showToast("Review added successfully", "success");
-      setNewTitle("");
-      setNewReviewText("");
-      setNewRating(5);
-    } catch (err: any) {
-      console.error("Error adding review:", err);
-      const message =
-        err?.message || err?.response?.data?.message || "Failed to add review";
-      showToast(message, "error");
-    } finally {
-      setSubmittingReview(false);
-    }
   };
 
   if (loading) {
@@ -301,30 +313,23 @@ const CartPage = () => {
                       <div className="flex items-center justify-center sm:justify-start gap-2 sm:gap-3">
                         <div className="flex items-center border border-gray-300 rounded-lg bg-white">
                           <button
-                            onClick={() =>
-                              handleUpdateQuantity(item._id, item.quantity - 1)
-                            }
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleUpdateQuantity(item._id, item.quantity - 1);
+                            }}
                             disabled={updating || item.quantity <= 1}
                             className="px-2 sm:px-3 py-1 text-sm sm:text-base hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             −
                           </button>
-                          <input
-                            type="number"
-                            value={item.quantity}
-                            onChange={(e) =>
-                              handleUpdateQuantity(
-                                item._id,
-                                parseInt(e.target.value) || 1
-                              )
-                            }
-                            className="w-10 sm:w-12 text-center text-sm sm:text-base border-l border-r border-gray-300 focus:outline-none"
-                            min="1"
-                          />
+                          <span className="w-10 sm:w-12 text-center text-sm sm:text-base py-1 select-none">
+                            {item.quantity}
+                          </span>
                           <button
-                            onClick={() =>
-                              handleUpdateQuantity(item._id, item.quantity + 1)
-                            }
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleUpdateQuantity(item._id, item.quantity + 1);
+                            }}
                             disabled={updating}
                             className="px-2 sm:px-3 py-1 text-sm sm:text-base hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
@@ -334,7 +339,10 @@ const CartPage = () => {
 
                         {/* Remove Button */}
                         <button
-                          onClick={() => handleRemoveItem(item._id)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleRemoveItem(item._id);
+                          }}
                           disabled={updating}
                           className="text-red-600 hover:text-red-700 font-semibold text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -386,12 +394,14 @@ const CartPage = () => {
 
                   <div className="flex justify-between text-gray-600 text-xs sm:text-sm">
                     <span>Shipping</span>
-                    <span className="text-green-600 font-semibold">FREE</span>
+                    <span className={displayShipping === 0 ? "text-green-600 font-semibold" : ""}>
+                      {displayShipping === 0 ? "FREE" : `₹${displayShipping}`}
+                    </span>
                   </div>
 
                   <div className="flex justify-between text-gray-600 text-xs sm:text-sm">
-                    <span>Tax (estimated)</span>
-                    <span>₹{(displayTotal * 0.18).toFixed(2)}</span>
+                    <span>Tax</span>
+                    <span>₹{displayTax.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -399,7 +409,7 @@ const CartPage = () => {
                 <div className="flex justify-between items-center mb-4 sm:mb-6 pb-4 sm:pb-6 border-b border-gray-200">
                   <span className="text-base sm:text-lg font-bold text-gray-900">Total</span>
                   <span className="text-xl sm:text-2xl font-bold text-green-600">
-                    ₹{(displayTotal + displayTotal * 0.18).toFixed(2)}
+                    ₹{displayTotalAmount.toFixed(2)}
                   </span>
                 </div>
 
@@ -419,111 +429,6 @@ const CartPage = () => {
                   ✓ Secure checkout • Money-back guarantee
                 </p>
               </div>
-
-              {displayItems.length > 0 && (
-                <div className="bg-white rounded-lg shadow-sm p-4 sm:p-5 md:p-6 mt-4 sm:mt-6">
-                  <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">
-                    Write a Review
-                  </h2>
-
-                  {!isLoggedIn ? (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 sm:p-4 flex items-center justify-between flex-col sm:flex-row gap-3">
-                      <p className="text-xs sm:text-sm text-gray-700 text-center sm:text-left">
-                        Please login to write a review for your purchased
-                        products.
-                      </p>
-                      <button
-                        onClick={() =>
-                          router.push("/auth/login?redirect=/cart")
-                        }
-                        className="px-3 sm:px-4 py-2 text-sm bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold rounded whitespace-nowrap"
-                      >
-                        Login to Review
-                      </button>
-                    </div>
-                  ) : (
-                    <form onSubmit={handleSubmitReview} className="space-y-3 sm:space-y-4">
-                      <div>
-                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                          Select Product
-                        </label>
-                        <select
-                          value={selectedProductId || ""}
-                          onChange={(e) =>
-                            setSelectedProductId(e.target.value || null)
-                          }
-                          className="w-full border border-gray-300 rounded px-2 sm:px-3 py-2 text-xs sm:text-sm"
-                        >
-                          {displayItems.map((item) => (
-                            <option key={item._id} value={item.productId}>
-                              {item.productName}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                        <div className="w-full sm:w-auto">
-                          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                            Rating
-                          </label>
-                          <select
-                            value={newRating}
-                            onChange={(e) =>
-                              setNewRating(Number(e.target.value))
-                            }
-                            className="w-full border border-gray-300 rounded px-2 sm:px-3 py-2 text-xs sm:text-sm"
-                          >
-                            {[5, 4, 3, 2, 1].map((r) => (
-                              <option key={r} value={r}>
-                                {r} Star{r > 1 ? "s" : ""}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="flex-1">
-                          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                            Title (optional)
-                          </label>
-                          <input
-                            type="text"
-                            value={newTitle}
-                            onChange={(e) => setNewTitle(e.target.value)}
-                            className="w-full border border-gray-300 rounded px-2 sm:px-3 py-2 text-xs sm:text-sm"
-                            placeholder="Summarize your experience"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                          Your Review
-                        </label>
-                        <textarea
-                          value={newReviewText}
-                          onChange={(e) => setNewReviewText(e.target.value)}
-                          className="w-full border border-gray-300 rounded px-2 sm:px-3 py-2 text-xs sm:text-sm min-h-20"
-                          placeholder="Share your experience with this product"
-                        />
-                      </div>
-
-                      <Button
-                        type="submit"
-                        variant="custom"
-                        size="md" 
-                        fullWidth={true} 
-                        loading={submittingReview} 
-                        customColors={{
-                          backgroundColor: colors.primeYellow,
-                          textColor: colors.black,
-                        }}
-                      >
-                        Submit Review
-                      </Button>
-                    </form>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         )}

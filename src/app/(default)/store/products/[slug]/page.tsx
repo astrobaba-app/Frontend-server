@@ -1,29 +1,28 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-
 import Image from "next/image";
-
 import { useParams, useRouter } from "next/navigation";
-
 import {
   getProductBySlug,
   addToCart,
   getProductReviews,
+  checkUserProductReview,
+  addProductReview,
+  updateProductReview,
+  deleteProductReview,
 } from "@/store/api/store";
-
 import { useCart } from "@/contexts/CartContext";
-
 import { useAuth } from "@/contexts/AuthContext";
-
 import { useToast } from "@/hooks/useToast";
 import Toast from "@/components/atoms/Toast";
-
 // ⚠️ IMPORT YOUR REUSABLE BUTTON HERE
 
 import Button from "@/components/atoms/Button";
 import Link from "next/link";
 import ProductDetailSkeleton from "@/components/skeletons/ProductDetailSkeleton";
+import ProductReviewModal from "@/components/modals/ProductReviewModal";
+import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
 
 // ⚠️ Note: Adjust the import path if your file location is different
 
@@ -114,6 +113,14 @@ export default function ProductDetailPage() {
 
   const [reviewsLoading, setReviewsLoading] = useState(false);
 
+  const [userReview, setUserReview] = useState<ProductReview | null>(null);
+
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+
+  const [reviewActionLoading, setReviewActionLoading] = useState(false);
+
   const { fetchCartCount } = useCart();
 
   const { isLoggedIn } = useAuth();
@@ -138,6 +145,9 @@ export default function ProductDetailPage() {
 
       if (data.product?.id) {
         fetchReviews(data.product.id);
+        if (isLoggedIn) {
+          checkUserReview(data.product.id);
+        }
       }
     } catch (err: any) {
       console.error("Error fetching product:", err);
@@ -161,6 +171,72 @@ export default function ProductDetailPage() {
       // We keep page usable even if reviews fail
     } finally {
       setReviewsLoading(false);
+    }
+  };
+
+  const checkUserReview = async (productId: string) => {
+    try {
+      const data = await checkUserProductReview(productId);
+      if (data.success && data.review) {
+        setUserReview(data.review);
+      } else {
+        setUserReview(null);
+      }
+    } catch (err: any) {
+      setUserReview(null);
+    }
+  };
+
+  const handleReviewSubmit = async (reviewData: {
+    rating: number;
+    title?: string;
+    review: string;
+  }) => {
+    if (!product) return;
+
+    try {
+      setReviewActionLoading(true);
+
+      if (userReview) {
+        // Update existing review
+        await updateProductReview(userReview.id, reviewData);
+        showToast("Review updated successfully!", "success");
+      } else {
+        // Add new review
+        await addProductReview(product.id, reviewData);
+        showToast("Review submitted successfully!", "success");
+      }
+
+      // Refresh reviews and user review
+      await fetchReviews(product.id);
+      await checkUserReview(product.id);
+      setReviewModalOpen(false);
+    } catch (err: any) {
+      const message = err?.message || "Failed to submit review";
+      showToast(message, "error");
+    } finally {
+      setReviewActionLoading(false);
+    }
+  };
+
+  const handleReviewDelete = async () => {
+    if (!userReview || !product) return;
+
+    try {
+      setReviewActionLoading(true);
+
+      await deleteProductReview(userReview.id);
+      showToast("Review deleted successfully!", "success");
+
+      // Refresh reviews and user review
+      setUserReview(null);
+      await fetchReviews(product.id);
+      setDeleteModalOpen(false);
+    } catch (err: any) {
+      const message = err?.message || "Failed to delete review";
+      showToast(message, "error");
+    } finally {
+      setReviewActionLoading(false);
     }
   };
 
@@ -470,18 +546,62 @@ export default function ProductDetailPage() {
       {/* Reviews */}
 
       <div className="mt-8 md:mt-16">
-        <div className="flex items-center justify-between mb-3 md:mb-4">
+        <div className="flex items-center justify-between mb-3 md:mb-4 flex-wrap gap-3">
           <h2 className="font-semibold text-base md:text-lg">
             Reviews ({reviews.length})
           </h2>
 
-          {totalReviews > 0 && (
-            <div className="text-xs md:text-sm text-gray-600">
-              <span className="text-yellow-400 mr-1">★</span>
-              {averageRating.toFixed(1)} average from {totalReviews} ratings
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {totalReviews > 0 && (
+              <div className="text-xs md:text-sm text-gray-600">
+                <span className="text-yellow-400 mr-1">★</span>
+                {averageRating.toFixed(1)} average from {totalReviews} ratings
+              </div>
+            )}
+
+            {isLoggedIn && (
+              <Button
+                onClick={() => setReviewModalOpen(true)}
+                variant="custom"
+                size="sm"
+                className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-xs md:text-sm"
+              >
+                {userReview ? "Edit My Review" : "Write a Review"}
+              </Button>
+            )}
+          </div>
         </div>
+
+        {/* User's Own Review (if exists) */}
+        {userReview && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex justify-between items-start mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-gray-900">
+                  Your Review
+                </span>
+                <div className="text-yellow-400 text-sm">
+                  {"★".repeat(userReview.rating)}
+                  <span className="text-gray-300">
+                    {"☆".repeat(5 - userReview.rating)}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setDeleteModalOpen(true)}
+                className="text-xs text-red-600 hover:text-red-700 font-semibold"
+              >
+                Delete
+              </button>
+            </div>
+            {userReview.title && (
+              <p className="text-sm font-semibold text-gray-900 mb-1">
+                {userReview.title}
+              </p>
+            )}
+            <p className="text-sm text-gray-700">{userReview.review}</p>
+          </div>
+        )}
 
         {reviewsLoading ? (
           <p className="text-gray-500 text-xs md:text-sm">Loading reviews...</p>
@@ -551,6 +671,28 @@ export default function ProductDetailPage() {
       {toast.show && (
         <Toast message={toast.message} type={toast.type} onClose={hideToast} />
       )}
+
+      {/* Review Modal */}
+      {product && (
+        <ProductReviewModal
+          isOpen={reviewModalOpen}
+          onClose={() => setReviewModalOpen(false)}
+          productName={product.productName}
+          existingReview={userReview}
+          onSubmit={handleReviewSubmit}
+          loading={reviewActionLoading}
+        />
+      )}
+
+      {/* Delete Review Modal */}
+      <DeleteConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleReviewDelete}
+        loading={reviewActionLoading}
+        title="Delete Review"
+        message="Are you sure you want to delete your review? This action cannot be undone."
+      />
     </div>
   );
 }

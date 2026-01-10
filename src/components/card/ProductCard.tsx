@@ -12,6 +12,7 @@ interface ProductCardProps {
   slug: string;
   productName: string;
   price: number;
+  discountPrice?: number | null;
   images?: string[] | string | null;
   averageRating?: number;
   totalReviews?: number;
@@ -23,6 +24,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   slug,
   productName,
   price,
+  discountPrice,
   images,
   averageRating = 5,
   totalReviews = 500,
@@ -90,7 +92,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           {/* Content */}
           <div className="p-2 sm:p-3 md:p-4">
             {/* Title */}
-            <h3 className="font-bold text-xs sm:text-sm md:text-base text-gray-900 mb-1 line-clamp-2">
+            <h3 className="font-bold text-xs sm:text-sm md:text-base text-gray-900 mb-1 line-clamp-2 md:line-clamp-1">
               {productName}
             </h3>
 
@@ -104,7 +106,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
             {/* Price + Add */}
             <div className="flex items-center justify-between mt-2">
-              <span className="text-sm sm:text-base md:text-lg font-bold text-gray-900">₹ {price}</span>
+              <span className="text-sm sm:text-base md:text-lg font-bold text-gray-900">₹ {discountPrice !== undefined && discountPrice !== null ? discountPrice : price}</span>
 
               <Button
                 variant="custom"
