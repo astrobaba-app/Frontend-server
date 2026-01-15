@@ -8,8 +8,8 @@ import {
   MapPin,
   Phone,
   Instagram,
-  Twitter,
   LucideIcon,
+  Linkedin,
 } from "lucide-react";
 import { colors } from "@/utils/colors";
 
@@ -47,7 +47,7 @@ const CONTACT_INFO = {
 const SOCIAL_MEDIA: Social[] = [
   { name: "Facebook", href: "https://facebook.com" },
   { name: "Instagram", href: "https://instagram.com" },
-  { name: "Twitter", href: "https://twitter.com" },
+  { name: "Linkedin", href: "https://linkedin.com" },
 ];
 
 const COMPANY_INFO = {
@@ -60,7 +60,7 @@ const COMPANY_INFO = {
 const socialIcons: Record<string, LucideIcon> = {
   Facebook,
   Instagram,
-  Twitter,
+  Linkedin,
 };
 
 // --- 3. SUB-COMPONENTS ---
