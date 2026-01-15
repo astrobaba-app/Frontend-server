@@ -40,7 +40,7 @@ const QUICK_LINKS: LinkItem[] = [
 
 const CONTACT_INFO = {
   address: "Goa, India",
-  phone: "+91 4567891234",
+  phone: "+91 9011482683",
   email: " team@graho.in",
 };
 
