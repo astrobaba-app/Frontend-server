@@ -16,7 +16,7 @@ interface BannerSlide {
 const BANNER_SLIDES: BannerSlide[] = [
   {
     id: 1,
-    image: "/images/banner1.png",
+    image: "/images/b1.png",
     title: "Siddh Rudrakhas",
     subtitle: "from Kedareshwar Mahadev Mandir, Kashi",
     discount: "Extra 20% OFF",
@@ -24,7 +24,7 @@ const BANNER_SLIDES: BannerSlide[] = [
   },
   {
     id: 2,
-    image: "/images/banner2.png",
+    image: "/images/b2.png",
     title: "Sacred Gemstones",
     subtitle: "Authentic & Certified for Your Spiritual Path",
     discount: "Extra 20% OFF",
@@ -32,7 +32,7 @@ const BANNER_SLIDES: BannerSlide[] = [
   },
   {
     id: 3,
-    image: "/images/banner3.png",
+    image: "/images/b3.png",
     title: "Spiritual Yantras",
     subtitle: "Authentic Yantras for Divine Blessings",
     discount: "Extra 20% OFF",
