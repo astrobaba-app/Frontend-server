@@ -12,19 +12,19 @@ import Testinomials from "@/components/sections/home/Testinomials";
 
 // SEO Metadata for better search engine optimization
 export const metadata: Metadata = {
-  title: 'Graho - Grah Disha, Jeevan Disha',
-  description: 'Get instant answers to life\'s biggest questions. Connect with verified astrologers for personalized guidance on career, love, health & wealth. 200+ expert astrologers available 24/7 for online consultation.',
+  title: 'Graho',
+  description: 'Graho is an astrology platform offering free Kundli, horoscope, matchmaking, and instant chat or call with verified astrologers. From questions to remedies - all in one place.',
   keywords: 'astrology, online astrology consultation, astrologer, kundli, horoscope, vedic astrology, talk to astrologer, astrology prediction',
   openGraph: {
-    title: 'Graho - Grah Disha, Jeevan Disha',
-    description: 'Connect with verified astrologers for personalized guidance on career, love, health & wealth.',
+    title: 'Graho',
+    description: 'Graho is an astrology platform offering free Kundli, horoscope, matchmaking, and instant chat or call with verified astrologers. From questions to remedies - all in one place.',
     type: 'website',
     locale: 'en_US',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Graho - Grah Disha, Jeevan Disha',
-    description: 'Connect with verified astrologers for personalized guidance.',
+    title: 'Graho',
+    description: 'Graho is an astrology platform offering free Kundli, horoscope, matchmaking, and instant chat or call with verified astrologers. From questions to remedies - all in one place.',
   },
   robots: {
     index: true,
