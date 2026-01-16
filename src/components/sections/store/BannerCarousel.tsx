@@ -77,7 +77,7 @@ const BannerCarousel: React.FC = () => {
   const slide = BANNER_SLIDES[currentSlide];
 
   return (
-    <div className="relative w-full aspect-[16/7] sm:aspect-[16/7] md:h-[500px] md:aspect-auto overflow-hidden md:rounded-lg">
+    <div className="relative w-full aspect-[16/7] sm:aspect-[16/7] md:h-[550px] md:aspect-auto overflow-hidden md:rounded-lg">
       {/* Banner Images */}
       <div className="relative w-full h-full">
         {BANNER_SLIDES.map((bannerSlide, index) => (
