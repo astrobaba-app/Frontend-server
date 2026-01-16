@@ -526,7 +526,7 @@ export default function ProductDetailPage() {
                   <span className="font-semibold">{product.dimensions}</span>
                 </p>
               )}
-
+{/* 
               {product.tags && product.tags.length > 0 && (
                 <p>
                   <span className="text-gray-600">Tags:</span>{" "}
@@ -534,7 +534,7 @@ export default function ProductDetailPage() {
                     {product.tags.join(", ")}
                   </span>
                 </p>
-              )}
+              )} */}
               <Link href="/policies/cancellation_refund" className="text-yellow-600 text-sm md:text-base">
                 Cancellation & Refund Policy
               </Link>
