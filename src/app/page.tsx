@@ -10,7 +10,7 @@ import PopularQuestions from "@/components/sections/home/PopularQues";
 import LatestBlogsSection from "@/components/sections/home/LatestBlog";
 import Testinomials from "@/components/sections/home/Testinomials";
 
-// SEO Metadata for better search engine optimization
+// SEO Metadata for better search engine  optimization
 export const metadata: Metadata = {
   title: 'Graho',
   description: 'Graho is an astrology platform offering free Kundli, horoscope, matchmaking, and instant chat or call with verified astrologers. From questions to remedies - all in one place.',
