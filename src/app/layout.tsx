@@ -19,9 +19,9 @@ const kanit = Kanit({
 });
 
 export const metadata: Metadata = {
-  title: "Graho - Grah Disha, Jeevan Disha",
+  title: "Graho",
   description:
-    "Get instant answers to life's biggest questions. Connect with verified astrologers for personalized guidance on career, love, health & wealth. 200+ expert astrologers available 24/7 for online consultation.",
+    "Graho is an astrology platform offering free Kundli, horoscope, matchmaking, and instant chat or call with verified astrologers. From questions to remedies - all in one place.",
   icons: {
     icon: "/images/logo.png",
   },
