@@ -23,18 +23,29 @@ interface KundliChartProps {
 }
 
 const KundliChart: React.FC<KundliChartProps & { ascSignNum?: number; ascDegree?: number }> = ({ chartData, chartType, style = "north", ascSignNum, ascDegree }) => {
-  // Map to store planets by sign number with degrees
+  // Normalize sign numbers to a consistent 1..12 range.
+  // (Some sources use 0..11, others use 1..12; the backend here typically uses 1..12.)
+  const normalizeSignNum = (value: unknown): number => {
+    const n = typeof value === "number" ? value : Number(value);
+    if (!Number.isFinite(n)) return 1;
+    if (n >= 1 && n <= 12) return n;
+    if (n >= 0 && n <= 11) return n + 1;
+    const mod = ((Math.round(n) % 12) + 12) % 12;
+    return mod + 1;
+  };
+
+  // Map to store planets by sign number (1..12) with degrees
   const signPlanetsMap = new Map<number, Array<{ name: string; degree: number }>>();
-  
-  // Initialize all 12 signs
-  for (let i = 0; i < 12; i++) {
+
+  // Initialize all 12 signs (1..12)
+  for (let i = 1; i <= 12; i++) {
     signPlanetsMap.set(i, []);
   }
   
   // Group planets by their sign
   if (chartData && chartData.planets) {
     Object.entries(chartData.planets).forEach(([planetName, planetData]) => {
-      const signNum = planetData.sign_num;
+      const signNum = normalizeSignNum(planetData.sign_num);
       const planets = signPlanetsMap.get(signNum) || [];
       // Use abbreviations for planets matching reference images
       const abbreviations: Record<string, string> = {
@@ -52,16 +63,21 @@ const KundliChart: React.FC<KundliChartProps & { ascSignNum?: number; ascDegree?
 
   // Add Ascendant marker to the appropriate sign (for D1 charts)
   if (typeof ascSignNum === "number") {
-    const existing = signPlanetsMap.get(ascSignNum) || [];
+    const ascSign = normalizeSignNum(ascSignNum);
+    const existing = signPlanetsMap.get(ascSign) || [];
     const ascDeg = typeof ascDegree === "number" ? ascDegree : 0;
-    existing.unshift({ name: "Asc", degree: ascDeg });
-    signPlanetsMap.set(ascSignNum, existing);
+    // Avoid duplicating Asc if it's already present in the divisional data.
+    if (!existing.some((p) => p.name === "Asc")) {
+      existing.unshift({ name: "Asc", degree: ascDeg });
+    }
+    signPlanetsMap.set(ascSign, existing);
   }
 
   const getSignName = (signNum: number): string => {
     const signs = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 
                    'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
-    return signs[signNum] || '';
+    const idx = normalizeSignNum(signNum) - 1;
+    return signs[idx] || '';
   };
 
   const getPlanetColor = (planetName: string): string => {
@@ -77,7 +93,8 @@ const KundliChart: React.FC<KundliChartProps & { ascSignNum?: number; ascDegree?
     return <SouthIndianChart signPlanetsMap={signPlanetsMap} chartType={chartType} getSignName={getSignName} getPlanetColor={getPlanetColor} />;
   }
 
-  return <NorthIndianChart signPlanetsMap={signPlanetsMap} chartType={chartType} getSignName={getSignName} getPlanetColor={getPlanetColor} ascSignNum={ascSignNum} />;
+  const normalizedAscSignNum = typeof ascSignNum === "number" ? normalizeSignNum(ascSignNum) : undefined;
+  return <NorthIndianChart signPlanetsMap={signPlanetsMap} chartType={chartType} getSignName={getSignName} getPlanetColor={getPlanetColor} ascSignNum={normalizedAscSignNum} />;
 };
 
 // North Indian Chart Component
@@ -90,27 +107,31 @@ const NorthIndianChart: React.FC<{
 }> = ({ signPlanetsMap, chartType, getSignName, getPlanetColor, ascSignNum }) => {
 
   // Diamond positions for North Indian style - 12 houses in triangular sections
-  // Based on reference image: house numbers in corners, planets in center of each section
+  // Standard North Indian layout matching AstroTalk:
+  // - House 1 (Asc) in center diamond
+  // - Houses 2-12 arranged counter-clockwise around center starting from top
   const housePositions = [
-    { house: 1, top: '24%', left: '50%', numberTop: '38%', numberLeft: '46%' },      // Center top
-    { house: 2, top: '14%', left: '65%', numberTop: '21%', numberLeft: '57%' },      // Top right upper
-    { house: 3, top: '14%', left: '80%', numberTop: '21%', numberLeft: '75%' },      // Top right
-    { house: 4, top: '35%', left: '50%', numberTop: '28%', numberLeft: '60%' },      // Upper center
-    { house: 5, top: '50%', left: '80%', numberTop: '42%', numberLeft: '73%' },      // Right
-    { house: 6, top: '65%', left: '80%', numberTop: '60%', numberLeft: '73%' },      // Right lower
-    { house: 7, top: '76%', left: '50%', numberTop: '62%', numberLeft: '46%' },      // Center bottom
-    { house: 8, top: '86%', left: '65%', numberTop: '78%', numberLeft: '60%' },      // Bottom right
-    { house: 9, top: '86%', left: '35%', numberTop: '78%', numberLeft: '40%' },      // Bottom left
-    { house: 10, top: '65%', left: '20%', numberTop: '60%', numberLeft: '27%' },     // Left lower
-    { house: 11, top: '50%', left: '20%', numberTop: '42%', numberLeft: '27%' },     // Left
-    { house: 12, top: '14%', left: '35%', numberTop: '21%', numberLeft: '40%' },     // Top left
+    { house: 1, top: '25%', left: '63%', numberTop: '42%', numberLeft: '50%' },      // Center (Asc)
+    { house: 2, top: '9%', left: '28%', numberTop: '20%', numberLeft: '25%' },      // Top-right of center
+    { house: 3, top: '10%', left: '80%', numberTop: '25%', numberLeft: '20%' },      // Top-right corner
+    { house: 4, top: '5%', left: '80%', numberTop: '50%', numberLeft: '42%' },      // Right upper
+    { house: 5, top: '65%', left: '80%', numberTop: '75%', numberLeft: '20%' },      // Right lower
+    { house: 6, top: '76%', left: '68%', numberTop: '79%', numberLeft: '25%' },      // Bottom-right of center
+    { house: 7, top: '90%', left: '29%', numberTop: '57%', numberLeft: '50%' },      // Bottom center
+    { house: 8, top: '90%', left: '32%', numberTop: '80%', numberLeft: '75%' },      // Bottom-left of center
+    { house: 9, top: '75%', left: '96%', numberTop: '75%', numberLeft: '80%' },      // Bottom-left corner
+    { house: 10, top: '50%', left: '77%', numberTop: '50%', numberLeft: '58%' },     // Left lower
+    { house: 11, top: '25%', left: '95%', numberTop: '25%', numberLeft: '80%' },     // Left upper
+    { house: 12, top: '8%', left: '80%', numberTop: '20%', numberLeft: '75%' },     // Top-left of center
   ];
 
-  // North Indian house to sign mapping (rotate so house 1 = Ascendant sign)
-  const asc = typeof ascSignNum === "number" ? ascSignNum : 0;
+  // North Indian house-to-sign mapping (rotate so house 1 = Ascendant sign).
+  // House 1 = Asc sign, House 2 = Asc+1, House 3 = Asc+2, etc.
+  const asc = typeof ascSignNum === "number" ? ascSignNum : 1;
   const houseToSignMap: Record<number, number> = {};
   for (let house = 1; house <= 12; house++) {
-    houseToSignMap[house] = (asc + house - 1) % 12;
+    // Standard Vedic: signs advance with house numbers (H1=Asc, H2=Asc+1, etc.)
+    houseToSignMap[house] = (((asc - 1) + (house - 1)) % 12) + 1;
   }
 
   return (
@@ -140,12 +161,12 @@ const NorthIndianChart: React.FC<{
           
           return (
             <React.Fragment key={house}>
-              {/* House number */}
+              {/* Sign number (matches reference layouts) */}
               <div
                 className="absolute text-[10px] text-gray-500 font-medium"
                 style={{ top: numberTop, left: numberLeft, transform: 'translate(-50%, -50%)' }}
               >
-                {house}
+                {signNum}
               </div>
               
               {/* Planets or -- if empty */}
@@ -190,9 +211,9 @@ const SouthIndianChart: React.FC<{
   getPlanetColor: (planetName: string) => string;
 }> = ({ signPlanetsMap, chartType, getSignName, getPlanetColor }) => {
   const signPositions = [
-    { sign: 0, row: 0, col: 0 }, { sign: 1, row: 0, col: 1 }, { sign: 2, row: 0, col: 2 }, { sign: 3, row: 0, col: 3 },
-    { sign: 4, row: 1, col: 3 }, { sign: 5, row: 2, col: 3 }, { sign: 6, row: 3, col: 3 }, { sign: 7, row: 3, col: 2 },
-    { sign: 8, row: 3, col: 1 }, { sign: 9, row: 3, col: 0 }, { sign: 10, row: 2, col: 0 }, { sign: 11, row: 1, col: 0 }
+    { sign: 1, row: 0, col: 0 }, { sign: 2, row: 0, col: 1 }, { sign: 3, row: 0, col: 2 }, { sign: 4, row: 0, col: 3 },
+    { sign: 5, row: 1, col: 3 }, { sign: 6, row: 2, col: 3 }, { sign: 7, row: 3, col: 3 }, { sign: 8, row: 3, col: 2 },
+    { sign: 9, row: 3, col: 1 }, { sign: 10, row: 3, col: 0 }, { sign: 11, row: 2, col: 0 }, { sign: 12, row: 1, col: 0 }
   ];
 
   return (
