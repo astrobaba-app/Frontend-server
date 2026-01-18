@@ -476,11 +476,11 @@ export default function TermsConditionsPage() {
                 <p className="font-medium" style={{ color: colors.darkGray }}>
                   Email:{" "}
                   <a
-                    href="mailto:team@graho.in"
+                    href="mailto:hello@graho.in"
                     className="font-bold underline"
                     style={{ color: colors.primeGreen }}
                   >
-                    team@graho.in
+                    hello@graho.in
                   </a>
                 </p>
                 <p className="text-xs mt-2" style={{ color: colors.gray }}>

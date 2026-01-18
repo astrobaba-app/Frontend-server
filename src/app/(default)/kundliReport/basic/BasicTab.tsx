@@ -2,7 +2,6 @@
 import React from "react";
 import { KundliResponse } from "@/store/api/kundli";
 import LatestBlogsSection from "@/components/sections/home/LatestBlog";
-import CompatibilityCheck from "@/components/sections/kundli/compatibilityCheck";
 
 interface BasicTabProps {
   kundliData: KundliResponse;
@@ -440,9 +439,7 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
           </div>
         </div>
       </div>
-
-      <CompatibilityCheck />
-      <LatestBlogsSection />
+      {/* <LatestBlogsSection /> */}
     </>
   );
 };

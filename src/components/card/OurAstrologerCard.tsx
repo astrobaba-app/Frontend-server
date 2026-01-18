@@ -34,6 +34,8 @@ export interface AstrologerApiData {
   bio: string;
 
   isOnline: boolean;
+
+  isAI?: boolean;
 }
 
 // Interface for props passed to the Card (simplified for component use)
@@ -53,6 +55,7 @@ const OurAstrologerCard: React.FC<OurAstrologerCardProps> = ({
     skills,
     pricePerMinute,
     isOnline,
+    isAI = false,
   } = astrologer;
 
   const specialties = Array.isArray(skills) ? skills : [];
@@ -96,6 +99,12 @@ const OurAstrologerCard: React.FC<OurAstrologerCardProps> = ({
                 Online
               </div>
             )}
+            {/* AI Astrologer Badge */}
+            {isAI && (
+              <div className="absolute top-3 -left-8 px-2 py-0.5 text-[10px] sm:text-xs font-bold rounded-full bg-linear-to-r from-yellow-400 to-yellow-300 text-white z-10">
+                AI
+              </div>
+            )}
 
             {/* Default Icon if no photo */}
             {!photo && (
@@ -116,7 +125,7 @@ const OurAstrologerCard: React.FC<OurAstrologerCardProps> = ({
 
             <div
               style={{ color: colors.primeYellow }}
-              className="flex items-center gap-1 flex-shrink-0 ml-2"
+              className="flex items-center gap-1 shrink-0 ml-2"
             >
               <span className="text-xs sm:text-sm font-semibold">
                 {displayRating}

@@ -19,6 +19,7 @@ export interface Astrologer {
   status?: "available" | "offline" | "wait";
   waitTime?: number;
   followersCount?: number;
+  isAI?: boolean;
 }
 
 interface OurAstrologerCardProps {
@@ -44,6 +45,7 @@ const AstrologerCard: React.FC<OurAstrologerCardProps> = ({
     price,
     languages = [],
     status = "available",
+    isAI = false,
   } = astrologer;
 
   const isCallMode = mode === "call";
@@ -80,6 +82,11 @@ const getStatusBadge = () => {
   return (
     <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden relative">
       {getStatusBadge()}
+      {isAI && (
+        <div className="absolute top-2 left-2 px-2 py-0.5 text-[10px] sm:text-xs font-bold rounded-full border bg-linear-to-r from-yellow-400 to-yellow-300 text-white z-10">
+          AI Astrologer
+        </div>
+      )}
 
       <div className="p-4 mt-3">
         <div className="flex items-start gap-3 mb-3">

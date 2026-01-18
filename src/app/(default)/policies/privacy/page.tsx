@@ -122,7 +122,7 @@ export default function PrivacyPolicyPage() {
               These communications may be sent via email, SMS, WhatsApp, in-app notifications, or other digital channels.
             </p>
             <p className="mt-4 text-sm" style={{ color: colors.gray }}>
-              You may opt out of non-essential promotional communications at any time using the unsubscribe option provided or by contacting <strong>team@graho.in</strong>. Service-related and transactional communications may continue as necessary to deliver our services.
+              You may opt out of non-essential promotional communications at any time using the unsubscribe option provided or by contacting <strong>hello@graho.in</strong>. Service-related and transactional communications may continue as necessary to deliver our services.
             </p>
           </section>
 
@@ -174,7 +174,7 @@ export default function PrivacyPolicyPage() {
                 <li>Request corrections or updates</li>
                 <li>Request deletion of your account and associated data</li>
             </ul>
-            <p className="text-sm" style={{ color: colors.darkGray }}>Requests can be made by contacting us at <strong>team@graho.in</strong>, subject to applicable laws and operational constraints.</p>
+            <p className="text-sm" style={{ color: colors.darkGray }}>Requests can be made by contacting us at <strong>hello@graho.in</strong>, subject to applicable laws and operational constraints.</p>
           </section>
 
           {/* Section 10 & 11: Children & Changes */}
@@ -203,7 +203,7 @@ export default function PrivacyPolicyPage() {
               </div>
               <div className="text-left md:text-right">
                 <p className="font-medium" style={{ color: colors.darkGray }}>
-                  Email: <a href="mailto:team@graho.in" className=" font-bold" style={{ color: colors.primeGreen }}>team@graho.in</a>
+                  Email: <a href="mailto:hello@graho.in" className=" font-bold" style={{ color: colors.primeGreen }}>hello@graho.in</a>
                 </p>
                 <p className="text-xs mt-2" style={{ color: colors.gray }}>
                   Registered Office: Goa, India

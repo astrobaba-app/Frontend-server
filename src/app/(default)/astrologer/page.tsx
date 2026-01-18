@@ -340,6 +340,7 @@ function AstrologersPage() {
                 languages: astrologer.languages,
                 status: astrologer.isOnline ? "available" : "offline",
                 isOnline: astrologer.isOnline,
+                isAI: true,
               }}
               mode={mode}
               onCallClick={(e) => {
