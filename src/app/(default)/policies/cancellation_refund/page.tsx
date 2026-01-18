@@ -105,7 +105,7 @@ export default function CancellationRefundPage() {
                 <li>Screenshots or supporting details (if available)</li>
             </ul>
             <p className="font-medium" style={{ color: colors.darkGray }}>
-              Email: <a href="mailto:team@graho.in" className="underline font-bold" style={{ color: colors.primeGreen }}>team@graho.in</a>
+              Email: <a href="mailto:hello@graho.in " className="underline font-bold" style={{ color: colors.primeGreen }}>hello@graho.in</a>
             </p>
           </section>
 

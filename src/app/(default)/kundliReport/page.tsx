@@ -245,7 +245,7 @@ function KundliReportPage() {
       </div>
 
       {/* Astrologer Section - Fixed Overflow with Responsive Grids */}
-      <div className="max-w-6xl mx-auto px-4 mb-10">
+      {/* <div className="max-w-6xl mx-auto px-4 mb-10">
         <div className="bg-white rounded-xl md:shadow-sm md:border border-gray-200 overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
             <h2 className="text-lg font-bold text-gray-900">
@@ -290,7 +290,7 @@ function KundliReportPage() {
             )}
           </div>
         </div>
-      </div>
+      </div> */}
 
       {toastProps.isVisible && (
         <Toast

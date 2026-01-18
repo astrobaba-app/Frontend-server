@@ -142,28 +142,8 @@ export default function FreeKundliPage() {
       const response = await createKundli(requestData);
 
       if (response.success) {
-        showToast("Kundli generated successfully!", "success");
-        setShowForm(false);
-        setCurrentStep(1);
-        setFetchFromProfile(false);
-        setFormData({
-          fullName: "",
-          gender: "Male",
-          dateOfbirth: "",
-          timeOfbirth: "",
-          placeOfBirth: "",
-          latitude: "",
-          longitude: "",
-          dontKnowTime: false,
-        });
-
-        const historyResponse = await getAllKundlis();
-        if (historyResponse.success)
-          setKundliHistory(historyResponse.userRequests);
-
-        setTimeout(() => {
-          router.push(`/kundliReport?id=${response.kundli.requestId}`);
-        }, 1500);
+        // Redirect immediately to prevent flash
+        router.push(`/kundliReport?id=${response.kundli.requestId}`);
       }
     } catch (error: any) {
       showToast(error?.message || "Failed to generate Kundli", "error");
@@ -457,7 +437,7 @@ export default function FreeKundliPage() {
                 <Plus className="w-4 h-4 mr-2" /> Create New Kundli
               </Button>
 
-              <Button
+              {/* <Button
                 onClick={handleFetchFromProfile}
                 variant="secondary"
                 className="rounded-xl text-xs md:text-sm py-2 md:py-3 h-auto" // Matching size
@@ -468,7 +448,7 @@ export default function FreeKundliPage() {
                 ) : (
                   "Use My Profile Details"
                 )}
-              </Button>
+              </Button> */}
             </div>
 
             <div className="space-y-4 px-2 sm:px-0">

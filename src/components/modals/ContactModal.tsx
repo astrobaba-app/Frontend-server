@@ -36,8 +36,8 @@ export default function ContactModal({ isOpen, onClose }: ContactModalProps) {
               </div>
               <div>
                 <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Email</p>
-                <a href="mailto:team@graho.in" className="text-dark font-medium">
-                  team@graho.in
+                <a href="mailto:hello@graho.in" className="text-dark font-medium">
+                  hello@graho.in
                 </a>
               </div>
             </div>

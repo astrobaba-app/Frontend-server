@@ -41,13 +41,13 @@ const QUICK_LINKS: LinkItem[] = [
 const CONTACT_INFO = {
   address: "Goa, India",
   phone: "+91 9011482683",
-  email: " team@graho.in",
+  email: " hello@graho.in",
 };
 
 const SOCIAL_MEDIA: Social[] = [
-  { name: "Facebook", href: "https://facebook.com" },
-  { name: "Instagram", href: "https://instagram.com" },
-  { name: "Linkedin", href: "https://linkedin.com" },
+  { name: "Facebook", href: "https://www.facebook.com/share/14Tmxa1KVPe" },
+  { name: "Instagram", href: "https://www.instagram.com/graho.in" },
+  { name: "Linkedin", href: "https://www.linkedin.com/company/graho" },
 ];
 
 const COMPANY_INFO = {

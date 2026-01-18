@@ -139,7 +139,7 @@ export default function ShippingDeliveryPage() {
               </div>
               <div className="text-left md:text-right">
                 <p className="font-medium" style={{ color: colors.darkGray }}>
-                  Email: <a href="mailto:team@graho.in" className="text-lg font-bold" style={{ color: colors.primeGreen }}>team@graho.in</a>
+                  Email: <a href="mailto:hello@graho.in" className="text-lg font-bold" style={{ color: colors.primeGreen }}>hello@graho.in</a>
                 </p>
                 <p className="mt-4 text-xs" style={{ color: colors.gray }}>
                   Graho may update this Shipping & Delivery Policy periodically to reflect operational or legal changes. The latest version will always be available on the platform.
