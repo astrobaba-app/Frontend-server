@@ -200,7 +200,7 @@ const Footer: React.FC = () => {
                 </div>
                 <span className="text-gray-400">{CONTACT_INFO.address}</span>
               </div>
-              <a
+              {/* <a
                 href={`tel:${CONTACT_INFO.phone}`}
                 className="flex items-center group"
               >
@@ -208,7 +208,7 @@ const Footer: React.FC = () => {
                   <Phone className="w-4 h-4 text-yellow-500" />
                 </div>
                 <span className="text-gray-400">{CONTACT_INFO.phone}</span>
-              </a>
+              </a> */}
               <a
                 href={`mailto:${CONTACT_INFO.email}`}
                 className="flex items-center group"

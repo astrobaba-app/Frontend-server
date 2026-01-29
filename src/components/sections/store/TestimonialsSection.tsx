@@ -54,7 +54,7 @@ export default function TestimonialsSection() {
           <div className="flex justify-center order-1 md:order-2">
             <div className="relative w-full h-40 md:w-full md:h-64 rounded-lg overflow-hidden">
               <Image
-                src="/images/test.jpg"
+                src="/images/testimonial-1.png"
                 alt="Customer testimonial"
                 fill
                 className="object-cover"
