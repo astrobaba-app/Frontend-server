@@ -348,7 +348,7 @@ export default function MyProfilePage() {
           <hr className="border-gray-100" />
 
           {/* Current Address */}
-          <div className="space-y-4">
+          {/* <div className="space-y-4">
             <Heading level={3} className="text-lg font-semibold text-gray-800">Current Address</Heading>
             <Input label="Street Address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="House no, Street" />
             
@@ -392,7 +392,7 @@ export default function MyProfilePage() {
                 pattern="[0-9]{6}"
               />
             </div>
-          </div>
+          </div> */}
 
           <Button type="submit" fullWidth size="lg" variant="custom" customColors={{ backgroundColor: "#facd05", textColor: "#111827" }} className="rounded-xl font-black text-lg py-4">
             Update Profile

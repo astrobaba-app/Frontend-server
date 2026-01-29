@@ -15,8 +15,8 @@ const testimonials: Testimonial[] = [
     id: 1,
     name: "Nikita",
     message:
-      "This is my second purchase from your store in the last two months itself. I bought the rose quartz pendant and got so many compliments from my colleagues. Even the colleague I found cute was convinced by the rose quartz saying it's magic. Ordered the bracelet as well now! Excited to try the combo together.",
-    image: "/images/testimonial.png",
+      "This is my second purchase from your store in the last two months itself. I bought the lucky-charm bracelet and got so many compliments from my colleagues. Even the colleague I found cute was convinced by the lucky-charm bracelet saying it's magic. Ordered the bracelet as well now! Excited to try the combo together.",
+    image: "/images/testimonial-1.png",
   },
 ];
 
@@ -24,7 +24,7 @@ export default function TestimonialsSection() {
   return (
     <section className="py-8 md:py-8 px-2 md:px-8 max-w-7xl mx-auto">
       <h2 className="text-2xl md:text-4xl font-bold text-gray-900 mb-6 md:mb-12 text-center">
-        Testimonials
+        What our users say
       </h2>
 
       <div className="relative px-2 md:px-20">
