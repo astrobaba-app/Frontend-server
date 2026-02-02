@@ -51,7 +51,7 @@ export default function RechargeModal({
         return;
       }
 
-      if (rechargeAmount > 100000) {
+      if (rechargeAmount > 100000000) {
         console.log('ERROR: Amount exceeds maximum');
         setError('Maximum recharge amount is ₹1,00,000');
         return;

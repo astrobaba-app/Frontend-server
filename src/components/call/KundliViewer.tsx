@@ -320,14 +320,38 @@ const PlanetaryTab: React.FC<{ kundli: any }> = ({ kundli }) => {
     return nakshatraLords[nakshatra] || '--';
   };
 
-  // Calculate house number based on ascendant and planet longitude
-  const getHouseNumber = (planetLongitude: number): number => {
-    const ascendantData = planetaryArray.find((p: any) => p?.planet === 'Ascendant');
-    const ascendantLongitude = ascendantData?.longitude || 0;
-    let house = Math.floor((planetLongitude - ascendantLongitude + 360) / 30) + 1;
-    if (house > 12) house -= 12;
-    if (house < 1) house += 12;
-    return house;
+  // Calculate house number based on ascendant and planet longitude (whole-sign houses)
+  const getHouseNumber = (planet: any): number | "--" => {
+    // Try multiple paths to find ascendant longitude
+    let ascendantLongitude = 
+      kundli?.basicDetails?.ascendant?.longitude ??
+      kundli?.astroDetails?.ascendant?.longitude ??
+      kundli?.astroDetails?.ascendant;
+    
+    // Also try to get from planetary array if Ascendant was included
+    if (!ascendantLongitude && planetaryArray) {
+      const ascPlanet = planetaryArray.find((p: any) => p?.planet === 'Ascendant');
+      ascendantLongitude = ascPlanet?.longitude;
+    }
+
+    if (ascendantLongitude === null || ascendantLongitude === undefined) {
+      return "--";
+    }
+
+    // Get sign numbers (0-11): Aries=0, Taurus=1, ..., Pisces=11
+    const ascSignNum = Math.floor(((Number(ascendantLongitude) % 360) + 360) % 360 / 30);
+    const planetSignNum =
+      planet?.sign_num !== null && planet?.sign_num !== undefined
+        ? Number(planet.sign_num)
+        : planet?.longitude !== null && planet?.longitude !== undefined
+          ? Math.floor(((Number(planet.longitude) % 360) + 360) % 360 / 30)
+          : null;
+
+    if (planetSignNum === null || Number.isNaN(planetSignNum)) return "--";
+
+    // Whole-sign house system: house = (planet_sign - asc_sign + 12) % 12, then add 1
+    // Example: Asc=Leo(4), Sun=Libra(6): (6-4+12)%12 = 2, +1 = House 3 ✓
+    return ((planetSignNum - ascSignNum + 12) % 12) + 1;
   };
 
   const getStatusLabel = (planet: any): string => {
@@ -418,7 +442,7 @@ const PlanetaryTab: React.FC<{ kundli: any }> = ({ kundli }) => {
             const status = getStatusLabel(planet);
             const signLord = getSignLord(planet.sign);
             const nakshatraLord = getNakshatraLord(planet.nakshatra);
-            const houseNumber = planet.longitude ? getHouseNumber(planet.longitude) : '--';
+            const houseNumber = planet.longitude ? getHouseNumber(planet) : '--';
             
             return (
               <tr

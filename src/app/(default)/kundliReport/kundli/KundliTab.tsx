@@ -93,15 +93,25 @@ const KundliTab: React.FC<KundliTabProps> = ({ kundliData }) => {
     return nakshatraLords[nakshatra] || '--';
   };
 
-  // Calculate house number based on ascendant and planet longitude
+  // Calculate house number using whole-sign houses (Vedic)
   const getHouseNumber = (planetLongitude: number): number => {
-    // Get ascendant from planetary data if available
-    const ascendantData = Object.values(planetaryData).find((p: any) => p?.planet === 'Ascendant') as PlanetData | undefined;
-    const ascendantLongitude = ascendantData?.longitude || 0;
-    let house = Math.floor((planetLongitude - ascendantLongitude + 360) / 30) + 1;
-    if (house > 12) house -= 12;
-    if (house < 1) house += 12;
-    return house;
+    // Try to get ascendant longitude from multiple sources
+    let ascendantLongitude = 
+      kundliData?.basicDetails?.ascendant?.longitude ??
+      kundliData?.astroDetails?.ascendant?.longitude ??
+      (Object.values(planetaryData).find((p: any) => p?.planet === 'Ascendant') as PlanetData | undefined)?.longitude;
+    
+    if (ascendantLongitude === null || ascendantLongitude === undefined) {
+      console.warn('[KundliTab] No ascendant found, houses will be incorrect');
+      return 0;
+    }
+    
+    // Whole-sign houses: both planet and ascendant sign numbers (0-11)
+    const ascSignNum = Math.floor(((Number(ascendantLongitude) % 360) + 360) % 360 / 30);
+    const planetSignNum = Math.floor(((Number(planetLongitude) % 360) + 360) % 360 / 30);
+    
+    // House = (planet_sign - asc_sign + 12) % 12, then add 1
+    return ((planetSignNum - ascSignNum + 12) % 12) + 1;
   };
 
   const getStatusLabel = (planet: PlanetData) => {
