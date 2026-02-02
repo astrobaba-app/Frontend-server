@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { getKundli, KundliResponse } from "@/store/api/kundli";
+import { getKundli, checkAiReportStatus, KundliResponse } from "@/store/api/kundli";
 import { useAuth } from "@/contexts/AuthContext";
 // import { KundliReportSkeleton } from "@/components/skeletons";
 import Toast from "@/components/atoms/Toast";
@@ -35,6 +35,9 @@ function KundliReportPage() {
   const [activeTab, setActiveTab] = useState("Basic");
   const [astrologers, setAstrologers] = useState<ApiAstrologer[]>([]);
   const [astrologersLoading, setAstrologersLoading] = useState(true);
+  const [aiReportLoading, setAiReportLoading] = useState(false);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const componentInstanceIdRef = useRef<string>(Math.random().toString(36).substring(7));
 
   const tabs = [
     "Basic",
@@ -45,6 +48,59 @@ function KundliReportPage() {
     "Dasha",
     "Free Report",
   ];
+
+  // Poll for AI report generation (runs in background)
+  const startPollingForAiReport = (userRequestId: string) => {
+    const instanceId = componentInstanceIdRef.current;
+    console.log(`[${instanceId}] Starting polling for ${userRequestId}`);
+    
+    // Clear any existing polling first
+    if (pollingIntervalRef.current) {
+      console.log(`[${instanceId}] Clearing existing interval`);
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+
+    let attempts = 0;
+    const maxAttempts = 60; // Poll for up to 60 seconds
+
+    const pollInterval = setInterval(async () => {
+      try {
+        attempts++;
+        console.log(`[${instanceId}] Polling attempt ${attempts} for ${userRequestId}`);
+        const response = await checkAiReportStatus(userRequestId);
+        
+        if (response.isReady && response.aiFreeReport) {
+          console.log(`[${instanceId}] AI report ready! Stopping polling.`);
+          // Update kundli data with AI report
+          setKundliData((prev) => prev ? {
+            ...prev,
+            aiFreeReport: response.aiFreeReport
+          } : null);
+          setAiReportLoading(false);
+          
+          // Stop polling
+          clearInterval(pollInterval);
+          pollingIntervalRef.current = null;
+          return;
+        }
+
+        // Stop after max attempts
+        if (attempts >= maxAttempts) {
+          console.log(`[${instanceId}] Max attempts reached. Stopping polling.`);
+          setAiReportLoading(false);
+          clearInterval(pollInterval);
+          pollingIntervalRef.current = null;
+          return;
+        }
+      } catch (error) {
+        console.error(`[${instanceId}] Polling error:`, error);
+        // Don't stop polling on error, just log it
+      }
+    }, 1000); // Check every 1 second
+    
+    pollingIntervalRef.current = pollInterval;
+  };
 
   useEffect(() => {
     if (!authLoading && !isLoggedIn) {
@@ -77,6 +133,9 @@ function KundliReportPage() {
         const response = await getKundli(kundliId);
         if (response.success && response.kundli) {
           setKundliData(response.kundli);
+          
+          // Don't start polling here - let the Free Report tab handle it
+          // This prevents polling when user is not viewing the report
         }
       } catch (error: any) {
         console.error("Failed to fetch kundli:", error);
@@ -86,10 +145,48 @@ function KundliReportPage() {
       }
     };
 
-    if (isLoggedIn && !authLoading) {
+    if (isLoggedIn && !authLoading && kundliId) {
       fetchKundliData();
     }
+
+    // Cleanup polling on unmount or when dependencies change
+    return () => {
+      if (pollingIntervalRef.current) {
+        console.log("Cleaning up polling interval");
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+        setAiReportLoading(false);
+      }
+    };
   }, [isLoggedIn, authLoading, kundliId]);
+
+  // Start polling only when Free Report tab is active
+  useEffect(() => {
+    const instanceId = componentInstanceIdRef.current;
+    
+    if (activeTab === "Free Report" && kundliData && !kundliData.aiFreeReport && kundliId) {
+      console.log(`[${instanceId}] Free Report tab active - starting AI polling for ${kundliId}`);
+      setAiReportLoading(true);
+      startPollingForAiReport(kundliId);
+    } else {
+      // Stop polling when leaving Free Report tab
+      if (pollingIntervalRef.current) {
+        console.log(`[${instanceId}] Stopping polling (tab: ${activeTab}, hasAI: ${!!kundliData?.aiFreeReport})`);
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+        setAiReportLoading(false);
+      }
+    }
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        console.log(`[${instanceId}] Cleanup: stopping polling`);
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+        setAiReportLoading(false);
+      }
+    };
+  }, [activeTab, kundliData?.aiFreeReport, kundliId]);
 
   useEffect(() => {
     const fetchAstrologers = async () => {
@@ -239,7 +336,7 @@ function KundliReportPage() {
             <AshtakvargaTab kundliData={kundliData} />
           )}
           {activeTab === "Free Report" && (
-            <FreeReportTab kundliData={kundliData} />
+            <FreeReportTab kundliData={kundliData} aiReportLoading={aiReportLoading} />
           )}
         </div>
       </div>

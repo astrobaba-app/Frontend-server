@@ -115,12 +115,12 @@ const NorthIndianChart: React.FC<{
     { house: 2, top: '10%', left: '28%', numberTop: '20%', numberLeft: '25%' },      // Top-right of center
     { house: 3, top: '25%', left: '12%', numberTop: '25%', numberLeft: '20%' },      // Top-right corner
     { house: 4, top: '50%', left: '28%', numberTop: '50%', numberLeft: '42%' },      // Right upper
-    { house: 5, top: '65%', left: '80%', numberTop: '75%', numberLeft: '20%' },      // Right lower
+    { house: 5, top: '73%', left: '12%', numberTop: '75%', numberLeft: '20%' },      // Right lower
     { house: 6, top: '90%', left: '28%', numberTop: '79%', numberLeft: '25%' },      // Bottom-right of center
     { house: 7, top: '75%', left: '53%', numberTop: '57%', numberLeft: '50%' },      // Bottom center
-    { house: 8, top: '75%', left: '95%', numberTop: '80%', numberLeft: '75%' },      // Bottom-left of center
+    { house: 8, top: '75%', left: '55%', numberTop: '80%', numberLeft: '75%' },      // Bottom-left of center
     { house: 9, top: '50%', left: '78%', numberTop: '75%', numberLeft: '80%' },      // Bottom-left corner
-    { house: 10, top: '74%', left: '93%', numberTop: '50%', numberLeft: '58%' },     // Left lower
+    { house: 10, top: '50%', left: '78%', numberTop: '50%', numberLeft: '58%' },     // Left lower
     { house: 11, top: '25%', left: '93%', numberTop: '25%', numberLeft: '80%' },     // Left upper
     { house: 12, top: '10%', left: '78%', numberTop: '20%', numberLeft: '75%' },     // Top-left of center
   ];

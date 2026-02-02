@@ -7,9 +7,10 @@ import { colors } from "@/utils/colors";
 
 interface FreeReportTabProps {
   kundliData: KundliResponse["kundli"];
+  aiReportLoading?: boolean;
 }
 
-const FreeReportTab: React.FC<FreeReportTabProps> = ({ kundliData }) => {
+const FreeReportTab: React.FC<FreeReportTabProps> = ({ kundliData, aiReportLoading = false }) => {
   const [activeMainTab, setActiveMainTab] = useState<"general" | "planetary" | "vimshottari" | "yoga">("general");
   const [activeSubTab, setActiveSubTab] = useState<string>("General");
   
@@ -17,6 +18,24 @@ const FreeReportTab: React.FC<FreeReportTabProps> = ({ kundliData }) => {
 
   // General sub-tabs
   const generalSubTabs = ["General", "Planetary", "Vimshottari Dasha", "Yoga"];
+
+  // AI Loading Skeleton
+  const AiLoadingSkeleton = () => (
+    <div className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
+      <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
+      <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
+      <div className="h-4 bg-gray-200 rounded w-5/6 mb-3"></div>
+      <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+      <div className="mt-4 flex items-center gap-2 text-sm text-blue-600">
+        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>Generating insights... (30-60 seconds)</span>
+      </div>
+    </div>
+  );
+
 
   // Format date
   const formatDate = (dateStr: string): string => {
@@ -100,57 +119,75 @@ const FreeReportTab: React.FC<FreeReportTabProps> = ({ kundliData }) => {
         <div className="space-y-6">
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Ascendant Report</h3>
-            <p className="text-sm text-gray-700 leading-relaxed mb-4">
-              {getValue(aiGeneral?.ascendant_overview) !== "--"
-                ? aiGeneral.ascendant_overview
-                : getValue(ascInfluence?.description) !== "--" 
-                ? ascInfluence.description
-                : "---"}
-            </p>
-            {ascendantSign !== "--" && (
-              <p className="text-sm text-gray-700 leading-relaxed">
-                Your ascendant is <span className="font-semibold">{ascendantSign}</span>
-              </p>
+            {aiReportLoading && getValue(aiGeneral?.ascendant_overview) === "--" ? (
+              <AiLoadingSkeleton />
+            ) : (
+              <>
+                <p className="text-sm text-gray-700 leading-relaxed mb-4">
+                  {getValue(aiGeneral?.ascendant_overview) !== "--"
+                    ? aiGeneral.ascendant_overview
+                    : getValue(ascInfluence?.description) !== "--" 
+                    ? ascInfluence.description
+                    : "---"}
+                </p>
+                {ascendantSign !== "--" && (
+                  <p className="text-sm text-gray-700 leading-relaxed">
+                    Your ascendant is <span className="font-semibold">{ascendantSign}</span>
+                  </p>
+                )}
+              </>
             )}
           </div>
 
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Personality</h3>
-            <p className="text-sm text-gray-700 leading-relaxed">
-              {getValue(aiGeneral?.personality) !== "--"
-                ? aiGeneral.personality
-                : getValue(overallPersonality) !== "--"
-                ? overallPersonality
-                : getValue(personality?.personality_report)
-                ? personality.personality_report
-                : "---"}
-            </p>
+            {aiReportLoading && getValue(aiGeneral?.personality) === "--" ? (
+              <AiLoadingSkeleton />
+            ) : (
+              <p className="text-sm text-gray-700 leading-relaxed">
+                {getValue(aiGeneral?.personality) !== "--"
+                  ? aiGeneral.personality
+                  : getValue(overallPersonality) !== "--"
+                  ? overallPersonality
+                  : getValue(personality?.personality_report)
+                  ? personality.personality_report
+                  : "---"}
+              </p>
+            )}
           </div>
 
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Physical Characteristics</h3>
-            <p className="text-sm text-gray-700 leading-relaxed">
-              {getValue(aiGeneral?.physical) !== "--"
-                ? aiGeneral.physical
-                : getValue(ascInfluence?.physical_appearance) !== "--"
-                ? ascInfluence.physical_appearance
-                : getValue(personality?.physical_characteristics) !== "--"
-                ? personality.physical_characteristics
-                : "---"}
-            </p>
+            {aiReportLoading && getValue(aiGeneral?.physical) === "--" ? (
+              <AiLoadingSkeleton />
+            ) : (
+              <p className="text-sm text-gray-700 leading-relaxed">
+                {getValue(aiGeneral?.physical) !== "--"
+                  ? aiGeneral.physical
+                  : getValue(ascInfluence?.physical_appearance) !== "--"
+                  ? ascInfluence.physical_appearance
+                  : getValue(personality?.physical_characteristics) !== "--"
+                  ? personality.physical_characteristics
+                  : "---"}
+              </p>
+            )}
           </div>
 
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Health</h3>
-            <p className="text-sm text-gray-700 leading-relaxed">
-              {getValue(aiGeneral?.health) !== "--"
-                ? aiGeneral.health
-                : getValue(healthAnalysis?.constitution) !== "--"
-                ? healthAnalysis.constitution
-                : getValue(personality?.health_report) !== "--"
-                ? personality.health_report
-                : "---"}
-            </p>
+            {aiReportLoading && getValue(aiGeneral?.health) === "--" ? (
+              <AiLoadingSkeleton />
+            ) : (
+              <p className="text-sm text-gray-700 leading-relaxed">
+                {getValue(aiGeneral?.health) !== "--"
+                  ? aiGeneral.health
+                  : getValue(healthAnalysis?.constitution) !== "--"
+                  ? healthAnalysis.constitution
+                  : getValue(personality?.health_report) !== "--"
+                  ? personality.health_report
+                  : "---"}
+              </p>
+            )}
           </div>
         </div>
       );

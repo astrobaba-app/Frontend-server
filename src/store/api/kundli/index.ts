@@ -44,7 +44,32 @@ export interface KundliResponse {
       createdAt: string;
       updatedAt: string;
     };
+    aiFreeReport?: {
+      general?: {
+        ascendant_overview?: string;
+        personality?: string;
+        physical?: string;
+        health?: string;
+      };
+      remedies?: {
+        overview?: string;
+        rudraksha?: string;
+        gemstones?: string;
+      };
+      dosha?: {
+        overview?: string;
+        manglik?: string;
+        kalsarpa?: string;
+        sadesati?: string;
+      };
+    };
   };
+}
+
+export interface AiReportStatusResponse {
+  success: boolean;
+  isReady: boolean;
+  aiFreeReport?: any;
 }
 
 export interface AllKundlisResponse {
@@ -82,5 +107,14 @@ export const getKundli = async (userRequestId: string): Promise<KundliResponse> 
     return response.data;
   } catch (error: any) {
     throw error.response?.data || { message: 'Failed to fetch kundli details', success: false };
+  }
+};
+
+export const checkAiReportStatus = async (userRequestId: string): Promise<AiReportStatusResponse> => {
+  try {
+    const response: AxiosResponse<AiReportStatusResponse> = await api.get(`/kundli/${userRequestId}/ai-status`);
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || { message: 'Failed to check AI report status', success: false };
   }
 };
