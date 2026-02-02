@@ -161,12 +161,12 @@ const NorthIndianChart: React.FC<{
           
           return (
             <React.Fragment key={house}>
-              {/* Sign number (matches reference layouts) */}
+              {/* House number (1-12) */}
               <div
                 className="absolute text-[10px] text-gray-500 font-medium"
                 style={{ top: numberTop, left: numberLeft, transform: 'translate(-50%, -50%)' }}
               >
-                {signNum}
+                {house}
               </div>
               
               {/* Planets or -- if empty */}
