@@ -86,6 +86,7 @@ export interface AllKundlisResponse {
 export const createKundli = async (data: KundliRequest): Promise<KundliResponse> => {
   try {
     const response: AxiosResponse<KundliResponse> = await api.post('/kundli/create', data);
+    
     return response.data;
   } catch (error: any) {
     throw error.response?.data || { message: 'Failed to create kundli', success: false };
@@ -104,6 +105,7 @@ export const getAllKundlis = async (): Promise<AllKundlisResponse> => {
 export const getKundli = async (userRequestId: string): Promise<KundliResponse> => {
   try {
     const response: AxiosResponse<KundliResponse> = await api.get(`/kundli/${userRequestId}`);
+    console.log('Kundli details fetched successfully:', response.data);
     return response.data;
   } catch (error: any) {
     throw error.response?.data || { message: 'Failed to fetch kundli details', success: false };

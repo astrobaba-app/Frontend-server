@@ -376,18 +376,18 @@ const SouthIndianChart: React.FC<{
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const signPositions = [
-    { sign: 1, row: 0, col: 0 },
-    { sign: 2, row: 0, col: 1 },
-    { sign: 3, row: 0, col: 2 },
-    { sign: 4, row: 0, col: 3 },
-    { sign: 5, row: 1, col: 3 },
-    { sign: 6, row: 2, col: 3 },
-    { sign: 7, row: 3, col: 3 },
-    { sign: 8, row: 3, col: 2 },
-    { sign: 9, row: 3, col: 1 },
-    { sign: 10, row: 3, col: 0 },
-    { sign: 11, row: 2, col: 0 },
-    { sign: 12, row: 1, col: 0 },
+    { sign: 1, row: 0, col: 1 },
+    { sign: 2, row: 0, col: 2 },
+    { sign: 3, row: 0, col: 3 },
+    { sign: 4, row: 1, col: 3 },
+    { sign: 5, row: 2, col: 3 },
+    { sign: 6, row: 3, col: 3 },
+    { sign: 7, row: 3, col: 2 },
+    { sign: 8, row: 3, col: 1 },
+    { sign: 9, row: 3, col: 0 },
+    { sign: 10, row: 2, col: 0 },
+    { sign: 11, row: 1, col: 0 },
+    { sign: 12, row: 0, col: 0 },
   ];
 
   useEffect(() => {
