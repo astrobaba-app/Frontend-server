@@ -25,8 +25,7 @@ interface KundliChartProps {
 const KundliChart: React.FC<
   KundliChartProps & { ascSignNum?: number; ascDegree?: number }
 > = ({ chartData, chartType, style = "north", ascSignNum, ascDegree }) => {
-  // Normalize sign numbers to a consistent 1..12 range.
-  // (Some sources use 0..11, others use 1..12; the backend here typically uses 1..12.)
+
   const normalizeSignNum = (value: unknown): number => {
     const n = typeof value === "number" ? value : Number(value);
     if (!Number.isFinite(n)) return 1;
