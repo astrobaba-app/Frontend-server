@@ -346,12 +346,12 @@ function AstrologersPage() {
               onCallClick={(e) => {
                 e?.preventDefault();
                 e?.stopPropagation();
-                router.push(`/aichat?astrologer=${encodeURIComponent(astrologer.fullName)}&photo=${encodeURIComponent(astrologer.photo || '')}`);
+                router.push(`/aichat?id=${encodeURIComponent(astrologer.id)}&astrologer=${encodeURIComponent(astrologer.fullName)}&photo=${encodeURIComponent(astrologer.photo || '')}`);
               }}
               onChatClick={(e) => {
                 e?.preventDefault();
                 e?.stopPropagation();
-                router.push(`/aichat?astrologer=${encodeURIComponent(astrologer.fullName)}&photo=${encodeURIComponent(astrologer.photo || '')}`);
+                router.push(`/aichat?id=${encodeURIComponent(astrologer.id)}&astrologer=${encodeURIComponent(astrologer.fullName)}&photo=${encodeURIComponent(astrologer.photo || '')}`);
               }}
             />
           </Link>

@@ -8,6 +8,7 @@ const BASE_URL = '/ai-chat';
 export interface AIChatSession {
   id: string;
   userId: string;
+  astrologerId?: string; // ID of the AI astrologer
   title: string;
   isActive: boolean;
   createdAt: string;
@@ -118,9 +119,11 @@ export interface VoiceConfigResponse {
 /**
  * Create a new AI chat session
  */
-export const createChatSession = async (): Promise<CreateSessionResponse> => {
+export const createChatSession = async (astrologerId?: string): Promise<CreateSessionResponse> => {
   try {
-    const response: AxiosResponse<CreateSessionResponse> = await api.post(`${BASE_URL}/create`);
+    const response: AxiosResponse<CreateSessionResponse> = await api.post(`${BASE_URL}/create`, {
+      astrologerId
+    });
     return response.data;
   } catch (error: any) {
     throw error.response?.data || { message: 'Failed to create chat session', success: false };
@@ -130,10 +133,10 @@ export const createChatSession = async (): Promise<CreateSessionResponse> => {
 /**
  * Get all chat sessions for the user
  */
-export const getMyChatSessions = async (page: number = 1, limit: number = 20): Promise<GetSessionsResponse> => {
+export const getMyChatSessions = async (page: number = 1, limit: number = 20, astrologerId?: string): Promise<GetSessionsResponse> => {
   try {
     const response: AxiosResponse<GetSessionsResponse> = await api.get(`${BASE_URL}/sessions`, {
-      params: { page, limit }
+      params: { page, limit, astrologerId }
     });
     return response.data;
   } catch (error: any) {

@@ -73,6 +73,7 @@ const AIChatPageContent = () => {
   const searchParams = useSearchParams();
   const astrologerName = searchParams.get("astrologer");
   const photo = searchParams.get("photo");
+  const astrologerId = searchParams.get("id"); // Get astrologer ID from URL
   const AI_ASTROLOGER_INFO = getAIAstrologerInfo(astrologerName, photo);
   const { showToast, toastProps, hideToast } = useToast();
 
@@ -200,7 +201,7 @@ const AIChatPageContent = () => {
   // Load all chat sessions
   const loadSessions = async () => {
     try {
-      const response = await getMyChatSessions(1, 20);
+      const response = await getMyChatSessions(1, 20, astrologerId || undefined);
       setSessions(response.sessions);
 
       // If there's at least one session, load it
@@ -234,12 +235,13 @@ const AIChatPageContent = () => {
   const handleNewChat = async () => {
     try {
       setIsLoading(true);
-      const response = await createChatSession();
+      const response = await createChatSession(astrologerId || undefined);
 
       // Add to sessions list
       const newSession: AIChatSession = {
         id: response.session.id,
         userId: String(user?.id || ""),
+        astrologerId: astrologerId || undefined,
         title: response.session.title,
         isActive: true,
         createdAt: response.session.createdAt,
