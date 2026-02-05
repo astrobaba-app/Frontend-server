@@ -191,8 +191,9 @@ const KundliTab: React.FC<KundliTabProps> = ({ kundliData }) => {
         </div>
       </div>
 
-      {/* Charts Display */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      {/* Charts Display - Centered */}
+      <div className="flex justify-center mb-8">
+        <div className="w-full max-w-md">
         {/* D1 Chart - Lagna/Ascendant */}
         <div className="">
           {isValidChartData(kundliData.charts?.D1) ? (
@@ -216,7 +217,7 @@ const KundliTab: React.FC<KundliTabProps> = ({ kundliData }) => {
         </div>
 
         {/* D9 Chart - Navamsa */}
-        <div className="">
+        {/* <div className="">
           {isValidChartData(kundliData.charts?.D9) ? (
             <KundliChart chartData={kundliData.charts.D9} chartType="Navamsa" style={chartStyle} />
           ) : (
@@ -229,6 +230,7 @@ const KundliTab: React.FC<KundliTabProps> = ({ kundliData }) => {
               </div>
             </>
           )}
+        </div> */}
         </div>
       </div>
 

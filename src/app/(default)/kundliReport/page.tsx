@@ -43,8 +43,8 @@ function KundliReportPage() {
     "Basic",
     "Kundli",
     "KP",
-    "Ashtakvarga",
-    "Charts",
+    // "Ashtakvarga",
+    // "Charts",
     "Dasha",
     "Free Report",
   ];
@@ -329,12 +329,12 @@ function KundliReportPage() {
             <BasicTab kundliData={{ success: true, kundli: kundliData }} />
           )}
           {activeTab === "Kundli" && <KundliTab kundliData={kundliData} />}
-          {activeTab === "Charts" && <ChartsTab kundliData={kundliData} />}
+          {/* {activeTab === "Charts" && <ChartsTab kundliData={kundliData} />} */}
           {activeTab === "Dasha" && <DashaTab kundliData={kundliData} />}
           {activeTab === "KP" && <KPTab kundliData={kundliData} />}
-          {activeTab === "Ashtakvarga" && (
+          {/* {activeTab === "Ashtakvarga" && (
             <AshtakvargaTab kundliData={kundliData} />
-          )}
+          )} */}
           {activeTab === "Free Report" && (
             <FreeReportTab kundliData={kundliData} aiReportLoading={aiReportLoading} />
           )}

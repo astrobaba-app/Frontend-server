@@ -326,9 +326,9 @@ const KPTab: React.FC<KPTabProps> = ({ kundliData }) => {
   return (
     <div className="max-w-6xl mx-auto px-2 md:px-4">
       {/* Bhav Chalit Chart and Ruling Planets */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"> */}
         {/* Bhav Chalit Chart */}
-        <div>
+        {/* <div>
           <h3 className="text-lg font-bold text-gray-900 mb-4">
             Bhav Chalit Chart
           </h3>
@@ -338,10 +338,10 @@ const KPTab: React.FC<KPTabProps> = ({ kundliData }) => {
             cusps={(kundliData as any)?.astroDetails?.houses?.cusps}
             ascendantLongitude={kundliData?.basicDetails?.ascendant?.longitude}
           />
-        </div>
+        </div> */}
 
-        {/* Ruling Planets */}
-        <div className="w-full">
+        {/* Ruling Planets - Centered */}
+        <div className="max-w-2xl mx-auto mb-8">
           <h3 className="text-lg font-bold text-gray-900 mb-4 border-l-4 border-yellow-400 pl-3">
             Ruling Planets
           </h3>
@@ -467,7 +467,7 @@ const KPTab: React.FC<KPTabProps> = ({ kundliData }) => {
             </div>
           </div>
         </div>
-      </div>
+      {/* </div> */}
 
       {/* Planets Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
