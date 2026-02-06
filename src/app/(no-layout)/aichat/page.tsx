@@ -1318,7 +1318,7 @@ const AIChatPageContent = () => {
               )}
 
               {/* Start/Stop Voice Call Button */}
-              {currentSessionId && !isChatSessionActive && (
+              {/* {currentSessionId && !isChatSessionActive && (
                 <button
                   onClick={
                     isVoiceSessionActive
@@ -1343,7 +1343,7 @@ const AIChatPageContent = () => {
                     <span className="hidden sm:inline"> Voice</span>
                   </span>
                 </button>
-              )}
+              )} */}
 
               {/* Wallet Balance */}
               <Link href="/profile/wallet">

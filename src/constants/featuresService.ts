@@ -57,7 +57,7 @@ export const featureServices: FeatureService[] = [
   },
   {
     icon: FiShoppingBag,
-    title: "Astrostore",
+    title: "Graho Store",
     description: "Remedies & Products",
     href: "/store",
   },
