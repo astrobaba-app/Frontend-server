@@ -512,6 +512,59 @@ const PanchangTab: React.FC<{ kundli: any }> = ({ kundli }) => {
 
   return (
     <div className="space-y-4">
+      {/* Panchang Timings */}
+      <div className="bg-gradient-to-br from-orange-50 to-yellow-50 rounded-lg p-4 border border-orange-200">
+        <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+          <span className="text-xl">🌅</span>
+          Panchang Timings
+        </h3>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="bg-white rounded p-2 shadow-sm">
+            <span className="text-gray-600 text-xs">Date:</span>
+            <p className="font-semibold text-gray-900">{getValue(panchang.date)}</p>
+          </div>
+          <div className="bg-white rounded p-2 shadow-sm">
+            <span className="text-gray-600 text-xs">Day:</span>
+            <p className="font-semibold text-gray-900">{getValue(panchang.weekday)}</p>
+          </div>
+          <div className="bg-white rounded p-2 shadow-sm">
+            <span className="text-gray-600 text-xs">Sunrise:</span>
+            <p className="font-semibold text-amber-600">{getValue(panchang.sunrise)}</p>
+          </div>
+          <div className="bg-white rounded p-2 shadow-sm">
+            <span className="text-gray-600 text-xs">Sunset:</span>
+            <p className="font-semibold text-indigo-600">{getValue(panchang.sunset)}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Inauspicious Timings */}
+      {(panchang.rahu_kaal || panchang.gulika_kaal) && (
+        <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+          <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+            <span className="text-xl">⚠️</span>
+            Inauspicious Timings
+          </h3>
+          <div className="space-y-2 text-sm">
+            {panchang.rahu_kaal && (
+              <InfoRow 
+                label="Rahu Kaal" 
+                value={`${panchang.rahu_kaal.start} - ${panchang.rahu_kaal.end}`} 
+              />
+            )}
+            {panchang.gulika_kaal && (
+              <InfoRow 
+                label="Gulika Kaal" 
+                value={`${panchang.gulika_kaal.start} - ${panchang.gulika_kaal.end}`} 
+              />
+            )}
+          </div>
+          <p className="text-xs text-red-700 mt-3 italic">
+            ⚠️ Avoid starting new ventures during these periods
+          </p>
+        </div>
+      )}
+
       <div className="bg-orange-50 rounded-lg p-4">
         <h3 className="font-bold text-gray-900 mb-3">Panchang Details</h3>
         <div className="space-y-2 text-sm">
@@ -519,7 +572,6 @@ const PanchangTab: React.FC<{ kundli: any }> = ({ kundli }) => {
           <InfoRow label="Nakshatra" value={getValue(panchang.nakshatra)} />
           <InfoRow label="Yoga" value={getValue(panchang.yoga)} />
           <InfoRow label="Karana" value={getValue(panchang.karana)} />
-          <InfoRow label="Day" value={getValue(panchang.day || panchang.weekday)} />
         </div>
       </div>
 
@@ -530,6 +582,34 @@ const PanchangTab: React.FC<{ kundli: any }> = ({ kundli }) => {
             <InfoRow label="Name" value={getValue(panchang.nakshatra.name)} />
             <InfoRow label="Pada" value={getValue(panchang.nakshatra.pada)} />
             <InfoRow label="Lord" value={getValue(panchang.nakshatra.lord)} />
+            <InfoRow label="Tatva" value={getValue(panchang.nakshatra.tatva)} />
+            <InfoRow label="Gan" value={getValue(panchang.nakshatra.gan)} />
+            <InfoRow label="Yoni" value={getValue(panchang.nakshatra.yoni)} />
+          </div>
+        </div>
+      )}
+
+      {/* Sun & Moon Positions */}
+      {(panchang.sun || panchang.moon) && (
+        <div className="bg-blue-50 rounded-lg p-4">
+          <h3 className="font-bold text-gray-900 mb-3">Celestial Positions</h3>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            {panchang.sun && (
+              <div className="bg-white rounded p-2 shadow-sm">
+                <span className="text-gray-600 text-xs flex items-center gap-1">
+                  <span>☀️</span> Sun Sign:
+                </span>
+                <p className="font-semibold text-gray-900">{getValue(panchang.sun.sign)}</p>
+              </div>
+            )}
+            {panchang.moon && (
+              <div className="bg-white rounded p-2 shadow-sm">
+                <span className="text-gray-600 text-xs flex items-center gap-1">
+                  <span>🌙</span> Moon Sign:
+                </span>
+                <p className="font-semibold text-gray-900">{getValue(panchang.moon.sign)}</p>
+              </div>
+            )}
           </div>
         </div>
       )}

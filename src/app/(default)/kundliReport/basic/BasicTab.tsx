@@ -75,7 +75,27 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
   };
 
   const birthDate = formatDate(userRequest?.dateOfbirth);
-  const birthTime = getValue(userRequest?.timeOfbirth);
+  const formatTime = (timeValue: any) => {
+    if (!timeValue) return "--";
+    try {
+      // Accept "HH:MM:SS", "HH:MM", or Date
+      if (typeof timeValue === "string") {
+        const parts = timeValue.split(":");
+        const h = parts[0]?.padStart(2, "0");
+        const m = (parts[1] ?? "00").padStart(2, "0");
+        const s = (parts[2] ?? "00").padStart(2, "0");
+        return `${h}:${m}:${s}`;
+      }
+      if (timeValue instanceof Date) {
+        return timeValue.toLocaleTimeString("en-GB", { hour12: false });
+      }
+      return getValue(timeValue);
+    } catch {
+      return getValue(timeValue);
+    }
+  };
+
+  const birthTime = formatTime(userRequest?.timeOfbirth);
 
   const getPlanetaryValue = (planetName: string, field: string) => {
     if (!planetary || typeof planetary !== "object") return getValue(undefined);
@@ -92,7 +112,12 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
       return getValue((basicDetails as any)[field]);
     }
     if (panchang) {
-      if (field === "tithi") return getValue(panchang.tithi?.name);
+      if (field === "tithi") {
+        const tithiName = panchang.tithi?.name;
+        const paksha = panchang.tithi?.paksha;
+        if (tithiName && paksha) return getValue(`${paksha}${tithiName}`);
+        return getValue(tithiName);
+      }
       if (field === "yog") return getValue(panchang.yoga?.name);
       if (field === "karan") return getValue(panchang.karana?.name);
       if (field === "nakshatra") return getValue(panchang.nakshatra?.name);
@@ -100,7 +125,7 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
       if (field === "paya") return getValue(panchang.nakshatra?.paya);
       if (field === "varna") return getValue(panchang.nakshatra?.varna);
       if (field === "yoni") return getValue(panchang.nakshatra?.yoni);
-      if (field === "yunja") return getValue(panchang.nakshatra?.yoni);
+      if (field === "yunja") return getValue(panchang.tithi?.yunja || panchang.nakshatra?.yunja);
       if (field === "gan") return getValue(panchang.nakshatra?.gan);
       if (field === "nadi") return getValue(panchang.nakshatra?.nadi);
       if (field === "vashya") return getValue(panchang.nakshatra?.vashya);
@@ -164,48 +189,58 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
   };
 
   const basicDetailsLeft: DisplayField[] = [
-    { label: "Name", value: getValue(userRequest?.fullName), isGrey: true },
-    { label: "Birth Date", value: birthDate },
-    { label: "Birth Time", value: birthTime, isGrey: true },
-    { label: "Birth Place", value: getValue(userRequest?.placeOfBirth) },
+    { label: "Name", value: getValue(userRequest?.fullName) },
+    { label: "Date", value: birthDate, isGrey: true },
+    { label: "Time", value: birthTime },
+    { label: "Place", value: getValue(userRequest?.placeOfBirth), isGrey: true },
+    { label: "Latitude", value: getValue(userRequest?.latitude) },
+    { label: "Longitude", value: getValue(userRequest?.longitude), isGrey: true },
+    { label: "Timezone", value: "GMT+5.5" },
+    { label: "Sunrise", value: formatTime(panchang?.sunrise), isGrey: true },
   ];
 
   const basicDetailsRight: DisplayField[] = [
-    { label: "Nakshatra", value: getNakshatraName() },
-    { label: "Ascendant", value: getAscendantSign(), isGrey: true },
-    { label: "Sign", value: getPlanetaryValue("Moon", "sign") },
+    { label: "Sunset", value: formatTime(panchang?.sunset) },
     {
       label: "Ayanamsha",
-      value: getFixedValue((basicDetails as any)?.ayanamsha, 2),
+      value: getFixedValue((basicDetails as any)?.ayanamsha, 5),
       isGrey: true,
     },
   ];
 
-  const kundliDetailsLeft: DisplayField[] = [
-    { label: "Nakshatra Lord", value: getValue(panchang?.nakshatra?.lord) },
-    { label: "Yog", value: getBasicDetailValue("yog"), isGrey: true },
+  // Panchang Details
+  const panchangDetails: DisplayField[] = [
     { label: "Tithi", value: getBasicDetailValue("tithi") },
-    { label: "Tatva", value: getBasicDetailValue("tatva"), isGrey: true },
-    { label: "Paya", value: getBasicDetailValue("paya") },
-    { label: "Varna", value: getBasicDetailValue("varna"), isGrey: true },
+    { label: "Karan", value: getBasicDetailValue("karan"), isGrey: true },
+    { label: "Yog", value: getBasicDetailValue("yog") },
+    { label: "Nakshatra", value: getNakshatraName(), isGrey: true },
+  ];
+
+  // Avakhada Details
+  const avakhadaDetailsLeft: DisplayField[] = [
+    { label: "Varna", value: getBasicDetailValue("varna") },
+    { label: "Vashya", value: getBasicDetailValue("vashya"), isGrey: true },
+    { label: "Yoni", value: getBasicDetailValue("yoni") },
+    { label: "Gan", value: getBasicDetailValue("gan"), isGrey: true },
+    { label: "Nadi", value: getBasicDetailValue("nadi") },
+    { label: "Sign", value: getPlanetaryValue("Moon", "sign"), isGrey: true },
     {
       label: "Sign Lord",
       value: getValue(
         getSignLordFromSign(getPlanetaryValue("Moon", "sign") as string)
       ),
     },
-    { label: "Yoni", value: getBasicDetailValue("yoni"), isGrey: true },
+    { label: "Nakshatra-Charan", value: getNakshatraName(), isGrey: true },
   ];
 
-  const kundliDetailsRight: DisplayField[] = [
-    { label: "Charan", value: getBasicDetailValue("charan") },
+  const avakhadaDetailsRight: DisplayField[] = [
+    { label: "Yog", value: getBasicDetailValue("yog") },
     { label: "Karan", value: getBasicDetailValue("karan"), isGrey: true },
-    { label: "Yunja", value: getBasicDetailValue("yunja") },
+    { label: "Tithi", value: getBasicDetailValue("tithi") },
+    { label: "Yunja", value: getBasicDetailValue("yunja"), isGrey: true },
+    { label: "Tatva", value: getBasicDetailValue("tatva") },
     { label: "Name Alphabet", value: getNameAlphabet(), isGrey: true },
-    { label: "Gan", value: getBasicDetailValue("gan") },
-    { label: "Nadi", value: getBasicDetailValue("nadi"), isGrey: true },
-    { label: "Vashya", value: getBasicDetailValue("vashya") },
-    { label: "Nakshatra", value: getNakshatraName(), isGrey: true },
+    { label: "Paya", value: getBasicDetailValue("paya") },
   ];
 
   const favourableDetailsleft: DisplayField[] = [
@@ -274,6 +309,8 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
     { label: "Lucky Gems", value: getValue(remedies?.gemstones?.primary) },
   ];
 
+
+
   return (
     <>
       
@@ -325,6 +362,26 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
                       </td>
                     </tr>
                   ))}
+                  <tr className="border-b border-gray-300">
+                    <td colSpan={2} className="py-2 px-4 font-semibold text-sm md:text-base text-gray-900 bg-gray-50 text-center">
+                      Panchang
+                    </td>
+                  </tr>
+                  {panchangDetails.map((item, index) => (
+                    <tr
+                      key={index}
+                      className={`${
+                        item.isGrey ? "bg-gray-100" : ""
+                      } border-b border-gray-300 last:border-b-0`}
+                    >
+                      <td className="py-2.5 px-4 font-normal text-sm md:text-base text-gray-900 w-1/2">
+                        {item.label}
+                      </td>
+                      <td className="py-2.5 px-4 font-semibold text-sm md:text-base text-gray-900 text-right">
+                        {item.value ?? "--"}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -332,10 +389,11 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
         </div>
       </div>
 
+      {/* Avakhada Details Section */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 max-w-6xl mx-auto">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="md:text-xl text-lg font-bold text-gray-900">
-            Kundli Details
+            Avakhada Details
           </h2>
         </div>
         <div className="p-6">
@@ -343,7 +401,7 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
             <div className="border border-gray-300 rounded-lg overflow-hidden">
               <table className="w-full">
                 <tbody>
-                  {kundliDetailsLeft.map((item, index) => (
+                  {avakhadaDetailsLeft.map((item, index) => (
                     <tr
                       key={index}
                       className={`${
@@ -364,7 +422,7 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
             <div className="border border-gray-300 rounded-lg overflow-hidden">
               <table className="w-full">
                 <tbody>
-                  {kundliDetailsRight.map((item, index) => (
+                  {avakhadaDetailsRight.map((item, index) => (
                     <tr
                       key={index}
                       className={`${
