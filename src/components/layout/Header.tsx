@@ -12,6 +12,7 @@ import {
   Phone,
   Moon,
   ShoppingBag,
+  Smartphone,
 } from "lucide-react";
 
 import { BsChatLeftTextFill } from "react-icons/bs";
@@ -189,6 +190,17 @@ const Header = () => {
               <FiPhone style={{ color: colors.primeGreen }} className="mt-1" />
               Talk with Astrologers
             </Link>
+
+            <a
+              href="https://play.google.com/store/apps/details?id=com.graho"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: colors.darkGray }}
+              className="flex gap-2 text-base font-bold hover:text-blue-600 transition-colors"
+            >
+              <Smartphone style={{ color: colors.primeYellow }} className="mt-0" />
+              Download App
+            </a>
           </div>
 
           {/* Right Side: Auth & Mobile Toggle */}
@@ -367,6 +379,21 @@ const Header = () => {
                 </Link>
               </div>
             )}
+
+            {/* Download App Section (Mobile) */}
+            <div className="p-4 border-t border-gray-200">
+              <a
+                href="https://play.google.com/store/apps/details?id=com.graho"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setIsOpen(false)}
+                style={{ background: colors.primeYellow, color: colors.black }}
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 text-sm font-bold rounded-full shadow-sm hover:brightness-95 transition-all"
+              >
+                <Smartphone className="w-4 h-4" />
+                Download App
+              </a>
+            </div>
 
            
           </div>
