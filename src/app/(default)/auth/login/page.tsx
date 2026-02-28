@@ -7,9 +7,11 @@ import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { generateOtp, verifyOtp } from "@/store/api/auth/login";
 import { initiateGoogleLogin } from "@/store/api/auth/google";
+import { initiateAppleLogin } from "@/store/api/auth/apple";
 import Toast from "@/components/atoms/Toast";
 import { useToast } from "@/hooks/useToast";
 import { FcGoogle } from "react-icons/fc";
+import { FaApple } from "react-icons/fa";
 import { Button } from "@/components/atoms";
 import { Suspense } from "react";
 import Link from "next/link";
@@ -268,6 +270,16 @@ function LoginPage() {
                   <FcGoogle className="text-2xl" />
                   <span className="text-sm sm:text-base">
                     Continue with Google
+                  </span>
+                </button>
+
+                <button
+                  onClick={initiateAppleLogin}
+                  className="w-full flex items-center justify-center gap-3 bg-black border border-black rounded-xl py-3 md:py-4 hover:bg-gray-900 transition-all font-semibold text-white"
+                >
+                  <FaApple className="text-2xl" />
+                  <span className="text-sm sm:text-base">
+                    Continue with Apple
                   </span>
                 </button>
 
