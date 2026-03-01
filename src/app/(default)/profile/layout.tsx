@@ -12,7 +12,7 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
   const router = useRouter();
 
   const handleLogout = async () => {
-    logout();
+    await logout();
     window.location.href = "/";
   };
 

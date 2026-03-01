@@ -87,18 +87,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('token_middleware');
       localStorage.removeItem('user_id');
       
-      // Clear cookies on client side
-      document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-      document.cookie = 'token_middleware=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      // Clear cookies on client side — MUST include domain so iOS WKWebView
+      // removes the same cookie that was set with domain=.graho.in.
+      const cookieBase = '; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.graho.in; secure; samesite=none';
+      document.cookie = 'token=' + cookieBase;
+      document.cookie = 'token_middleware=' + cookieBase;
+      // Also clear without domain as a fallback for local/non-prod envs
+      document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+      document.cookie = 'token_middleware=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
       
       window.dispatchEvent(new Event('auth_change'));
     }
     
-    // Call logout API to clear cookies on server side
+    // Call logout API to clear server-side httpOnly cookie
     try {
       await logoutUser();
     } catch (error) {
       console.error('Logout API error:', error);
+    }
+
+    // Notify React Native WebView so it can clear native state
+    if (typeof window !== 'undefined' && (window as any).ReactNativeWebView) {
+      (window as any).ReactNativeWebView.postMessage(
+        JSON.stringify({ type: 'LOGOUT' })
+      );
     }
   };
 
