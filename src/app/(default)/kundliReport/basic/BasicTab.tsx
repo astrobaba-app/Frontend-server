@@ -175,8 +175,46 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
   };
 
   const getNameAlphabet = () => {
-    const name = (userRequest?.fullName || "").trim();
-    if (name) return name.charAt(0).toUpperCase();
+    // Standard Vedic nakshatra syllables (akshar) by pada — used for naming convention
+    // Each nakshatra has 4 padas, each mapped to a distinct syllable
+    const NAKSHATRA_SYLLABLES: Record<string, string[]> = {
+      'Ashwini':           ['Chu', 'Che', 'Cho', 'La'],
+      'Bharani':           ['Li', 'Lu', 'Le', 'Lo'],
+      'Krittika':          ['A', 'I', 'U', 'E'],
+      'Rohini':            ['O', 'Va', 'Vi', 'Vu'],
+      'Mrigashira':        ['Ve', 'Vo', 'Ka', 'Ki'],
+      'Ardra':             ['Ku', 'Gha', 'Ing', 'Jha'],
+      'Punarvasu':         ['Ke', 'Ko', 'Ha', 'Hi'],
+      'Pushya':            ['Hu', 'He', 'Ho', 'Da'],
+      'Ashlesha':          ['Di', 'Du', 'De', 'Do'],
+      'Magha':             ['Ma', 'Mi', 'Mu', 'Me'],
+      'Purva Phalguni':    ['Mo', 'Ta', 'Ti', 'Tu'],
+      'Uttara Phalguni':   ['Te', 'To', 'Pa', 'Pi'],
+      'Hasta':             ['Pu', 'Sha', 'Na', 'Tha'],
+      'Chitra':            ['Pe', 'Po', 'Ra', 'Ri'],
+      'Swati':             ['Ru', 'Re', 'Ro', 'Ta'],
+      'Vishakha':          ['Ti', 'Tu', 'Te', 'To'],
+      'Anuradha':          ['Na', 'Ni', 'Nu', 'Ne'],
+      'Jyeshtha':          ['No', 'Ya', 'Yi', 'Yu'],
+      'Mula':              ['Ye', 'Yo', 'Bha', 'Bhi'],
+      'Purva Ashadha':     ['Bhu', 'Dha', 'Pha', 'Dhaa'],
+      'Uttara Ashadha':    ['Bhe', 'Bho', 'Ja', 'Ji'],
+      'Shravana':          ['Ju', 'Je', 'Jo', 'Gha'],
+      'Dhanishta':         ['Ga', 'Gi', 'Gu', 'Ge'],
+      'Shatabhisha':       ['Go', 'Sa', 'Si', 'Su'],
+      'Purva Bhadrapada':  ['Se', 'So', 'Da', 'Di'],
+      'Uttara Bhadrapada': ['Du', 'Tha', 'Jha', 'Na'],
+      'Revati':            ['De', 'Do', 'Cha', 'Chi'],
+    };
+
+    const nakshatra = panchang?.nakshatra?.name as string;
+    const pada = panchang?.nakshatra?.pada as number;
+
+    if (nakshatra && pada && NAKSHATRA_SYLLABLES[nakshatra]) {
+      const syllables = NAKSHATRA_SYLLABLES[nakshatra];
+      const syllable = syllables[(pada - 1) % 4];
+      if (syllable) return syllable;
+    }
     return getValue(undefined);
   };
 
