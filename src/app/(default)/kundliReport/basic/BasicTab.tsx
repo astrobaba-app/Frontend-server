@@ -482,7 +482,7 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 max-w-6xl mx-auto">
+      {/* <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 max-w-6xl mx-auto">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="md:text-xl text-lg font-bold text-gray-900">
             Favourable
@@ -534,7 +534,7 @@ const BasicTab: React.FC<BasicTabProps> = ({ kundliData }) => {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
       {/* <LatestBlogsSection /> */}
     </>
   );

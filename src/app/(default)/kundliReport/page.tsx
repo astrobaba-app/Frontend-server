@@ -43,7 +43,7 @@ function KundliReportPage() {
     "Basic",
     "Kundli",
     "KP",
-    // "Ashtakvarga",
+    "Ashtakvarga",
     // "Charts",
     "Dasha",
     "Free Report",
@@ -332,9 +332,9 @@ function KundliReportPage() {
           {/* {activeTab === "Charts" && <ChartsTab kundliData={kundliData} />} */}
           {activeTab === "Dasha" && <DashaTab kundliData={kundliData} />}
           {activeTab === "KP" && <KPTab kundliData={kundliData} />}
-          {/* {activeTab === "Ashtakvarga" && (
+          {activeTab === "Ashtakvarga" && (
             <AshtakvargaTab kundliData={kundliData} />
-          )} */}
+          )}
           {activeTab === "Free Report" && (
             <FreeReportTab kundliData={kundliData} aiReportLoading={aiReportLoading} />
           )}

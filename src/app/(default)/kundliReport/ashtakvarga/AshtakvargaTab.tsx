@@ -43,44 +43,41 @@ const AshtakvargaChart: React.FC<AshtakvargaChartProps> = ({ title, data }) => {
           <line x1="100" y1="200" x2="0" y2="100" stroke="#999" strokeWidth="1.5" />
           {/* Left vertex (0, 100) to Top vertex (100, 0) */}
           <line x1="0" y1="100" x2="100" y2="0" stroke="#999" strokeWidth="1.5" />
-          <text x="50" y="30" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(11)}</text>
+          {/* Top-LEFT corner = H2 */}
+          <text x="50" y="20" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(1)}</text>
           
-          {/* Top-right triangle (House 1) */}
-          <text x="150" y="30" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(0)}</text>
+          {/* Top-RIGHT corner = H12 */}
+          <text x="150" y="21" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(11)}</text>
 
-          {/* Upper-middle section - 3 values */}
-          {/* Left triangle (House 11) */}
-          <text x="30" y="70" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(10)}</text>
+          {/* Upper-LEFT triangle = H3 */}
+          <text x="20" y="52" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(2)}</text>
           
-          {/* Center diamond (House 2) */}
-          <text x="100" y="60" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(1)}</text>
+          {/* Top-center diamond = H1 (Lagna) */}
+          <text x="100" y="52" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(0)}</text>
           
-          {/* Right triangle (House 3) */}
-          <text x="170" y="70" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(2)}</text>
+          {/* Upper-RIGHT triangle = H11 */}
+          <text x="180" y="50" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(10)}</text>
 
-          {/* Middle section - 2 values */}
-          {/* Left side (House 10) */}
-          <text x="50" y="100" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(9)}</text>
+          {/* Mid-LEFT = H4 */}
+          <text x="50" y="100" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(3)}</text>
           
-          {/* Right side (House 4) */}
-          <text x="150" y="100" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(3)}</text>
+          {/* Mid-RIGHT = H10 */}
+          <text x="150" y="100" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(9)}</text>
 
-          {/* Lower-middle section - 3 values */}
-          {/* Left triangle (House 9) */}
-          <text x="30" y="130" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(8)}</text>
+          {/* Lower-LEFT triangle = H5 */}
+          <text x="20" y="150" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(4)}</text>
           
-          {/* Center diamond (House 5) */}
-          <text x="100" y="140" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(4)}</text>
+          {/* Bottom-center diamond = H7 */}
+          <text x="100" y="140" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(6)}</text>
           
-          {/* Right triangle (House 6) */}
-          <text x="170" y="130" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(5)}</text>
+          {/* Lower-RIGHT triangle = H9 */}
+          <text x="185" y="150" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(8)}</text>
 
-          {/* Bottom section - 2 values */}
-          {/* Bottom-left triangle (House 8) */}
-          <text x="50" y="170" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(7)}</text>
+          {/* Bottom-LEFT corner = H6 */}
+          <text x="50" y="180" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(5)}</text>
           
-          {/* Bottom-right triangle (House 7) */}
-          <text x="150" y="170" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(6)}</text>
+          {/* Bottom-RIGHT corner = H8 */}
+          <text x="150" y="180" className="text-base font-medium" fill="#333" textAnchor="middle" dominantBaseline="middle">{getHouseValue(7)}</text>
         </svg>
       </div>
     </div>
