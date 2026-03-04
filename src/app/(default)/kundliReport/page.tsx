@@ -44,7 +44,7 @@ function KundliReportPage() {
     "Kundli",
     "KP",
     "Ashtakvarga",
-    // "Charts",
+     "Charts",
     "Dasha",
     "Free Report",
   ];
@@ -329,7 +329,7 @@ function KundliReportPage() {
             <BasicTab kundliData={{ success: true, kundli: kundliData }} />
           )}
           {activeTab === "Kundli" && <KundliTab kundliData={kundliData} />}
-          {/* {activeTab === "Charts" && <ChartsTab kundliData={kundliData} />} */}
+          {activeTab === "Charts" && <ChartsTab kundliData={kundliData} />}
           {activeTab === "Dasha" && <DashaTab kundliData={kundliData} />}
           {activeTab === "KP" && <KPTab kundliData={kundliData} />}
           {activeTab === "Ashtakvarga" && (

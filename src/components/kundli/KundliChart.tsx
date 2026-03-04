@@ -94,11 +94,15 @@ const KundliChart: React.FC<
     const ascSign = normalizeSignNum(ascSignNum);
     const existing = signPlanetsMap.get(ascSign) || [];
     const ascDeg = typeof ascDegree === "number" ? ascDegree : 0;
-    // Avoid duplicating Asc if it's already present in the divisional data.
-    if (!existing.some((p) => p.name === "Asc")) {
+    // Check ALL signs — if Asc is already present anywhere (e.g. injected as a
+    // real planet with its true longitude for Sun/Moon/Chalit charts), skip.
+    const ascAlreadyPresent = Array.from(signPlanetsMap.values()).some((arr) =>
+      arr.some((p) => p.name === "Asc")
+    );
+    if (!ascAlreadyPresent) {
       existing.unshift({ name: "Asc", degree: ascDeg });
+      signPlanetsMap.set(ascSign, existing);
     }
-    signPlanetsMap.set(ascSign, existing);
   }
 
   const getSignName = (signNum: number): string => {
@@ -254,7 +258,7 @@ const NorthIndianChart: React.FC<{
     housePositions.forEach(({ house, x, y, numX, numY }) => {
       const signNum = houseToSignMap[house];
       const planets = signPlanetsMap.get(signNum) || [];
-      // Draw house number (not sign number) - small gray text in corners
+      // Draw sign number - small gray text in corners
       ctx.fillStyle = "#999999";
       ctx.font = "9px Arial";
       ctx.textAlign = "center";

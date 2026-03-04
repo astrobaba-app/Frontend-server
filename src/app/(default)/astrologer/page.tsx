@@ -61,7 +61,7 @@ const AI_ASTROLOGERS: Astrologer[] = [
   {
     id: "ai-astrologer-devansh",
     fullName: "Acharya Devansh Sharma",
-    photo: "/images/devansh.jpg",
+    photo: "/images/devanshv1.jpeg",
     yearsOfExperience: 12,
     pricePerMinute: "10",
     rating: "4.9",
@@ -88,7 +88,7 @@ const AI_ASTROLOGERS: Astrologer[] = [
   {
     id: "ai-astrologer-ritika",
     fullName: "Ritika Mehra",
-    photo: "/images/ritika.jpg",
+    photo: "/images/ritikav1.jpeg",
     yearsOfExperience: 9,
     pricePerMinute: "10",
     rating: "4.8",
@@ -115,7 +115,7 @@ const AI_ASTROLOGERS: Astrologer[] = [
   {
     id: "ai-astrologer-arjun",
     fullName: "Pandit Arjun Iyer",
-    photo: "/images/arjun.jpg",
+    photo: "/images/arjunv1.jpeg",
     yearsOfExperience: 11,
     pricePerMinute: "10",
     rating: "4.9",

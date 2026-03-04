@@ -120,3 +120,12 @@ export const checkAiReportStatus = async (userRequestId: string): Promise<AiRepo
     throw error.response?.data || { message: 'Failed to check AI report status', success: false };
   }
 };
+
+export const refreshAshtakvarga = async (userRequestId: string): Promise<KundliResponse> => {
+  try {
+    const response: AxiosResponse<KundliResponse> = await api.put(`/kundli/${userRequestId}/refresh-ashtakvarga`);
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || { message: 'Failed to refresh Ashtakavarga', success: false };
+  }
+};

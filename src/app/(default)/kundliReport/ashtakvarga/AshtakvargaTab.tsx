@@ -114,13 +114,17 @@ const AshtakvargaTab: React.FC<AshtakvargaTabProps> = ({ kundliData }) => {
     <div className="max-w-6xl mx-auto md:px-4 py-6">
       {/* Header Section */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-3">Ashtakvarga Chart</h2>
-        <p className="text-sm text-gray-600 leading-relaxed">
-          Ashtakvarga is used to assess the strength and patterns that are present in a birth chart. The Ashtakvarga or 
-          Ashtakavarga is a numerical quantification or score of a planet placed in the chart with reference to the 
-          other 7 planets and the Lagna. In Sarva Ashtaka Varga the total scores of all the BAVs are overlaid and then 
-          totalled. This makes the SAV of the chart. The total of all the scores should be 337.
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Ashtakvarga Chart</h2>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Ashtakvarga is used to assess the strength and patterns that are present in a birth chart. The Ashtakvarga or 
+              Ashtakavarga is a numerical quantification or score of a planet placed in the chart with reference to the 
+              other 7 planets and the Lagna. In Sarva Ashtaka Varga the total scores of all the BAVs are overlaid and then 
+              totalled. This makes the SAV of the chart. The total of all the scores should be 337.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Charts Grid */}
