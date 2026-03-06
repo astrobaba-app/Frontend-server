@@ -160,9 +160,7 @@ const ChartsTab: React.FC<ChartsTabProps> = ({ kundliData }) => {
     { key: "D24", title: "Chaturvimsamsa (Intellectual)", description: "" },
     { key: "D27", title: "Saptavimsamsa (Strength / Protection)", description: "" },
     { key: "D30", title: "Trimsamsa (Misfortunes)", description: "" },
-    { key: "D40", title: "Khavedamsa (Auspicious time)", description: "" },
-    { key: "D45", title: "Akshavedamsa (General issues)", description: "" },
-    { key: "D60", title: "Shastiamsa (Summary of charts)", description: "" },
+
   ];
 
   const renderChart = (chartInfo: ChartInfo, index: number) => {

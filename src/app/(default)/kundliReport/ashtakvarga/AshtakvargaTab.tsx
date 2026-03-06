@@ -8,14 +8,19 @@ interface AshtakvargaTabProps {
 
 interface AshtakvargaChartProps {
   title: string;
-  data?: number[]; // Array of 12 house values
+  data?: number[]; // Sign-indexed array (Aries=0 … Pisces=11)
+  ascSignNum: number; // 0-indexed ascendant sign (0=Aries … 11=Pisces)
 }
 
-const AshtakvargaChart: React.FC<AshtakvargaChartProps> = ({ title, data }) => {
-  // Get house values or default to "--"
-  const getHouseValue = (index: number): string => {
-    if (!data || data[index] === undefined || data[index] === null) return "--";
-    return data[index].toString();
+const AshtakvargaChart: React.FC<AshtakvargaChartProps> = ({ title, data, ascSignNum }) => {
+  // Map house index (0=H1, 1=H2 … 11=H12) to the correct sign's value.
+  // House N corresponds to the sign at (ascSignNum + N) % 12 in the sign-indexed array.
+  const getHouseValue = (houseIndex: number): string => {
+    if (!data || data.length !== 12) return "--";
+    const signIdx = (ascSignNum + houseIndex) % 12;
+    const val = data[signIdx];
+    if (val === undefined || val === null) return "--";
+    return val.toString();
   };
 
   return (
@@ -86,8 +91,14 @@ const AshtakvargaChart: React.FC<AshtakvargaChartProps> = ({ title, data }) => {
 
 const AshtakvargaTab: React.FC<AshtakvargaTabProps> = ({ kundliData }) => {
   // Extract ashtakvarga data from API response if available
-  // Since the API response doesn't include ashtakvarga field, we check if it exists
   const ashtakvargaData = (kundliData as any)?.ashtakvarga;
+
+  // Ascendant sign (0-indexed: 0=Aries … 11=Pisces) for sign→house mapping
+  const planetary = (kundliData as any)?.planetary;
+  const ascLon: number = (planetary?.Ascendant?.longitude as number)
+    ?? ((kundliData as any)?.basicDetails?.ascendant?.longitude as number)
+    ?? 0;
+  const ascSignNum: number = Math.floor((ascLon % 360) / 30);
 
   // Planets to display - matching the image order
   const planets = [
@@ -137,6 +148,7 @@ const AshtakvargaTab: React.FC<AshtakvargaTabProps> = ({ kundliData }) => {
               key={planet.key}
               title={planet.label}
               data={data}
+              ascSignNum={ascSignNum}
             />
           );
         })}
