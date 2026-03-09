@@ -12,12 +12,21 @@ export interface Astrologer {
   yearsOfExperience: number;
 }
 
+export interface AdminAuthor {
+  id: string;
+  name: string;
+  email: string;
+}
+
 export interface Blog {
   id: string;
-  astrologerId: string;
+  astrologerId?: string;
+  adminId?: string;
   title: string;
   description: string;
-  image: string;
+  image?: string;
+  images?: string[];
+  category?: string;
   isPublished: boolean;
   views: number;
   likes: number;
@@ -25,6 +34,7 @@ export interface Blog {
   createdAt: string;
   updatedAt: string;
   astrologer?: Astrologer;
+  admin?: AdminAuthor;
 }
 
 export interface Pagination {

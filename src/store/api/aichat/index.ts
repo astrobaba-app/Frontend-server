@@ -9,6 +9,7 @@ export interface AIChatSession {
   id: string;
   userId: string;
   astrologerId?: string; // ID of the AI astrologer
+  kundliUserRequestId?: string | null; // Linked Kundli user request ID
   title: string;
   isActive: boolean;
   createdAt: string;
@@ -89,6 +90,22 @@ export interface DeleteSessionResponse {
 export interface ClearSessionResponse {
   success: boolean;
   message: string;
+}
+
+export interface AttachKundliResponse {
+  success: boolean;
+  message: string;
+  session?: {
+    id: string;
+    kundliUserRequestId: string;
+  };
+  greetingMessage?: AIChatMessage | null;
+}
+
+export interface GreetSessionResponse {
+  success: boolean;
+  alreadyGreeted: boolean;
+  greetingMessage: AIChatMessage | null;
 }
 
 export interface VoiceSessionResponse {
@@ -217,5 +234,39 @@ export const getVoiceConfig = async (): Promise<VoiceConfigResponse> => {
     return response.data;
   } catch (error: any) {
     throw error.response?.data || { message: 'Failed to get voice configuration', success: false };
+  }
+};
+
+/**
+ * Attach a Kundli (user request) to an AI chat session.
+ * After this, every message in the session will use the Kundli birth chart as context.
+ */
+export const attachKundliToSession = async (
+  sessionId: string,
+  kundliUserRequestId: string
+): Promise<AttachKundliResponse> => {
+  try {
+    const response: AxiosResponse<AttachKundliResponse> = await api.put(
+      `${BASE_URL}/session/${sessionId}/attach-kundli`,
+      { kundliUserRequestId }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || { message: 'Failed to attach Kundli to session', success: false };
+  }
+};
+
+/**
+ * Send the AI greeting message at the start of a new session.
+ * Idempotent — safe to call even if session was already greeted.
+ */
+export const greetSession = async (sessionId: string): Promise<GreetSessionResponse> => {
+  try {
+    const response: AxiosResponse<GreetSessionResponse> = await api.post(
+      `${BASE_URL}/session/${sessionId}/greet`
+    );
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || { message: 'Failed to send greeting', success: false };
   }
 };

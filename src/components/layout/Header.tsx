@@ -13,6 +13,7 @@ import {
   Moon,
   ShoppingBag,
   Smartphone,
+  BookOpen,
 } from "lucide-react";
 
 import { BsChatLeftTextFill } from "react-icons/bs";
@@ -50,6 +51,12 @@ const NAV_LINKS = [
     name: "Graho Store",
     href: "/store",
     icon: <ShoppingBag className="w-5 h-5" />,
+  },
+
+  {
+    name: "Blog",
+    href: "/blog",
+    icon: <BookOpen className="w-5 h-5" />,
   },
 ];
 

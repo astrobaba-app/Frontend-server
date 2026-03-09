@@ -32,9 +32,12 @@ import {
   clearChatSession as clearChatSessionAPI,
   createVoiceSession,
   getVoiceConfig,
+  attachKundliToSession,
+  greetSession,
   AIChatMessage,
   AIChatSession,
 } from "@/store/api/aichat";
+import { getAllKundlis } from "@/store/api/kundli";
 import { useToast } from "@/hooks/useToast";
 import Toast from "@/components/atoms/Toast";
 import ConfirmDeleteChatModal from "@/components/modals/ConfirmDeleteChatModal";
@@ -102,6 +105,14 @@ const AIChatPageContent = () => {
     useState(false);
   const [isChatSessionActive, setIsChatSessionActive] = useState(false);
   const [isVoiceSessionActive, setIsVoiceSessionActive] = useState(false);
+
+  // Kundli selection state
+  const [showKundliModal, setShowKundliModal] = useState(false);
+  const [kundliList, setKundliList] = useState<
+    Array<{ id: string; fullName: string; dateOfbirth: string; timeOfbirth: string; placeOfBirth: string }>
+  >([]);
+  const [kundliListLoading, setKundliListLoading] = useState(false);
+  const [attachingKundli, setAttachingKundli] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -198,15 +209,96 @@ const AIChatPageContent = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Load all chat sessions
+  // Fetch all user kundlis and open the selection modal
+  const openKundliModal = async () => {
+    setKundliListLoading(true);
+    setShowKundliModal(true);
+    try {
+      const response = await getAllKundlis();
+      setKundliList(response.userRequests || []);
+    } catch (err: any) {
+      console.error("Failed to load Kundlis:", err);
+      showToast("Failed to load Kundlis", "error");
+    } finally {
+      setKundliListLoading(false);
+    }
+  };
+
+  // Handle selecting a Kundli from the modal
+  const handleSelectKundli = async (kundliUserRequestId: string) => {
+    if (!currentSessionId) return;
+    setAttachingKundli(true);
+    try {
+      const resp = await attachKundliToSession(currentSessionId, kundliUserRequestId);
+      // Update session in local state
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === currentSessionId ? { ...s, kundliUserRequestId } : s
+        )
+      );
+      // Inject greeting message returned by backend (only present for fresh sessions)
+      if (resp.greetingMessage) {
+        const greetMsg: AIChatMessage = {
+          ...resp.greetingMessage,
+          sessionId: currentSessionId,
+          updatedAt: resp.greetingMessage.updatedAt || resp.greetingMessage.createdAt,
+        };
+        setMessages((prev) => {
+          // Avoid duplicates in case messages were loaded in parallel
+          if (prev.some((m) => m.id === greetMsg.id)) return prev;
+          return [greetMsg, ...prev.filter((m) => m.role !== "assistant" || m.id !== greetMsg.id)];
+        });
+      }
+      setShowKundliModal(false);
+      showToast(
+        "Kundli selected! Your birth chart will be used for personalised readings.",
+        "success"
+      );
+    } catch (err: any) {
+      console.error("Failed to attach Kundli:", err);
+      showToast(err.message || "Failed to attach Kundli", "error");
+    } finally {
+      setAttachingKundli(false);
+    }
+  };
+
+  // Load all chat sessions; auto-create one if none exist for this astrologer
   const loadSessions = async () => {
     try {
       const response = await getMyChatSessions(1, 20, astrologerId || undefined);
       setSessions(response.sessions);
 
-      // If there's at least one session, load it
       if (response.sessions.length > 0 && !currentSessionId) {
-        setCurrentSessionId(response.sessions[0].id);
+        const firstSession = response.sessions[0];
+        setCurrentSessionId(firstSession.id);
+        // Prompt Kundli selection only when no Kundli is linked to this session
+        if (!firstSession.kundliUserRequestId) {
+          await openKundliModal();
+        }
+      } else if (response.sessions.length === 0) {
+        // Auto-create a new session so the user doesn't have to click "New Chat"
+        try {
+          const createResp = await createChatSession(astrologerId || undefined);
+          const newSession: AIChatSession = {
+            id: createResp.session.id,
+            userId: String(user?.id || ""),
+            astrologerId: astrologerId || undefined,
+            kundliUserRequestId: null,
+            title: createResp.session.title,
+            isActive: true,
+            createdAt: createResp.session.createdAt,
+            updatedAt: createResp.session.createdAt,
+            lastMessageAt: createResp.session.createdAt,
+          };
+          setSessions([newSession]);
+          setCurrentSessionId(newSession.id);
+          // New session — always prompt for Kundli
+          await openKundliModal();
+        } catch (createErr: any) {
+          console.error("Failed to auto-create session:", createErr);
+          setError(createErr.message || "Failed to create chat session");
+          showToast(createErr.message || "Failed to create chat session", "error");
+        }
       }
     } catch (err: any) {
       console.error("Failed to load sessions:", err);
@@ -222,6 +314,24 @@ const AIChatPageContent = () => {
       const response = await getChatMessages(sessionId, 1, 50);
       setMessages(response.messages);
       setError(null);
+
+      // If session already has a kundli but NO messages, auto-send greeting
+      const session = sessions.find((s) => s.id === sessionId);
+      if (response.messages.length === 0 && session?.kundliUserRequestId) {
+        try {
+          const greetResp = await greetSession(sessionId);
+          if (greetResp.greetingMessage) {
+            const greetMsg: AIChatMessage = {
+              ...greetResp.greetingMessage,
+              sessionId,
+              updatedAt: greetResp.greetingMessage.updatedAt || greetResp.greetingMessage.createdAt,
+            };
+            setMessages([greetMsg]);
+          }
+        } catch (greetErr) {
+          console.error("Failed to send greeting:", greetErr);
+        }
+      }
     } catch (err: any) {
       console.error("Failed to load messages:", err);
       setError(err.message || "Failed to load messages");
@@ -242,6 +352,7 @@ const AIChatPageContent = () => {
         id: response.session.id,
         userId: String(user?.id || ""),
         astrologerId: astrologerId || undefined,
+        kundliUserRequestId: null,
         title: response.session.title,
         isActive: true,
         createdAt: response.session.createdAt,
@@ -253,6 +364,8 @@ const AIChatPageContent = () => {
       setCurrentSessionId(newSession.id);
       setMessages([]);
       setError(null);
+      // Prompt Kundli selection for the new session
+      await openKundliModal();
     } catch (err: any) {
       console.error("Failed to create session:", err);
       setError(err.message || "Failed to create new chat");
@@ -1652,13 +1765,13 @@ const AIChatPageContent = () => {
                     ? "Insufficient balance..."
                     : !isChatSessionActive
                     ? "Click 'Start Chat' to begin..."
-                    : "Message AI Astrologer..."
+                    : `Message ${AI_ASTROLOGER_INFO.name}...`
                 }
                 disabled={!currentSessionId || isTyping || !isChatSessionActive}
-                className="w-full px-4 sm:px-5 py-2.5 sm:py-3 pr-12 sm:pr-14 bg-gray-100 border border-gray-300 rounded-full focus:outline-none text-sm text-gray-900 placeholder-gray-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full px-4 sm:px-5 py-2.5 sm:py-3 pr-14 sm:pr-16 bg-gray-100 border border-gray-200 rounded-full focus:outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400 text-sm text-gray-900 placeholder-gray-400 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200"
                 autoFocus
               />
-              {/* Send Button Inside Input */}
+              {/* Send Button — WhatsApp style */}
               <button
                 type="submit"
                 disabled={
@@ -1667,28 +1780,19 @@ const AIChatPageContent = () => {
                   isTyping ||
                   !isChatSessionActive
                 }
-                className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 p-1.5 sm:p-2 rounded-full transition-all duration-200 disabled:opacity-50 flex items-center justify-center"
+                className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-200 shadow-sm active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{
                   backgroundColor:
-                    inputMessage.trim() &&
-                    currentSessionId &&
-                    isChatSessionActive
-                      ? colors.primeYellow
-                      : "#E5E7EB",
+                    inputMessage.trim() && currentSessionId && isChatSessionActive
+                      ? "#25D366"
+                      : "#CBD5E1",
                 }}
                 aria-label="Send message"
               >
                 <Send
-                  size={18}
-                  className="sm:w-5 sm:h-5"
-                  style={{
-                    color:
-                      inputMessage.trim() &&
-                      currentSessionId &&
-                      isChatSessionActive
-                        ? colors.darkGray
-                        : "#9CA3AF",
-                  }}
+                  size={16}
+                  className="sm:w-[18px] sm:h-[18px] translate-x-[1px]"
+                  color="#ffffff"
                 />
               </button>
             </form>
@@ -1817,6 +1921,131 @@ const AIChatPageContent = () => {
           setPendingDeleteSessionId(null);
         }}
       />
+
+      {/* Kundli Selection Modal */}
+      {showKundliModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex flex-col items-center text-center mb-5">
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center mb-3"
+                style={{ backgroundColor: colors.offYellow }}
+              >
+                <Image
+                  src="/images/logo.png"
+                  alt="Kundli"
+                  width={40}
+                  height={40}
+                  className="rounded-full"
+                  priority
+                />
+              </div>
+              <h3
+                className="text-xl font-bold"
+                style={{ color: colors.darkGray }}
+              >
+                Select Your Kundli
+              </h3>
+              <p className="text-sm mt-1" style={{ color: colors.gray }}>
+                Choose a birth chart for personalised astrological readings.
+              </p>
+            </div>
+
+            {/* Content */}
+            {kundliListLoading ? (
+              <div className="flex justify-center py-8">
+                <div
+                  className="animate-spin rounded-full h-8 w-8 border-4 border-gray-200"
+                  style={{ borderTopColor: colors.primeYellow }}
+                ></div>
+              </div>
+            ) : kundliList.length === 0 ? (
+              /* No Kundlis — must create one first */
+              <div className="text-center py-4">
+                <div
+                  className="mb-4 p-3 rounded-xl"
+                  style={{
+                    backgroundColor: "#FEF9E7",
+                    border: `1px solid ${colors.primeYellow}`,
+                  }}
+                >
+                  <p className="text-sm" style={{ color: colors.darkGray }}>
+                    You haven&apos;t created any Kundli yet. Please create one
+                    first to get personalised astrological insights.
+                  </p>
+                </div>
+                <button
+                  onClick={() => router.push("/profile/kundli")}
+                  className="w-full py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity"
+                  style={{
+                    backgroundColor: colors.primeYellow,
+                    color: colors.white,
+                  }}
+                >
+                  Create Your Kundli
+                </button>
+              </div>
+            ) : (
+              /* Kundli list */
+              <>
+                <div className="space-y-2 max-h-56 overflow-y-auto mb-4 pr-1">
+                  {kundliList.map((k) => (
+                    <button
+                      key={k.id}
+                      onClick={() => handleSelectKundli(k.id)}
+                      disabled={attachingKundli}
+                      className="w-full text-left p-3 rounded-xl border-2 hover:border-yellow-400 transition-all disabled:opacity-60"
+                      style={{
+                        borderColor: "#E5E7EB",
+                        backgroundColor: colors.white,
+                      }}
+                    >
+                      <p
+                        className="font-semibold text-sm"
+                        style={{ color: colors.darkGray }}
+                      >
+                        {k.fullName}
+                      </p>
+                      <p className="text-xs mt-0.5" style={{ color: colors.gray }}>
+                        {k.dateOfbirth}
+                        {k.placeOfBirth ? ` · ${k.placeOfBirth}` : ""}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Create New Kundli option */}
+                <button
+                  onClick={() => router.push("/profile/kundli")}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-medium hover:bg-gray-50 transition-colors"
+                  style={{
+                    borderColor: colors.primeYellow,
+                    color: colors.darkGray,
+                  }}
+                >
+                  <Plus size={16} />
+                  Create New Kundli
+                </button>
+              </>
+            )}
+
+            {/* Loading state while attaching */}
+            {attachingKundli && (
+              <div className="mt-3 flex items-center justify-center gap-2 text-sm" style={{ color: colors.gray }}>
+                <div
+                  className="animate-spin rounded-full h-4 w-4 border-2 border-gray-200"
+                  style={{ borderTopColor: colors.primeYellow }}
+                ></div>
+                Linking your birth chart…
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Insufficient Balance Modal */}
       {showInsufficientBalanceModal && (

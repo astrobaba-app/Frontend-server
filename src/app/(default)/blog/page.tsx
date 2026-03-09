@@ -6,14 +6,14 @@ import { colors } from '@/utils/colors';
 import BlogCard from '@/components/card/BlogCard';
 
 const CATEGORIES = [
-  { id: 'all', label: 'All', icon: '✨' },
-  { id: 'love', label: 'Love', icon: '❤️' },
-  { id: 'kundli', label: 'Kundli', icon: '🔮' },
-  { id: 'zodiac', label: 'Zodiac Sign', icon: '♈' },
-  { id: 'spirituality', label: 'Spirituality', icon: '🕉️' },
-  { id: 'tarot', label: 'Tarot', icon: '🃏' },
-  { id: 'palm', label: 'Palm Reading', icon: '🖐️' },
-  { id: 'vedic', label: 'Vedic Astrology', icon: '📿' },
+  { id: 'all', label: 'All' },
+  { id: 'Love & Relationships', label: 'Love' },
+  { id: 'Kundli & Birth Chart', label: 'Kundli' },
+  { id: 'Zodiac Signs', label: 'Zodiac Sign' },
+  { id: 'Spirituality', label: 'Spirituality' },
+  { id: 'Tarot & Divination', label: 'Tarot' },
+  { id: 'Palm Reading', label: 'Palm Reading' },
+  { id: 'Vedic Astrology', label: 'Vedic Astrology' },
 ];
 
 export default function BlogListPage() {
@@ -45,9 +45,7 @@ export default function BlogListPage() {
     if (selectedCategory === 'all') {
       setFilteredBlogs(blogs);
     } else {
-      // For now, show all blogs since we don't have category field
-      // In future, filter by: blogs.filter(blog => blog.category === selectedCategory)
-      setFilteredBlogs(blogs);
+      setFilteredBlogs(blogs.filter((blog) => blog.category === selectedCategory));
     }
   }, [selectedCategory, blogs]);
 
@@ -65,7 +63,27 @@ export default function BlogListPage() {
         </div>
       </div>
 
-   
+      {/* Category Filter */}
+      <div className="bg-white border-b border-gray-100 sticky top-16 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex gap-2 overflow-x-auto py-3 scrollbar-hide">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  selectedCategory === cat.id
+                    ? 'text-gray-900 shadow-sm'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+                style={selectedCategory === cat.id ? { backgroundColor: colors.primeYellow } : {}}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Blog Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -84,24 +102,40 @@ export default function BlogListPage() {
         ) : filteredBlogs.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-xl text-gray-600">No blogs found</p>
+            {selectedCategory !== 'all' && (
+              <button
+                onClick={() => setSelectedCategory('all')}
+                className="mt-4 text-sm font-medium underline"
+                style={{ color: colors.primeYellow }}
+              >
+                View all blogs
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            {filteredBlogs.map((blog) => (
-              <BlogCard
-                key={blog.id}
-                id={blog.id}
-                img={blog.image}
-                title={blog.title}
-                author={blog.astrologer?.fullName || 'Astrobaba'}
-                likes={blog.views}
-                date={new Date(blog.createdAt).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              />
-            ))}
+            {filteredBlogs.map((blog) => {
+              const coverImage =
+                blog.images && blog.images.length > 0 ? blog.images[0] : blog.image;
+              const authorName =
+                blog.astrologer?.fullName || blog.admin?.name || 'Graho Team';
+              return (
+                <BlogCard
+                  key={blog.id}
+                  id={blog.id}
+                  img={coverImage}
+                  title={blog.title}
+                  author={authorName}
+                  likes={blog.views}
+                  category={blog.category}
+                  date={new Date(blog.createdAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                />
+              );
+            })}
           </div>
         )}
       </div>
