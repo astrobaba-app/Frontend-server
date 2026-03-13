@@ -41,7 +41,7 @@ export const BlogDetailsModal: React.FC<BlogDetailsModalProps> = ({
             {/* Delete Button */}
             <button
               onClick={() => {
-                onDelete(blog.id || blog._id);
+                onDelete(blog.id);
                 onClose();
               }}
               className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
@@ -64,13 +64,19 @@ export const BlogDetailsModal: React.FC<BlogDetailsModalProps> = ({
         <div className="p-6">
           {/* Featured Image */}
           <div className="relative w-full h-96 rounded-lg overflow-hidden mb-6">
-            <Image
-              src={blog.image}
-              alt={blog.title}
-              fill
-              className="object-cover"
-              unoptimized
-            />
+            {blog.image ? (
+              <Image
+                src={blog.image}
+                alt={blog.title}
+                fill
+                className="object-cover"
+                unoptimized
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-500">
+                No image available
+              </div>
+            )}
           </div>
 
           {/* Title */}

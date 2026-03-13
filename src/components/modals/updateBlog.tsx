@@ -30,7 +30,7 @@ export const UpdateBlogModal: React.FC<UpdateBlogModalProps> = ({
     if (blog) {
       setTitle(blog.title);
       setDescription(blog.description);
-      setImagePreview(blog.image);
+      setImagePreview(blog.image ?? '');
       setImageFile(null);
     }
   }, [blog]);
@@ -73,10 +73,10 @@ export const UpdateBlogModal: React.FC<UpdateBlogModalProps> = ({
       };
 
       if (imageFile) {
-        updateData.image = imageFile;
+        updateData.images = [imageFile];
       }
 
-      await onUpdate(blog.id || blog._id, updateData);
+      await onUpdate(blog.id, updateData);
       onClose();
     } catch (err: any) {
       setError(err.message || 'Failed to update blog');
