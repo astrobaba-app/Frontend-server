@@ -144,7 +144,7 @@ const ChartsTab: React.FC<ChartsTabProps> = ({ kundliData }) => {
 
   // Chart definitions with titles and descriptions
   const charts: ChartInfo[] = [
-    { key: "Chalit", title: "Chalit", description: "" },
+   // { key: "Chalit", title: "Chalit", description: "" },
     { key: "Sun", title: "Sun", description: "" },
     { key: "Moon", title: "Moon", description: "" },
     { key: "D1", title: "Lagna / Ascendant / Basic Birth Chart", description: "" },
