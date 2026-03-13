@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -14,6 +15,14 @@ export default function LayoutContent({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+
+  // Track Meta Pixel PageView on every route change (SPA navigation)
+  useEffect(() => {
+    if (typeof window !== "undefined" && typeof (window as any).fbq === "function") {
+      (window as any).fbq("track", "PageView");
+    }
+  }, [pathname]);
+
   const NO_LAYOUT_ROUTES = [
     "/aichat",
     "/chat",
