@@ -38,7 +38,7 @@ function LoginPage() {
     if (authLoading) return;
 
     if (isLoggedIn) {
-      const redirectPath = searchParams.get("redirect") || "/astrologer";
+      const redirectPath = searchParams.get("redirect") || "/profile";
       router.push(redirectPath);
       return;
     }

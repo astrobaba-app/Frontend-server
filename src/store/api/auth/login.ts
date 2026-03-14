@@ -17,6 +17,9 @@ export interface UserProfile {
   state?: string | null;
   country?: string | null;
   pincode?: string | null;
+  pushNotifications?: boolean;
+  emailUpdates?: boolean;
+  smsAlerts?: boolean;
 }
 
 export interface VerifyOtpSuccessData {

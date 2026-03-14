@@ -22,6 +22,9 @@ export interface UpdateProfileData {
   state?: string;
   country?: string;
   pincode?: string;
+  pushNotifications?: boolean;
+  emailUpdates?: boolean;
+  smsAlerts?: boolean;
 }
 
 export const getProfile = async (): Promise<ProfileResponse> => {

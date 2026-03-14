@@ -9,40 +9,25 @@ import Button from "@/components/atoms/Button";
 import StepIndicator from "@/components/userprofile/StepIndicator";
 import { getProfile, updateProfile } from "@/store/api/auth/profile";
 import { createKundli } from "@/store/api/kundli";
-import { getMyChatSessions } from "@/store/api/chat";
+import { getTransactionHistory } from "@/utils/wallet";
 import { useToast } from "@/hooks/useToast";
 import Toast from "@/components/atoms/Toast";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/store/api";
-import { useSearchParams } from "next/navigation";
-import {
-  Gift,
-  Sparkles,
-  MessageCircle,
-  Ticket,
-  Loader2,
-  X,
-} from "lucide-react";
-
-interface ActiveCoupon {
-  id: string;
-  code: string;
-  description?: string;
-  discountType: "percentage" | "fixed";
-  discountValue: number;
-  maxDiscount?: number | null;
-  minRechargeAmount?: number;
-  canUse?: boolean;
-  remainingUses?: number;
-}
-
-interface ActiveCouponsResponse {
-  success: boolean;
-  coupons: ActiveCoupon[];
-}
-
-const CHAT_FREE_MINUTES = 5;
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Gift, Loader2, MessageCircle, X } from "lucide-react";
 const KUNDLI_GENERATED_KEY_PREFIX = "profile_kundli_generated";
+const CELEBRATION_PARTICLES = [
+  { left: "8%", size: "7px", color: "bg-yellow-300", delay: "0ms", duration: "900ms" },
+  { left: "18%", size: "6px", color: "bg-rose-400", delay: "80ms", duration: "1000ms" },
+  { left: "27%", size: "8px", color: "bg-amber-300", delay: "130ms", duration: "1100ms" },
+  { left: "38%", size: "6px", color: "bg-emerald-300", delay: "170ms", duration: "950ms" },
+  { left: "49%", size: "7px", color: "bg-sky-300", delay: "220ms", duration: "1050ms" },
+  { left: "60%", size: "6px", color: "bg-fuchsia-300", delay: "260ms", duration: "980ms" },
+  { left: "71%", size: "8px", color: "bg-orange-300", delay: "320ms", duration: "1150ms" },
+  { left: "82%", size: "6px", color: "bg-lime-300", delay: "360ms", duration: "1000ms" },
+  { left: "92%", size: "7px", color: "bg-pink-300", delay: "420ms", duration: "1080ms" },
+];
 
 const getSetupStepFromProfile = (profile: {
   fullName?: string | null;
@@ -145,20 +130,11 @@ const toProfileTime = (
   return `${kundliTime}:00`;
 };
 
-const getCouponValueLabel = (coupon: ActiveCoupon | null) => {
-  if (!coupon) return "No coupon available";
-
-  if (coupon.discountType === "fixed") {
-    return `Rs ${coupon.discountValue} off`;
-  }
-
-  const maxCap = coupon.maxDiscount ? ` (up to Rs ${coupon.maxDiscount})` : "";
-  return `${coupon.discountValue}% off${maxCap}`;
-};
-
 function MyProfilePageContent() {
   const { isLoggedIn, refreshUser, user, loading: authLoading } = useAuth();
   const { showToast, toastProps, hideToast } = useToast();
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const [isProfileComplete, setIsProfileComplete] = useState(false);
@@ -167,12 +143,9 @@ function MyProfilePageContent() {
   const [submittingSetup, setSubmittingSetup] = useState(false);
 
   const [showGiftModal, setShowGiftModal] = useState(false);
-  const [giftRevealed, setGiftRevealed] = useState(false);
-  const [loadingRewards, setLoadingRewards] = useState(false);
-  const [bestCoupon, setBestCoupon] = useState<ActiveCoupon | null>(null);
-  const [firstChatEligible, setFirstChatEligible] = useState<boolean | null>(
-    null,
-  );
+  const [signupBonusAmount, setSignupBonusAmount] = useState(0);
+  const [isGiftOpening, setIsGiftOpening] = useState(false);
+  const [giftOpened, setGiftOpened] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -203,12 +176,11 @@ function MyProfilePageContent() {
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(false);
   const birthPlaceRef = useRef<HTMLDivElement>(null);
 
-  const rewardSubtitle = useMemo(() => {
-    if (firstChatEligible === null) return "Tap to reveal your welcome rewards";
-    if (firstChatEligible)
-      return `Free ${CHAT_FREE_MINUTES} min first chat + coupon unlocked`;
-    return "Coupon unlocked for your next wallet recharge";
-  }, [firstChatEligible]);
+  const freeChatMinutes = useMemo(() => {
+    const minutes = signupBonusAmount / 10;
+    if (!Number.isFinite(minutes) || minutes <= 0) return "0";
+    return Number.isInteger(minutes) ? String(minutes) : minutes.toFixed(1);
+  }, [signupBonusAmount]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -231,15 +203,23 @@ function MyProfilePageContent() {
 
   useEffect(() => {
     if (!showGiftModal) {
-      setGiftRevealed(false);
+      setIsGiftOpening(false);
+      setGiftOpened(false);
       return;
     }
 
-    const revealTimer = setTimeout(() => {
-      setGiftRevealed(true);
-    }, 900);
+    const openStartTimer = setTimeout(() => {
+      setIsGiftOpening(true);
+    }, 350);
 
-    return () => clearTimeout(revealTimer);
+    const openCompleteTimer = setTimeout(() => {
+      setGiftOpened(true);
+    }, 1400);
+
+    return () => {
+      clearTimeout(openStartTimer);
+      clearTimeout(openCompleteTimer);
+    };
   }, [showGiftModal]);
 
   useEffect(() => {
@@ -262,10 +242,10 @@ function MyProfilePageContent() {
         const dateObj = p.dateOfbirth ? new Date(p.dateOfbirth) : null;
         const parsedTime = parseTimeForForm(p.timeOfbirth);
         const setupComplete = isProfileFullyComplete(p);
-        const forceSetup = searchParams.get("setup") === "1";
+        const shouldShowSetup = !setupComplete;
 
-        setIsProfileComplete(forceSetup ? false : setupComplete);
-        if (!setupComplete || forceSetup) {
+        setIsProfileComplete(!shouldShowSetup);
+        if (shouldShowSetup) {
           setSetupStep(getSetupStepFromProfile(p));
         }
 
@@ -405,34 +385,20 @@ function MyProfilePageContent() {
     }
   };
 
-  const loadRewards = async () => {
+  const fetchSignupBonusAmount = async () => {
     try {
-      setLoadingRewards(true);
-      const [couponRes, chatRes] = await Promise.all([
-        api.get<ActiveCouponsResponse>("/coupon/active"),
-        getMyChatSessions({ page: 1, limit: 1 }),
-      ]);
-
-      const coupons = couponRes.data?.coupons || [];
-      const usableCoupons = coupons.filter((coupon) => coupon.canUse !== false);
-      const selectedCoupon = usableCoupons[0] || coupons[0] || null;
-      setBestCoupon(selectedCoupon);
-
-      const totalChats =
-        chatRes.pagination?.total ?? chatRes.sessions?.length ?? 0;
-      setFirstChatEligible(totalChats === 0);
+      const history = await getTransactionHistory(1, 100, "credit", "completed");
+      const signupBonusTransaction = history.transactions.find(
+        (transaction) =>
+          transaction.paymentMethod === "signup_bonus" ||
+          /signup bonus/i.test(transaction.description || ""),
+      );
+      const creditedBonus = signupBonusTransaction
+        ? Number(signupBonusTransaction.amount)
+        : 0;
+      return Number.isFinite(creditedBonus) ? creditedBonus : 0;
     } catch {
-      setBestCoupon(null);
-      setFirstChatEligible(true);
-    } finally {
-      setLoadingRewards(false);
-    }
-  };
-
-  const openGiftModal = () => {
-    setShowGiftModal(true);
-    if (!loadingRewards) {
-      loadRewards();
+      return 0;
     }
   };
 
@@ -490,6 +456,12 @@ function MyProfilePageContent() {
       const kundliCreated = await maybeGenerateKundli(true);
       await refreshUser();
       setIsProfileComplete(true);
+      const creditedBonus = await fetchSignupBonusAmount();
+      setSignupBonusAmount(creditedBonus);
+      setShowGiftModal(true);
+      if (searchParams.get("setup") === "1") {
+        router.replace(pathname, { scroll: false });
+      }
       showToast(
         kundliCreated
           ? "Profile updated and your Kundli has been generated"
@@ -599,20 +571,6 @@ function MyProfilePageContent() {
         <p className="mt-2 text-xs text-gray-500">Loading places...</p>
       )}
     </div>
-  );
-
-  const renderGiftFloatingAction = () => (
-    <button
-      type="button"
-      onClick={openGiftModal}
-      aria-label="Open welcome rewards"
-      className="fixed top-28 sm:top-32 md:top-44 right-3 sm:right-5 z-50 h-11 w-11 sm:h-14 sm:w-14 rounded-full bg-linear-to-br from-amber-300 via-yellow-400 to-orange-400 text-white shadow-lg ring-2 sm:ring-4 ring-white/70 hover:scale-105 active:scale-95 transition-transform"
-    >
-      <Gift className="w-5 h-5 sm:w-7 sm:h-7 mx-auto drop-shadow-sm" />
-      <span className="absolute -top-1 -right-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
-        1
-      </span>
-    </button>
   );
 
   const renderSetupStep = () => {
@@ -865,8 +823,8 @@ function MyProfilePageContent() {
   };
 
   return (
-    <div className="animate-in fade-in duration-500">
-      {renderGiftFloatingAction()}
+    <div className="animate-in fade-in duration-500 relative">
+      <div className={showGiftModal ? "pointer-events-none blur-sm select-none" : ""}>
 
       {(authLoading || (isLoggedIn && !profileHydrated)) && (
         <div className="space-y-6">
@@ -1100,111 +1058,94 @@ function MyProfilePageContent() {
           </form>
         </Card>
       ) : null}
+      </div>
 
       {showGiftModal && (
-        <div className="fixed inset-0 z-70 bg-[#f4cc2a] overflow-y-auto">
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            {[
-              "top-10 left-6",
-              "top-24 right-10",
-              "top-40 left-1/4",
-              "top-56 right-1/3",
-              "top-72 left-12",
-              "bottom-32 right-8",
-              "bottom-20 left-1/3",
-              "bottom-10 left-8",
-            ].map((position, idx) => (
-              <span
-                key={idx}
-                className={`absolute ${position} h-2 w-6 rounded-full ${idx % 2 === 0 ? "bg-white/80" : "bg-orange-400/80"} ${idx % 3 === 0 ? "rotate-45" : "-rotate-12"}`}
-              />
-            ))}
-          </div>
+        <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/35 px-4">
+          <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-amber-200 bg-white p-6 sm:p-8 shadow-2xl animate-in zoom-in-95 duration-300">
+            <button
+              type="button"
+              className="absolute right-4 top-4 rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+              onClick={() => setShowGiftModal(false)}
+            >
+              <X className="h-5 w-5" />
+            </button>
 
-          <button
-            type="button"
-            className="fixed top-4 right-4 sm:top-6 sm:right-6 z-80 p-2 rounded-full bg-white/70 hover:bg-white transition-colors"
-            onClick={() => setShowGiftModal(false)}
-          >
-            <X className="w-5 h-5 text-gray-700" />
-          </button>
+            <div className="pointer-events-none absolute inset-0">
+              {CELEBRATION_PARTICLES.map((particle, idx) => (
+                <span
+                  key={idx}
+                  className={`absolute top-3 rounded-full ${particle.color} transition-all ease-out ${giftOpened ? "opacity-100 translate-y-72 rotate-180" : "opacity-0 -translate-y-6"}`}
+                  style={{
+                    left: particle.left,
+                    width: particle.size,
+                    height: particle.size,
+                    transitionDelay: giftOpened ? particle.delay : "0ms",
+                    transitionDuration: particle.duration,
+                  }}
+                />
+              ))}
+            </div>
 
-          <div className="min-h-screen w-full flex flex-col items-center justify-center px-4 py-8 sm:py-10">
-            <div className="relative mb-6 sm:mb-8 h-56 sm:h-64 w-56 sm:w-72">
-              <div className="absolute left-1/2 -translate-x-1/2 -top-14 sm:-top-20 h-24 sm:h-32 w-44 sm:w-56 rounded-full bg-white/45 blur-2xl animate-pulse" />
-              {giftRevealed && (
-                <div className="absolute left-1/2 -translate-x-1/2 top-16 sm:top-20 h-20 sm:h-24 w-32 sm:w-40 rounded-full bg-white/60 blur-xl animate-pulse" />
-              )}
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+              <Gift className="h-8 w-8" />
+            </div>
 
-              <div className="relative h-full w-full flex items-center justify-center">
+            <p className="text-center text-xs font-semibold tracking-[0.2em] text-amber-600">
+              BOOM! WELCOME GIFT UNLOCKED
+            </p>
+            <h3 className="mt-2 text-center text-xl font-extrabold text-gray-900 sm:text-2xl">
+              {giftOpened ? "Your rewards are ready " : "Opening your welcome gift..."}
+            </h3>
+
+            <div className="mt-5 flex justify-center">
+              <div className="relative h-28 w-40">
+                <div className="absolute bottom-0 left-0 right-0 h-16 rounded-b-xl bg-amber-500 shadow-md" />
                 <div
-                  className={`absolute top-8 sm:top-22 left-1/2 z-20 -translate-x-1/2 transition-all duration-700 ${giftRevealed ? "-translate-y-10 sm:-translate-y-30 -rotate-12" : "animate-bounce"}`}
-                >
-                  <div className="h-10 sm:h-12 w-44 sm:w-56 rounded-md bg-emerald-400 shadow-lg border border-emerald-500/40" />
-                  <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-6 sm:w-7 bg-rose-500/90" />
-                  <Gift className="absolute -top-7 sm:-top-8 left-1/2 -translate-x-1/2 w-8 h-8 sm:w-10 sm:h-10 text-rose-600" />
-                </div>
-
+                  className={`absolute left-0 right-0 top-9 h-8 origin-bottom rounded-t-xl bg-amber-400 shadow transition-transform duration-700 ${isGiftOpening ? "-rotate-[22deg] -translate-y-5" : "rotate-0 translate-y-0"}`}
+                />
+                <div className="absolute left-1/2 top-7 h-16 w-3 -translate-x-1/2 rounded bg-rose-500" />
                 <div
-                  className={`absolute top-2 sm:top-8 left-1/2 z-10 w-40 sm:w-48 -translate-x-1/2 rounded-2xl  px-3 py-2.5 sm:px-4 sm:py-3 transition-all duration-500 ${giftRevealed && !loadingRewards ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-75 translate-y-3"}`}
+                  className={`absolute -top-2 left-1/2 -translate-x-1/2 text-2xl transition-all duration-500 ${giftOpened ? "opacity-100 scale-100" : "opacity-0 scale-50"}`}
                 >
-                  <p className="text-[10px] sm:text-xs uppercase tracking-wider font-black text-amber-700 text-center">
-                    Rewards Revealed
-                  </p>
-                  <p className="text-xs sm:text-sm font-extrabold text-gray-900 text-center mt-1 leading-tight">
-                    {getCouponValueLabel(bestCoupon)}
-                  </p>
-                  <p className="text-[11px] sm:text-xs text-gray-700 text-center mt-1 leading-tight">
-                    {firstChatEligible === false
-                      ? "First chat reward used"
-                      : `${CHAT_FREE_MINUTES} min free first chat`}
-                  </p>
-                </div>
-
-                <div className="absolute bottom-0 left-1/2 h-28 sm:h-32 w-44 sm:w-56 -translate-x-1/2 rounded-b-xl bg-emerald-500 shadow-2xl border border-emerald-600/40 overflow-hidden">
-                  <div className="absolute inset-y-0 left-1/3 w-6 sm:w-7 bg-rose-500/95" />
-                  <div className="absolute inset-y-0 right-1/4 w-6 sm:w-7 bg-rose-600/90" />
+                  
                 </div>
               </div>
             </div>
 
-            <div className="text-center mb-4 sm:mb-6">
-              <p className="text-xs uppercase tracking-widest text-amber-900/80 font-black">
-                Welcome Rewards
-              </p>
-              <h3 className="text-2xl sm:text-3xl font-black text-gray-900 mt-1">
-                {giftRevealed ? "Gift Box Unlocked" : "Opening Your Gift..."}
-              </h3>
-              <p className="text-sm sm:text-base text-gray-700 mt-1">
-                {giftRevealed ? rewardSubtitle : "Please wait while your rewards are being revealed"}
-              </p>
-            </div>
+            {giftOpened ? (
+              <>
+                <div className="mt-4 space-y-3 rounded-xl border border-amber-100 bg-amber-50 p-4 sm:p-5">
+                  <p className="text-sm font-semibold text-gray-800 sm:text-base">
+                    Rs {signupBonusAmount} is credited to your wallet.
+                  </p>
+                  <p className="text-sm font-semibold text-gray-800 sm:text-base">
+                    {freeChatMinutes} min chat is free to talk with any astrologer.
+                  </p>
+                </div>
 
-            <div className="w-full max-w-md space-y-3 sm:space-y-4">
-              {!giftRevealed ? (
-                <div className="rounded-2xl bg-white/80 border border-white p-8 sm:p-10 flex items-center justify-center gap-3">
-                  <Sparkles className="w-5 h-5 text-amber-700 animate-pulse" />
-                  <p className="text-sm font-semibold text-gray-700">
-                    Opening your surprise reward...
-                  </p>
-                </div>
-              ) : loadingRewards ? (
-                <div className="rounded-2xl bg-white/80 border border-white p-8 sm:p-10 flex items-center justify-center">
-                  <Loader2 className="w-6 h-6 animate-spin text-yellow-700" />
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-white/80 bg-white/75 p-4 sm:p-5 shadow-md text-center">
-                  <p className="text-sm font-bold text-gray-800">
-                    Your surprise is shown inside the gift box.
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-700 mt-1">
-                    {bestCoupon
-                      ? `Coupon code: ${bestCoupon.code}`
-                      : "No active coupon code right now"}
-                  </p>
-                </div>
-              )}
-            </div>
+                <Button
+                  fullWidth
+                  size="lg"
+                  className="mt-6"
+                  onClick={() => {
+                    setShowGiftModal(false);
+                    router.push(
+                      `/aichat?id=${encodeURIComponent("ai-astrologer-devansh")}&astrologer=${encodeURIComponent("Acharya Devansh Sharma")}&photo=${encodeURIComponent("/images/devanshv1.jpeg")}`,
+                    );
+                  }}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <MessageCircle className="h-4 w-4" />
+                    Talk to Astrologer
+                  </span>
+                </Button>
+              </>
+            ) : (
+              <p className="mt-4 text-center text-sm font-medium text-gray-600">
+                Please wait, opening your gift...
+              </p>
+            )}
           </div>
         </div>
       )}

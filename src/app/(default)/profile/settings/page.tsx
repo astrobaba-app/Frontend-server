@@ -3,23 +3,76 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bell, Mail, MessageSquare, Settings, Trash2, AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { requestAccountDeletion, getDeletionRequestStatus, cancelDeletionRequest, type AccountDeletionRequest } from "@/store/api/auth/profile";
+import { requestAccountDeletion, getDeletionRequestStatus, cancelDeletionRequest, getProfile, updateProfile, type AccountDeletionRequest } from "@/store/api/auth/profile";
 import { useToast } from "@/hooks/useToast";
 import Toast from "@/components/atoms/Toast";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { showToast, toastProps, hideToast } = useToast();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteReason, setDeleteReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletionRequest, setDeletionRequest] = useState<AccountDeletionRequest | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
+  const [preferences, setPreferences] = useState({
+    pushNotifications: true,
+    emailUpdates: false,
+    smsAlerts: true,
+  });
+  const [updatingPreferenceKey, setUpdatingPreferenceKey] = useState<
+    "pushNotifications" | "emailUpdates" | "smsAlerts" | null
+  >(null);
 
   useEffect(() => {
     fetchDeletionStatus();
+    fetchPreferences();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    setPreferences({
+      pushNotifications: user.pushNotifications ?? true,
+      emailUpdates: user.emailUpdates ?? false,
+      smsAlerts: user.smsAlerts ?? true,
+    });
+  }, [user]);
+
+  const fetchPreferences = async () => {
+    try {
+      const response = await getProfile();
+      if (response.success && response.user) {
+        setPreferences({
+          pushNotifications: response.user.pushNotifications ?? true,
+          emailUpdates: response.user.emailUpdates ?? false,
+          smsAlerts: response.user.smsAlerts ?? true,
+        });
+      }
+    } catch {
+      // Keep defaults
+    }
+  };
+
+  const handlePreferenceToggle = async (
+    key: "pushNotifications" | "emailUpdates" | "smsAlerts",
+    value: boolean,
+  ) => {
+    const previous = preferences[key];
+    setPreferences((prev) => ({ ...prev, [key]: value }));
+    setUpdatingPreferenceKey(key);
+
+    try {
+      await updateProfile({ [key]: value });
+      await refreshUser();
+      showToast("Preference updated", "success");
+    } catch (error: any) {
+      setPreferences((prev) => ({ ...prev, [key]: previous }));
+      showToast(error?.message || "Failed to update preference", "error");
+    } finally {
+      setUpdatingPreferenceKey(null);
+    }
+  };
 
   const fetchDeletionStatus = async () => {
     try {
@@ -123,7 +176,15 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" defaultChecked />
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={preferences.pushNotifications}
+                    disabled={updatingPreferenceKey === "pushNotifications"}
+                    onChange={(e) =>
+                      handlePreferenceToggle("pushNotifications", e.target.checked)
+                    }
+                  />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
                 </label>
               </div>
@@ -140,7 +201,15 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" />
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={preferences.emailUpdates}
+                    disabled={updatingPreferenceKey === "emailUpdates"}
+                    onChange={(e) =>
+                      handlePreferenceToggle("emailUpdates", e.target.checked)
+                    }
+                  />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
                 </label>
               </div>
@@ -157,7 +226,15 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" defaultChecked />
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={preferences.smsAlerts}
+                    disabled={updatingPreferenceKey === "smsAlerts"}
+                    onChange={(e) =>
+                      handlePreferenceToggle("smsAlerts", e.target.checked)
+                    }
+                  />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
                 </label>
               </div>

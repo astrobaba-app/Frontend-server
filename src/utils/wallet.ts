@@ -17,7 +17,7 @@ export interface WalletTransaction {
   amount: number;
   type: 'credit' | 'debit';
   status: 'pending' | 'completed' | 'failed' | 'refunded';
-  paymentMethod: 'razorpay' | 'manual' | 'refund' | 'bonus';
+  paymentMethod: 'razorpay' | 'manual' | 'refund' | 'bonus' | 'signup_bonus';
   description: string;
   balanceBefore: number | null;
   balanceAfter: number | null;
