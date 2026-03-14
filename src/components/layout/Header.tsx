@@ -29,6 +29,7 @@ import Link from "next/link";
 import type { AstrologerProfile } from "@/store/api/astrologer/profile";
 
 import { getAstrologerProfile } from "@/store/api/astrologer/profile";
+import { getProfile } from "@/store/api/auth/profile";
 
 const NAV_LINKS = [
   { name: "Home", href: "/", icon: <Home className="w-5 h-5" /> },
@@ -67,6 +68,27 @@ const Header = () => {
 
   const [astrologerProfile, setAstrologerProfile] =
     useState<AstrologerProfile | null>(null);
+  const [isUserProfileIncomplete, setIsUserProfileIncomplete] = useState(false);
+
+  const isProfileIncomplete = (profile: {
+    fullName?: string | null;
+    gender?: string | null;
+    dateOfbirth?: string | null;
+    timeOfbirth?: string | null;
+    placeOfBirth?: string | null;
+    latitude?: string | null;
+    longitude?: string | null;
+  }) => {
+    return !(
+      profile.fullName &&
+      profile.gender &&
+      profile.dateOfbirth &&
+      profile.timeOfbirth &&
+      profile.placeOfBirth &&
+      profile.latitude &&
+      profile.longitude
+    );
+  };
 
   // Initialize auth state synchronously to prevent flash
   const [isAstrologer, setIsAstrologer] = useState(() => {
@@ -110,8 +132,16 @@ const Header = () => {
         }
       } else if (middlewareToken) {
         setRole("user");
+        try {
+          const userProfileRes = await getProfile();
+          const userProfile = userProfileRes?.user;
+          setIsUserProfileIncomplete(userProfile ? isProfileIncomplete(userProfile) : false);
+        } catch {
+          setIsUserProfileIncomplete(false);
+        }
       } else {
         setRole(null);
+        setIsUserProfileIncomplete(false);
       }
 
       setAstrologerProfile(null);
@@ -137,7 +167,11 @@ const Header = () => {
   const isSomeoneLoggedIn = isAstrologer || isLoggedIn;
 
   const profileHref =
-    role === "astrologer" ? "/astrologer/dashboard" : "/profile";
+    role === "astrologer"
+      ? "/astrologer/dashboard"
+      : isUserProfileIncomplete
+      ? "/profile?setup=1"
+      : "/profile";
 
   return (
     <header className="w-full bg-white shadow-sm sticky top-0 z-50 font-inter">
