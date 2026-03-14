@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Card from "@/components/atoms/Card";
 import Heading from "@/components/atoms/Heading";
 import Input from "@/components/atoms/Input";
@@ -156,7 +156,7 @@ const getCouponValueLabel = (coupon: ActiveCoupon | null) => {
   return `${coupon.discountValue}% off${maxCap}`;
 };
 
-export default function MyProfilePage() {
+function MyProfilePageContent() {
   const { isLoggedIn, refreshUser, user, loading: authLoading } = useAuth();
   const { showToast, toastProps, hideToast } = useToast();
   const searchParams = useSearchParams();
@@ -1217,5 +1217,13 @@ export default function MyProfilePage() {
         />
       )}
     </div>
+  );
+}
+
+export default function MyProfilePage() {
+  return (
+    <Suspense fallback={<div className="animate-in fade-in duration-500" />}>
+      <MyProfilePageContent />
+    </Suspense>
   );
 }
