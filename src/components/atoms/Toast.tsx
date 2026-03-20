@@ -9,9 +9,14 @@ interface ToastProps {
   type: ToastType;
   onClose: () => void;
   duration?: number;
+  isVisible?: boolean;
 }
 
-export default function Toast({ message, type, onClose, duration = 4000 }: ToastProps) {
+export default function Toast({ message, type, onClose, duration = 4000, isVisible = true }: ToastProps) {
+  if (!isVisible || !message?.trim()) {
+    return null;
+  }
+
   useEffect(() => {
     const timer = setTimeout(() => {
       onClose();

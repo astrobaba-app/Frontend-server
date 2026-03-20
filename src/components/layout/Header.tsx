@@ -59,6 +59,12 @@ const NAV_LINKS = [
     href: "/blog",
     icon: <BookOpen className="w-5 h-5" />,
   },
+
+  {
+    name: "Discussion",
+    href: "/forum",
+    icon: <MessageSquare className="w-5 h-5" />,
+  },
 ];
 
 const Header = () => {
@@ -165,6 +171,14 @@ const Header = () => {
   }, []);
 
   const isSomeoneLoggedIn = isAstrologer || isLoggedIn;
+
+  const getNavHref = (href: string) => {
+    if (href === "/forum" && !isSomeoneLoggedIn) {
+      return "/auth/login?redirect=/forum";
+    }
+
+    return href;
+  };
 
   const profileHref =
     role === "astrologer"
@@ -297,7 +311,7 @@ const Header = () => {
           {NAV_LINKS.map((link) => (
             <Link
               key={link.name}
-              href={link.href}
+              href={getNavHref(link.href)}
               className="text-sm font-bold uppercase tracking-wider text-black hover:opacity-70 transition-opacity"
             >
               {link.name}
@@ -388,7 +402,7 @@ const Header = () => {
               {NAV_LINKS.map((link) => (
                 <Link
                   key={link.name}
-                  href={link.href}
+                  href={getNavHref(link.href)}
                   onClick={() => setIsOpen(false)}
                   className="flex items-center space-x-4 px-6 py-4 text-gray-700 hover:bg-gray-50 border-b border-gray-50 transition-colors"
                 >

@@ -39,6 +39,7 @@ const PROTECTED_ROUTES = [
   '/checkout',
   '/kundli-matching',
   '/kundliReport',
+  '/forum',
 ];
 
 // Routes that require astrologer authentication (routes starting with these paths)

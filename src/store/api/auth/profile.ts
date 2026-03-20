@@ -25,6 +25,7 @@ export interface UpdateProfileData {
   pushNotifications?: boolean;
   emailUpdates?: boolean;
   smsAlerts?: boolean;
+  forumIdentityMode?: 'real' | 'anonymous';
 }
 
 export const getProfile = async (): Promise<ProfileResponse> => {

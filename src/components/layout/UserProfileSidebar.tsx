@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { User, Wallet, Heart, ShoppingBag, FileText, Settings, LogOut, Star, ChevronRight, HelpCircle } from "lucide-react";
+import { User, Wallet, Heart, ShoppingBag, MessageSquare, Settings, LogOut, Star, ChevronRight, HelpCircle } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LuShoppingCart } from "react-icons/lu";
@@ -16,6 +16,7 @@ const MENU_ITEMS = [
   { icon: Wallet, label: "My Wallet", href: "/profile/wallet" },
   { icon: Heart, label: "My Following", href: "/profile/following" },
   { icon: Heart, label: "Free Kundli", href: "/profile/kundli" },
+  { icon: MessageSquare, label: "My Posts", href: "/profile/my-posts" },
   // TEMPORARILY HIDDEN: Uncomment the line below to show Generate Kundli Report feature
   // { icon: FileText, label: "Generate Kundli Report (PDF)", href: "/profile/kundli-report" },
   { icon: ShoppingBag, label: "My Orders", href: "/profile/orders" },
@@ -30,7 +31,7 @@ export default function ProfileSidebar({ userName = "User", userEmail = "Not pro
 
   return (
     <div className="bg-white rounded-2xl overflow-hidden w-full border border-gray-100 shadow-sm transition-all duration-300">
-      <div className="p-6 bg-gradient-to-br from-yellow-50 to-white border-b border-gray-100">
+      <div className="p-6 bg-linear-to-br from-yellow-50 to-white border-b border-gray-100">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-yellow-400 flex items-center justify-center text-white font-bold text-xl shadow-inner">
             {userName.charAt(0).toUpperCase()}

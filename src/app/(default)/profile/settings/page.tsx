@@ -20,9 +20,10 @@ export default function SettingsPage() {
     pushNotifications: true,
     emailUpdates: false,
     smsAlerts: true,
+    forumIdentityMode: 'real' as 'real' | 'anonymous',
   });
   const [updatingPreferenceKey, setUpdatingPreferenceKey] = useState<
-    "pushNotifications" | "emailUpdates" | "smsAlerts" | null
+    "pushNotifications" | "emailUpdates" | "smsAlerts" | "forumIdentityMode" | null
   >(null);
 
   useEffect(() => {
@@ -36,6 +37,7 @@ export default function SettingsPage() {
       pushNotifications: user.pushNotifications ?? true,
       emailUpdates: user.emailUpdates ?? false,
       smsAlerts: user.smsAlerts ?? true,
+      forumIdentityMode: user.forumIdentityMode ?? 'real',
     });
   }, [user]);
 
@@ -47,6 +49,7 @@ export default function SettingsPage() {
           pushNotifications: response.user.pushNotifications ?? true,
           emailUpdates: response.user.emailUpdates ?? false,
           smsAlerts: response.user.smsAlerts ?? true,
+          forumIdentityMode: response.user.forumIdentityMode ?? 'real',
         });
       }
     } catch {
@@ -55,11 +58,11 @@ export default function SettingsPage() {
   };
 
   const handlePreferenceToggle = async (
-    key: "pushNotifications" | "emailUpdates" | "smsAlerts",
-    value: boolean,
+    key: "pushNotifications" | "emailUpdates" | "smsAlerts" | "forumIdentityMode",
+    value: boolean | 'real' | 'anonymous',
   ) => {
     const previous = preferences[key];
-    setPreferences((prev) => ({ ...prev, [key]: value }));
+    setPreferences((prev) => ({ ...prev, [key]: value as never }));
     setUpdatingPreferenceKey(key);
 
     try {
@@ -164,6 +167,53 @@ export default function SettingsPage() {
             </div>
 
             <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-50">
+              <div className="p-5 sm:p-6">
+                <div className="flex gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                    <Settings className="w-5 h-5 text-amber-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-bold text-gray-900">Forum Identity</h4>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Choose whether new community posts and comments use your profile or an anonymous alias.
+                    </p>
+                    {user?.forumAnonymousHandle && (
+                      <p className="mt-2 text-xs font-semibold text-amber-700">
+                        Current anonymous alias: {user.forumAnonymousHandle}
+                      </p>
+                    )}
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        disabled={updatingPreferenceKey === 'forumIdentityMode'}
+                        onClick={() => handlePreferenceToggle('forumIdentityMode', 'real')}
+                        className={`rounded-xl border px-4 py-3 text-left transition ${
+                          preferences.forumIdentityMode === 'real'
+                            ? 'border-yellow-400 bg-yellow-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <p className="text-sm font-bold text-gray-900">Real Identity</p>
+                        <p className="mt-1 text-xs text-gray-500">New discussions use your visible profile name.</p>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={updatingPreferenceKey === 'forumIdentityMode'}
+                        onClick={() => handlePreferenceToggle('forumIdentityMode', 'anonymous')}
+                        className={`rounded-xl border px-4 py-3 text-left transition ${
+                          preferences.forumIdentityMode === 'anonymous'
+                            ? 'border-yellow-400 bg-yellow-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <p className="text-sm font-bold text-gray-900">Anonymous Mode</p>
+                        <p className="mt-1 text-xs text-gray-500">New discussions use a generated alias that stays attached permanently.</p>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Notification Toggle */}
               <div className="flex items-center justify-between p-5 sm:p-6">
                 <div className="flex gap-4">

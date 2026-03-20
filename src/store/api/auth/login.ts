@@ -20,6 +20,9 @@ export interface UserProfile {
   pushNotifications?: boolean;
   emailUpdates?: boolean;
   smsAlerts?: boolean;
+  forumIdentityMode?: 'real' | 'anonymous';
+  forumAnonymousHandle?: string | null;
+  forumAnonymousHash?: string | null;
 }
 
 export interface VerifyOtpSuccessData {
