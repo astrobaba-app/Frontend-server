@@ -60,6 +60,7 @@ export interface RegisterRequest {
   password: string;
   fullName: string;
   dateOfBirth?: string;
+  gender?: string;
   languages: string[] | string;
   skills: string[] | string;
   categories: string[] | string;
@@ -146,6 +147,7 @@ export const registerAstrologer = async (data: RegisterRequest): Promise<Registe
     formData.append('fullName', data.fullName);
     
     if (data.dateOfBirth) formData.append('dateOfBirth', data.dateOfBirth);
+    if (data.gender) formData.append('gender', data.gender);
     if (data.yearsOfExperience) formData.append('yearsOfExperience', data.yearsOfExperience.toString());
     if (data.bio) formData.append('bio', data.bio);
     if (data.pricePerMinute) formData.append('pricePerMinute', data.pricePerMinute.toString());

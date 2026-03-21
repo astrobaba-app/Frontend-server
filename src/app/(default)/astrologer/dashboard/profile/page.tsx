@@ -10,6 +10,7 @@ import { AstrologerProfileSkeleton } from "@/components/skeletons";
 import { useToast } from "@/hooks/useToast";
 import { colors } from "@/utils/colors";
 import { getAstrologerProfile, updateAstrologerProfile } from "@/store/api/astrologer/profile";
+import { getOnlineStatus, goOnline, goOffline } from "@/store/api/astrologer/auth";
 import type { AstrologerProfile } from "@/store/api/astrologer/auth";
 
 export default function AstrologerProfilePage() {
@@ -18,6 +19,9 @@ export default function AstrologerProfilePage() {
   const [profile, setProfile] = useState<AstrologerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
+  const [statusLoading, setStatusLoading] = useState(true);
+  const [togglingStatus, setTogglingStatus] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [newImage, setNewImage] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -36,7 +40,36 @@ export default function AstrologerProfilePage() {
 
   useEffect(() => {
     fetchProfile();
+    fetchOnlineStatus();
   }, []);
+
+  const fetchOnlineStatus = async () => {
+    try {
+      const response = await getOnlineStatus();
+      if (response.success) {
+        setIsOnline(response.isOnline);
+      }
+    } catch (err: any) {
+      console.error("Failed to fetch online status:", err);
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
+  const handleToggleStatus = async (newStatus: boolean) => {
+    setTogglingStatus(true);
+    try {
+      const response = newStatus ? await goOnline() : await goOffline();
+      if (response.success) {
+        setIsOnline(response.isOnline);
+        showToast(response.message, "success");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Failed to update status", "error");
+    } finally {
+      setTogglingStatus(false);
+    }
+  };
 
   const fetchProfile = async () => {
     try {
@@ -172,6 +205,84 @@ export default function AstrologerProfilePage() {
             onSubmit={handleSubmit}
             className="bg-white rounded-lg shadow-md p-4 sm:p-6 lg:p-8"
           >
+          <div className="mb-6 sm:mb-8">
+            <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4" style={{ color: colors.black }}>
+              Availability Status
+            </h2>
+            <p className="mb-4 sm:mb-6 text-sm sm:text-base" style={{ color: colors.gray }}>
+              Control your online status to receive consultation requests from users.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:p-6 rounded-lg border-2 gap-4" style={{ borderColor: colors.offYellow }}>
+              <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1">
+                <div
+                  className="w-4 h-4 rounded-full mt-1 sm:mt-0 shrink-0"
+                  style={{ backgroundColor: isOnline ? colors.primeGreen : colors.primeRed }}
+                ></div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-base sm:text-lg" style={{ color: colors.black }}>
+                    {isOnline ? "You are Online" : "You are Offline"}
+                  </h3>
+                  <p className="text-xs sm:text-sm" style={{ color: colors.gray }}>
+                    {isOnline
+                      ? "Users can send you consultation requests"
+                      : "Users cannot send you consultation requests"}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleToggleStatus(!isOnline)}
+                disabled={togglingStatus || statusLoading}
+                className="relative inline-flex h-8 w-16 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 shrink-0"
+                style={{
+                  backgroundColor: isOnline ? colors.primeGreen : colors.gray,
+                }}
+              >
+                <span
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                    isOnline ? "translate-x-9" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-4">
+              <Button
+                fullWidth
+                type="button"
+                onClick={() => handleToggleStatus(true)}
+                loading={togglingStatus && !isOnline}
+                disabled={isOnline || togglingStatus || statusLoading}
+                customColors={{
+                  backgroundColor: colors.primeGreen,
+                  textColor: colors.white,
+                }}
+                className="py-2.5 sm:py-3 text-base sm:text-lg font-semibold"
+              >
+                {isOnline ? "Already Online" : "Go Online"}
+              </Button>
+
+              <Button
+                fullWidth
+                type="button"
+                onClick={() => handleToggleStatus(false)}
+                loading={togglingStatus && isOnline}
+                disabled={!isOnline || togglingStatus || statusLoading}
+                customColors={{
+                  backgroundColor: colors.primeRed,
+                  textColor: colors.white,
+                }}
+                className="py-2.5 sm:py-3 text-base sm:text-lg font-semibold"
+              >
+                {!isOnline ? "Already Offline" : "Go Offline"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="mb-6 border-t pt-6" style={{ borderColor: colors.offYellow }}></div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
             {/* Full Name */}
             <div>
@@ -257,7 +368,6 @@ export default function AstrologerProfilePage() {
                 name="gender"
                 value={formData.gender}
                 onChange={handleInputChange}
-                disabled={true}
               >
                 <option value="">Select Gender</option>
                 <option value="Male">Male</option>

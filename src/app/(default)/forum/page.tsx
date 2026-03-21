@@ -9,12 +9,14 @@ import Toast from '@/components/atoms/Toast';
 import ForumComposer from '@/components/forum/ForumComposer';
 import ForumFeedCard from '@/components/forum/ForumFeedCard';
 import ForumReportModal from '@/components/forum/ForumReportModal';
+import { updateProfile } from '@/store/api/auth/profile';
 import {
   createForumPost,
   getForumPosts,
   reportForumPost,
   shareForumPost,
   toggleForumPostLike,
+  type ForumIdentityMode,
   type ForumPost,
 } from '@/store/api/general/forum';
 
@@ -27,7 +29,7 @@ const SORT_OPTIONS: Array<{ key: 'newest' | 'oldest' | 'top-liked' | 'most-comme
 
 export default function ForumPage() {
   const router = useRouter();
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, refreshUser } = useAuth();
   const { showToast, toastProps, hideToast } = useToast();
   const [posts, setPosts] = useState<ForumPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +40,12 @@ export default function ForumPage() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [reportingPost, setReportingPost] = useState<ForumPost | null>(null);
   const [submittingReport, setSubmittingReport] = useState(false);
+  const [identityMode, setIdentityMode] = useState<ForumIdentityMode>(user?.forumIdentityMode || 'real');
+  const [updatingIdentity, setUpdatingIdentity] = useState(false);
+
+  useEffect(() => {
+    setIdentityMode(user?.forumIdentityMode || 'real');
+  }, [user?.forumIdentityMode]);
 
   const redirectToLogin = () => {
     router.push('/auth/login?redirect=/forum');
@@ -144,6 +152,32 @@ export default function ForumPage() {
     setReportingPost(post);
   };
 
+  const handleIdentitySwitch = async (mode: ForumIdentityMode) => {
+    if (!isLoggedIn) {
+      redirectToLogin();
+      return;
+    }
+
+    if (mode === identityMode) {
+      return;
+    }
+
+    const previousMode = identityMode;
+    setIdentityMode(mode);
+    setUpdatingIdentity(true);
+
+    try {
+      await updateProfile({ forumIdentityMode: mode });
+      await refreshUser();
+      showToast(`Switched to ${mode === 'anonymous' ? 'Anonymous' : 'Real'} identity`, 'success');
+    } catch (error: any) {
+      setIdentityMode(previousMode);
+      showToast(error?.message || 'Failed to switch identity', 'error');
+    } finally {
+      setUpdatingIdentity(false);
+    }
+  };
+
   const handleSubmitReport = async (payload: { reason: any; details?: string }) => {
     if (!reportingPost) {
       return;
@@ -182,7 +216,7 @@ export default function ForumPage() {
       </div>
 
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:px-8">
-        <div className="space-y-6">
+        <div className="order-2 space-y-6 lg:order-1">
           {/* Sort + filter bar */}
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.22em] text-gray-400">
@@ -201,6 +235,32 @@ export default function ForumPage() {
                 {option.label}
               </button>
             ))}
+
+            <div className="ml-1 h-6 w-px bg-gray-300" />
+
+            <div className="flex items-center gap-1 rounded-full border border-gray-200 bg-white p-1">
+              <span className="px-2 text-[11px] font-black uppercase tracking-[0.12em] text-gray-500">Switch Identity</span>
+              <button
+                type="button"
+                disabled={updatingIdentity}
+                onClick={() => handleIdentitySwitch('real')}
+                className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                  identityMode === 'real' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+                } ${updatingIdentity ? 'cursor-not-allowed opacity-70' : ''}`}
+              >
+                Real
+              </button>
+              <button
+                type="button"
+                disabled={updatingIdentity}
+                onClick={() => handleIdentitySwitch('anonymous')}
+                className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                  identityMode === 'anonymous' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+                } ${updatingIdentity ? 'cursor-not-allowed opacity-70' : ''}`}
+              >
+                Anonymous
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -241,7 +301,7 @@ export default function ForumPage() {
           )}
         </div>
 
-        <aside className="space-y-4">
+        <aside className="order-1 space-y-4 lg:order-2">
           <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <p className="text-xs font-black uppercase tracking-[0.22em] text-gray-400">Posting Rules</p>
@@ -289,7 +349,7 @@ export default function ForumPage() {
             </button>
             <ForumComposer
               isLoggedIn={isLoggedIn}
-              identityMode={user?.forumIdentityMode || 'real'}
+              identityMode={identityMode}
               anonymousHandle={user?.forumAnonymousHandle}
               onSubmit={handleCreatePost}
               onRequireAuth={redirectToLogin}

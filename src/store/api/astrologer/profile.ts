@@ -79,6 +79,7 @@ export const updateAstrologerProfile = async (data: UpdateProfileRequest): Promi
     
     if (data.fullName) formData.append('fullName', data.fullName);
     if (data.dateOfBirth) formData.append('dateOfBirth', data.dateOfBirth);
+    if (data.gender) formData.append('gender', data.gender);
     if (data.yearsOfExperience) formData.append('yearsOfExperience', data.yearsOfExperience.toString());
     if (data.bio) formData.append('bio', data.bio);
     if (data.pricePerMinute) formData.append('pricePerMinute', data.pricePerMinute.toString());
