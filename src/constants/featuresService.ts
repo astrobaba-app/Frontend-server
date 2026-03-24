@@ -1,7 +1,6 @@
 import { IconType } from "react-icons";
-import { FaHeart, FaBookOpen } from "react-icons/fa";
+import { FaHeart, FaBookOpen, FaComments } from "react-icons/fa";
 import { IoChatbubbles, IoSunnyOutline } from "react-icons/io5";
-import { RiRobot2Line } from "react-icons/ri";
 import { MdPhone } from "react-icons/md";
 import { FiShoppingBag } from "react-icons/fi";
 
@@ -50,10 +49,10 @@ export const featureServices: FeatureService[] = [
     href: "/astrologer?mode=call",
   },
   {
-    icon: RiRobot2Line,
-    title: "AI Astrologer",
-    description: "24/7 AI Astrologer",
-    href: "/aichat",
+    icon: FaComments,
+    title: "Discussion",
+    description: "Anonymous Mode Available",
+    href: "/forum",
   },
   {
     icon: FiShoppingBag,
