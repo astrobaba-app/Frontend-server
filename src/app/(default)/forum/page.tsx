@@ -229,7 +229,7 @@ export default function ForumPage() {
                 type="button"
                 onClick={() => setSort(option.key)}
                 className={`rounded-full px-4 py-2 text-sm font-bold transition ${
-                  sort === option.key ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  sort === option.key ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
                 }`}
               >
                 {option.label}
@@ -238,27 +238,27 @@ export default function ForumPage() {
 
             <div className="ml-1 h-6 w-px bg-gray-300" />
 
-            <div className="flex items-center gap-1 rounded-full border border-gray-200 bg-white p-1">
-              <span className="px-2 text-[11px] font-black uppercase tracking-[0.12em] text-gray-500">Switch Identity</span>
+            <div className="flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 p-1">
+              <span className="px-2 text-[11px] font-black uppercase tracking-[0.12em] text-amber-700">Anonymous Mode</span>
               <button
                 type="button"
                 disabled={updatingIdentity}
                 onClick={() => handleIdentitySwitch('real')}
                 className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
-                  identityMode === 'real' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+                  identityMode === 'real' ? 'bg-amber-500 text-white' : 'text-amber-700 hover:bg-amber-100'
                 } ${updatingIdentity ? 'cursor-not-allowed opacity-70' : ''}`}
               >
-                Real
+                OFF
               </button>
               <button
                 type="button"
                 disabled={updatingIdentity}
                 onClick={() => handleIdentitySwitch('anonymous')}
                 className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
-                  identityMode === 'anonymous' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+                  identityMode === 'anonymous' ? 'bg-amber-500 text-white' : 'text-amber-700 hover:bg-amber-100'
                 } ${updatingIdentity ? 'cursor-not-allowed opacity-70' : ''}`}
               >
-                Anonymous
+                ON
               </button>
             </div>
           </div>
