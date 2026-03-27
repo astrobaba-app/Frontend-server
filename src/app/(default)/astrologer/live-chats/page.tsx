@@ -128,6 +128,7 @@ function LiveChatsPageContent() {
   >(null);
   const typingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const autoOpenProcessedSessionRef = React.useRef<string | null>(null);
 
   const selectedSession = useMemo(
     () => chatSessions.find((s) => s.id === selectedSessionId) || null,
@@ -232,8 +233,53 @@ function LiveChatsPageContent() {
     const matchingSession = chatSessions.find((s) => s.id === sessionIdFromUrl);
     if (matchingSession && selectedSessionId !== matchingSession.id) {
       setSelectedSessionId(matchingSession.id);
+      setActiveTab("chats");
     }
   }, [sessionIdFromUrl, chatSessions, selectedSessionId]);
+
+  // If opened from notification with a pending request sessionId, auto-approve and open it.
+  useEffect(() => {
+    if (!sessionIdFromUrl) return;
+    if (autoOpenProcessedSessionRef.current === sessionIdFromUrl) return;
+
+    const alreadyApproved = chatSessions.some((s) => s.id === sessionIdFromUrl);
+    if (alreadyApproved) {
+      autoOpenProcessedSessionRef.current = sessionIdFromUrl;
+      setSelectedSessionId(sessionIdFromUrl);
+      setActiveTab("chats");
+      return;
+    }
+
+    const pending = requestSessions.find((s) => s.id === sessionIdFromUrl);
+    if (!pending) return;
+
+    autoOpenProcessedSessionRef.current = sessionIdFromUrl;
+
+    const autoApproveAndOpen = async () => {
+      try {
+        try {
+          await approveChatRequest(sessionIdFromUrl, false);
+        } catch (error: any) {
+          const statusCode = error?.response?.status;
+          const requiresForce = !!error?.response?.data?.requiresForce;
+          if (statusCode === 409 && requiresForce) {
+            await approveChatRequest(sessionIdFromUrl, true);
+          } else {
+            throw error;
+          }
+        }
+
+        await refreshSessions();
+        setSelectedSessionId(sessionIdFromUrl);
+        setActiveTab("chats");
+      } catch (error) {
+        console.error("Failed to auto-approve notification chat session", error);
+        showToast("Could not auto-open chat request", "error");
+      }
+    };
+
+    autoApproveAndOpen();
+  }, [sessionIdFromUrl, chatSessions, requestSessions, refreshSessions, showToast]);
 
   // Load astrologer chat sessions and requests
   useEffect(() => {
