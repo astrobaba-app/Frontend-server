@@ -7,6 +7,7 @@ import {  logoutAstrologer } from "@/store/api/astrologer/auth";
 import { getAstrologerProfile } from "@/store/api/astrologer/profile";
 import type { AstrologerProfile } from "@/store/api/astrologer/auth";
 import AstrologerSidebar from "@/components/layout/AstrologerSidebar";
+import AstrologerChatRequestModal from "@/components/chat/AstrologerChatRequestModal";
 import { RxCross2 } from "react-icons/rx";
 import { IoIosMenu } from "react-icons/io";
 
@@ -153,6 +154,8 @@ export default function AstrologerDashboardLayout({
           </div>
         </div>
       )}
+
+      <AstrologerChatRequestModal />
     </div>
   );
 }

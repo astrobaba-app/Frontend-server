@@ -57,7 +57,12 @@ interface PaginatedResponse<T> {
 
 export async function startChatSession(astrologerId: string) {
   const response = await api.post("/chat/start", { astrologerId });
-  return response.data as { success: boolean; session: ChatSessionSummary };
+  return response.data as {
+    success: boolean;
+    session: ChatSessionSummary;
+    requestTimeoutSeconds?: number;
+    requestExpiresAt?: string;
+  };
 }
 
 export async function getMyChatSessions(params?: {
@@ -70,6 +75,11 @@ export async function getMyChatSessions(params?: {
     { params }
   );
   return response.data;
+}
+
+export async function endChatSession(sessionId: string) {
+  const response = await api.post(`/chat/${sessionId}/end`);
+  return response.data as { success: boolean; message: string };
 }
 
 export async function getAstrologerChatSessions(params?: {
@@ -85,14 +95,21 @@ export async function getAstrologerChatSessions(params?: {
   return response.data;
 }
 
-export async function approveChatRequest(sessionId: string) {
-  const response = await api.post(`/chat/astrologer/requests/${sessionId}/approve`);
+export async function approveChatRequest(sessionId: string, forceAccept = false) {
+  const response = await api.post(`/chat/astrologer/requests/${sessionId}/approve`, {
+    forceAccept,
+  });
   return response.data as { success: boolean };
 }
 
 export async function rejectChatRequest(sessionId: string) {
   const response = await api.post(`/chat/astrologer/requests/${sessionId}/reject`);
   return response.data as { success: boolean };
+}
+
+export async function endAstrologerChatSession(sessionId: string) {
+  const response = await api.post(`/chat/astrologer/${sessionId}/end`);
+  return response.data as { success: boolean; message: string };
 }
 
 export async function getChatMessages(

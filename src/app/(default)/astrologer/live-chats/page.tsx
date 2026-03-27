@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
 import {
   FiSearch,
   FiPhone,
@@ -18,13 +18,14 @@ import { RxCross2 } from "react-icons/rx";
 import { IoMdArrowBack } from "react-icons/io";
 import { colors } from "@/utils/colors";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getChatSocket } from "@/utils/chatSocket";
 import AgoraCall from "@/components/AgoraCall";
 import type { ChatMessageDto, ChatSessionSummary } from "@/store/api/chat";
 import type { CallSession } from "@/store/api/call";
 import {
   approveChatRequest,
+  endAstrologerChatSession,
   getAstrologerChatSessions,
   getChatMessages,
   rejectChatRequest,
@@ -38,6 +39,7 @@ import {
 } from "@/store/api/call";
 import { useToast } from "@/hooks/useToast";
 import Toast from "@/components/atoms/Toast";
+import AstrologerChatRequestModal from "@/components/chat/AstrologerChatRequestModal";
 
 function formatDateLabel(date: Date): string {
   const today = new Date();
@@ -88,8 +90,13 @@ function groupMessagesByDate(messages: ChatMessageDto[]): MessageGroup[] {
 
 type TabType = "chats" | "requests";
 
-export default function LiveChatsPage() {
+function LiveChatsPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const sessionIdFromUrl = useMemo(
+    () => searchParams.get("sessionId"),
+    [searchParams]
+  );
   const { showToast, toastProps, hideToast } = useToast();
   const [chatSessions, setChatSessions] = useState<ChatSessionSummary[]>([]);
   const [requestSessions, setRequestSessions] = useState<ChatSessionSummary[]>(
@@ -112,6 +119,13 @@ export default function LiveChatsPage() {
   const [incomingCall, setIncomingCall] = useState<CallSession | null>(null);
   const [activeCall, setActiveCall] = useState<CallSession | null>(null);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [showLeaveChatConfirm, setShowLeaveChatConfirm] = useState(false);
+  const [showLeaveSectionConfirm, setShowLeaveSectionConfirm] = useState(false);
+  const [showUserEndedModal, setShowUserEndedModal] = useState(false);
+  const [userEndedModalName, setUserEndedModalName] = useState<string>("User");
+  const [pendingSwitchSessionId, setPendingSwitchSessionId] = useState<
+    string | null
+  >(null);
   const typingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
@@ -127,6 +141,14 @@ export default function LiveChatsPage() {
       name: selectedSession.user.fullName,
       online: true,
     };
+  }, [selectedSession]);
+
+  const hasActiveSelectedChat = useMemo(() => {
+    return !!(
+      selectedSession &&
+      selectedSession.status === "active" &&
+      selectedSession.requestStatus === "approved"
+    );
   }, [selectedSession]);
 
   const filteredChats = useMemo(
@@ -167,39 +189,67 @@ export default function LiveChatsPage() {
     console.log("[Astrologer] incomingCall state changed:", incomingCall);
   }, [incomingCall]);
 
+  const refreshSessions = React.useCallback(async () => {
+    try {
+      const [approvedRes, pendingRes] = await Promise.all([
+        getAstrologerChatSessions({
+          requestStatus: "approved",
+          status: "active",
+          page: 1,
+          limit: 100,
+        }),
+        getAstrologerChatSessions({
+          requestStatus: "pending",
+          page: 1,
+          limit: 100,
+        }),
+      ]);
+
+      const chats = approvedRes.sessions || [];
+      const requests = pendingRes.sessions || [];
+
+      setChatSessions(chats);
+      setRequestSessions(requests);
+
+      if (sessionIdFromUrl) {
+        const matchingSession = chats.find((s) => s.id === sessionIdFromUrl);
+        if (matchingSession) {
+          setSelectedSessionId(matchingSession.id);
+          return;
+        }
+      }
+
+      if (!selectedSessionId && chats.length > 0) {
+        setSelectedSessionId(chats[0].id);
+      }
+    } catch (error) {
+      console.error("Failed to load astrologer chat sessions", error);
+    }
+  }, [selectedSessionId, sessionIdFromUrl]);
+
+  useEffect(() => {
+    if (!sessionIdFromUrl || chatSessions.length === 0) return;
+    const matchingSession = chatSessions.find((s) => s.id === sessionIdFromUrl);
+    if (matchingSession && selectedSessionId !== matchingSession.id) {
+      setSelectedSessionId(matchingSession.id);
+    }
+  }, [sessionIdFromUrl, chatSessions, selectedSessionId]);
+
   // Load astrologer chat sessions and requests
   useEffect(() => {
-    const fetchSessions = async () => {
-      try {
-        const [approvedRes, pendingRes] = await Promise.all([
-          getAstrologerChatSessions({
-            requestStatus: "approved",
-            page: 1,
-            limit: 100,
-          }),
-          getAstrologerChatSessions({
-            requestStatus: "pending",
-            page: 1,
-            limit: 100,
-          }),
-        ]);
+    refreshSessions();
+  }, [refreshSessions]);
 
-        const chats = approvedRes.sessions || [];
-        const requests = pendingRes.sessions || [];
-
-        setChatSessions(chats);
-        setRequestSessions(requests);
-
-        if (!selectedSessionId && chats.length > 0) {
-          setSelectedSessionId(chats[0].id);
-        }
-      } catch (error) {
-        console.error("Failed to load astrologer chat sessions", error);
-      }
+  useEffect(() => {
+    const refreshOnEvent = () => {
+      refreshSessions();
     };
 
-    fetchSessions();
-  }, [selectedSessionId]);
+    window.addEventListener("astrologer_chat_sessions_refresh", refreshOnEvent);
+    return () => {
+      window.removeEventListener("astrologer_chat_sessions_refresh", refreshOnEvent);
+    };
+  }, [refreshSessions]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -283,18 +333,24 @@ export default function LiveChatsPage() {
       sessionId: string;
       session: ChatSessionSummary;
     }) => {
-      setChatSessions((prev) =>
-        prev.map((s) =>
-          s.id === payload.sessionId
-            ? {
-                // Preserve existing related data like user details
-                ...s,
-                ...payload.session,
-                user: s.user,
-              }
-            : s
-        )
-      );
+      const incoming = payload.session;
+
+      if (incoming.status !== "active" || incoming.requestStatus !== "approved") {
+        setChatSessions((prev) => prev.filter((s) => s.id !== payload.sessionId));
+      } else {
+        setChatSessions((prev) =>
+          prev.map((s) =>
+            s.id === payload.sessionId
+              ? {
+                  // Preserve existing related data like user details
+                  ...s,
+                  ...incoming,
+                  user: s.user,
+                }
+              : s
+          )
+        );
+      }
 
       setRequestSessions((prev) =>
         prev.map((s) =>
@@ -307,6 +363,26 @@ export default function LiveChatsPage() {
             : s
         )
       );
+    };
+
+    const handleChatEnded = (payload: {
+      sessionId: string;
+      endedBy: string;
+      reason?: string;
+    }) => {
+      const endedSession = chatSessions.find((s) => s.id === payload.sessionId);
+      setChatSessions((prev) => prev.filter((s) => s.id !== payload.sessionId));
+
+      if (payload.endedBy === "user") {
+        setUserEndedModalName(endedSession?.user?.fullName || "User");
+        setShowUserEndedModal(true);
+      }
+
+      if (payload.sessionId === selectedSessionId) {
+        setSelectedSessionId(null);
+        setMessages([]);
+        showToast("Chat ended", "info");
+      }
     };
 
     const handleMessagesRead = (payload: {
@@ -371,6 +447,7 @@ export default function LiveChatsPage() {
     socket.on("unread:update", handleUnreadUpdate);
     socket.on("call:incoming", handleIncomingCall);
     socket.on("call:ended", handleCallEnded);
+    socket.on("chat:ended", handleChatEnded);
 
     return () => {
       socket.emit("leave_chat", { sessionId: selectedSessionId });
@@ -381,13 +458,14 @@ export default function LiveChatsPage() {
       socket.off("unread:update", handleUnreadUpdate);
       socket.off("call:incoming", handleIncomingCall);
       socket.off("call:ended", handleCallEnded);
+      socket.off("chat:ended", handleChatEnded);
 
       // Clean up typing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
     };
-  }, [selectedSessionId]);
+  }, [selectedSessionId, showToast, chatSessions]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -550,14 +628,7 @@ export default function LiveChatsPage() {
     try {
       await approveChatRequest(sessionId);
       setRequestSessions((prev) => prev.filter((s) => s.id !== sessionId));
-      const updatedReq = await getAstrologerChatSessions({
-        requestStatus: "pending",
-      });
-      const updatedChats = await getAstrologerChatSessions({
-        requestStatus: "approved",
-      });
-      setRequestSessions(updatedReq.sessions || []);
-      setChatSessions(updatedChats.sessions || []);
+      await refreshSessions();
     } catch (error) {
       console.error("Failed to approve chat request", error);
     }
@@ -567,8 +638,76 @@ export default function LiveChatsPage() {
     try {
       await rejectChatRequest(sessionId);
       setRequestSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      await refreshSessions();
     } catch (error) {
       console.error("Failed to reject chat request", error);
+    }
+  };
+
+  const requestSessionSwitch = (sessionId: string) => {
+    if (!selectedSessionId || selectedSessionId === sessionId) {
+      setSelectedSessionId(sessionId);
+      return;
+    }
+
+    setPendingSwitchSessionId(sessionId);
+    setShowLeaveChatConfirm(true);
+  };
+
+  const confirmEndCurrentChatAndSwitch = async () => {
+    if (!selectedSessionId || !pendingSwitchSessionId) {
+      setShowLeaveChatConfirm(false);
+      return;
+    }
+
+    try {
+      await endAstrologerChatSession(selectedSessionId);
+      setChatSessions((prev) => prev.filter((s) => s.id !== selectedSessionId));
+      setMessages([]);
+      setSelectedSessionId(pendingSwitchSessionId);
+      showToast("Current chat ended", "success");
+    } catch (error) {
+      console.error("Failed to end active chat before switching", error);
+      showToast("Could not end current chat", "error");
+    } finally {
+      setShowLeaveChatConfirm(false);
+      setPendingSwitchSessionId(null);
+      await refreshSessions();
+    }
+  };
+
+  const cancelSessionSwitch = () => {
+    setShowLeaveChatConfirm(false);
+    setPendingSwitchSessionId(null);
+  };
+
+  const requestLeaveSection = () => {
+    if (!hasActiveSelectedChat || !selectedSessionId) {
+      router.back();
+      return;
+    }
+
+    setShowLeaveSectionConfirm(true);
+  };
+
+  const confirmLeaveSectionAndEndChat = async () => {
+    if (!selectedSessionId) {
+      setShowLeaveSectionConfirm(false);
+      router.back();
+      return;
+    }
+
+    try {
+      await endAstrologerChatSession(selectedSessionId);
+      setChatSessions((prev) => prev.filter((s) => s.id !== selectedSessionId));
+      setSelectedSessionId(null);
+      setMessages([]);
+      showToast("Chat ended", "success");
+      setShowLeaveSectionConfirm(false);
+      router.back();
+    } catch (error) {
+      console.error("Failed to end chat while leaving section", error);
+      showToast("Could not end active chat", "error");
     }
   };
 
@@ -637,8 +776,8 @@ export default function LiveChatsPage() {
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <button
                 type="button"
-                onClick={() => router.back()}
-                className="p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
+                onClick={requestLeaveSection}
+                className="p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition-colors shrink-0"
                 aria-label="Go back"
               >
                 <IoMdArrowBack className="w-5 h-5 text-gray-700" />
@@ -653,7 +792,7 @@ export default function LiveChatsPage() {
             <button
               type="button"
               onClick={() => setShowSidebar(false)}
-              className="lg:hidden p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
+              className="lg:hidden p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition-colors shrink-0"
               aria-label="Close sidebar"
             >
               <RxCross2 className="w-5 h-5 rotate-90 text-gray-700" />
@@ -715,14 +854,14 @@ export default function LiveChatsPage() {
               filteredChats.map((session) => (
                 <div
                   key={session.id}
-                  onClick={() => setSelectedSessionId(session.id)}
+                  onClick={() => requestSessionSwitch(session.id)}
                   className={`p-3 sm:p-4 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 ${
                     selectedSessionId === session.id ? "bg-yellow-50" : ""
                   }`}
                 >
                   <div className="flex items-start gap-2 sm:gap-3">
                     {/* Avatar */}
-                    <div className="relative flex-shrink-0">
+                    <div className="relative shrink-0">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-linear-to-br from-yellow-200 to-yellow-300 flex items-center justify-center">
                         <span className="text-base sm:text-lg font-semibold text-gray-700">
                           {(session.user?.fullName || "?").charAt(0)}
@@ -778,7 +917,7 @@ export default function LiveChatsPage() {
               >
                 <div className="flex items-start gap-2 sm:gap-3">
                   {/* Avatar */}
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-linear-to-br from-blue-200 to-blue-300 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-linear-to-br from-blue-200 to-blue-300 flex items-center justify-center shrink-0">
                     <span className="text-base sm:text-lg font-semibold text-gray-700">
                       {(session.user?.fullName || "?").charAt(0)}
                     </span>
@@ -848,13 +987,13 @@ export default function LiveChatsPage() {
                   <button
                     type="button"
                     onClick={() => setShowSidebar(true)}
-                    className="lg:hidden p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
+                    className="lg:hidden p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition-colors shrink-0"
                     aria-label="Open chat list"
                   >
                     <GiHamburgerMenu className="w-5 h-5 text-gray-800" />
                   </button>
                   {/* Avatar */}
-                  <div className="relative flex-shrink-0">
+                  <div className="relative shrink-0">
                     <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-linear-to-br from-yellow-200 to-yellow-300 flex items-center justify-center">
                       <span className="text-base sm:text-lg font-semibold text-gray-700">
                         {(selectedUser.name || "?").charAt(0)}
@@ -877,7 +1016,7 @@ export default function LiveChatsPage() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                   <button
                     className="p-1.5 sm:p-2 cursor-pointer hover:bg-yellow-200 rounded-full transition-colors"
                     title="Voice Call"
@@ -1142,7 +1281,7 @@ export default function LiveChatsPage() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-3 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
+                  className="p-3 hover:bg-gray-100 rounded-full transition-colors shrink-0"
                   title="Attach file"
                 >
                   <FiPaperclip className="w-5 h-5 text-gray-600" />
@@ -1253,6 +1392,83 @@ export default function LiveChatsPage() {
           onCallEnd={() => setActiveCall(null)}
         />
       )}
+
+      {showLeaveChatConfirm && (
+        <div className="fixed inset-0 z-130 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-gray-900">Leave Current Chat?</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              If you leave this chat, the current chat session will end immediately.
+            </p>
+            <div className="mt-5 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={cancelSessionSwitch}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmEndCurrentChatAndSwitch}
+                className="flex-1 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-600"
+              >
+                End And Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLeaveSectionConfirm && (
+        <div className="fixed inset-0 z-131 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-gray-900">Leave This Chat?</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              As soon as you go back, this active chat will end immediately for both you and the user.
+            </p>
+            <div className="mt-5 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowLeaveSectionConfirm(false)}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Stay Here
+              </button>
+              <button
+                type="button"
+                onClick={confirmLeaveSectionAndEndChat}
+                className="flex-1 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-600"
+              >
+                Back And End Chat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showUserEndedModal && (
+        <div className="fixed inset-0 z-132 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-gray-900">Chat Ended By User</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              {userEndedModalName} ended the chat session.
+            </p>
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowUserEndedModal(false)}
+                className="rounded-lg bg-yellow-400 px-4 py-2.5 text-sm font-semibold text-gray-900 hover:bg-yellow-500"
+              >
+                Okay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <AstrologerChatRequestModal />
+
       {toastProps.isVisible && (
         <Toast
           message={toastProps.message}
@@ -1261,5 +1477,19 @@ export default function LiveChatsPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function LiveChatsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center text-sm text-gray-500">
+          Loading chats...
+        </div>
+      }
+    >
+      <LiveChatsPageContent />
+    </Suspense>
   );
 }

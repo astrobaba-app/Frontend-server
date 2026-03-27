@@ -107,6 +107,43 @@ export interface GetOnlineStatusResponse {
   isOnline: boolean;
 }
 
+export type ForgotPasswordMethod = 'mobile' | 'email';
+
+export interface SendForgotPasswordOtpRequest {
+  method: ForgotPasswordMethod;
+  phoneNumber?: string;
+  email?: string;
+}
+
+export interface SendForgotPasswordOtpResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface VerifyForgotPasswordOtpRequest {
+  method: ForgotPasswordMethod;
+  otp: string;
+  phoneNumber?: string;
+  email?: string;
+}
+
+export interface VerifyForgotPasswordOtpResponse {
+  success: boolean;
+  message: string;
+  resetToken: string;
+}
+
+export interface ResetForgotPasswordRequest {
+  resetToken: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ResetForgotPasswordResponse {
+  success: boolean;
+  message: string;
+}
+
 // --- API Functions ---
 
 // Send OTP for registration
@@ -201,6 +238,48 @@ export const loginAstrologer = async (data: LoginRequest): Promise<LoginResponse
     throw error.response?.data as ErrorResponseData || { 
       message: 'Failed to login', 
       success: false 
+    };
+  }
+};
+
+export const sendAstrologerForgotPasswordOtp = async (
+  data: SendForgotPasswordOtpRequest
+): Promise<SendForgotPasswordOtpResponse> => {
+  try {
+    const response: AxiosResponse<SendForgotPasswordOtpResponse> = await api.post('/astrologer/auth/forgot-password/send-otp', data);
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data as ErrorResponseData || {
+      message: 'Failed to send OTP',
+      success: false,
+    };
+  }
+};
+
+export const verifyAstrologerForgotPasswordOtp = async (
+  data: VerifyForgotPasswordOtpRequest
+): Promise<VerifyForgotPasswordOtpResponse> => {
+  try {
+    const response: AxiosResponse<VerifyForgotPasswordOtpResponse> = await api.post('/astrologer/auth/forgot-password/verify-otp', data);
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data as ErrorResponseData || {
+      message: 'Failed to verify OTP',
+      success: false,
+    };
+  }
+};
+
+export const resetAstrologerForgotPassword = async (
+  data: ResetForgotPasswordRequest
+): Promise<ResetForgotPasswordResponse> => {
+  try {
+    const response: AxiosResponse<ResetForgotPasswordResponse> = await api.post('/astrologer/auth/forgot-password/reset', data);
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data as ErrorResponseData || {
+      message: 'Failed to reset password',
+      success: false,
     };
   }
 };

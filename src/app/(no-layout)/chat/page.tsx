@@ -15,6 +15,7 @@ import AgoraCall from "@/components/AgoraCall";
 import type { ChatMessageDto, ChatSessionSummary } from "@/store/api/chat";
 import type { CallSession } from "@/store/api/call";
 import {
+  endChatSession,
   getMyChatSessions,
   getChatMessages,
   startChatSession,
@@ -99,8 +100,12 @@ function ChatPage() {
   const [activeCall, setActiveCall] = useState<CallSession | null>(null);
   const [isInitiatingCall, setIsInitiatingCall] = useState(false);
   const [isChatSessionActive, setIsChatSessionActive] = useState(false);
+  const [isWaitingForApproval, setIsWaitingForApproval] = useState(false);
+  const [inviteSecondsLeft, setInviteSecondsLeft] = useState(0);
+  const [pendingRequestSessionId, setPendingRequestSessionId] = useState<string | null>(null);
   const [showInsufficientBalanceModal, setShowInsufficientBalanceModal] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const inviteTimerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -178,6 +183,38 @@ function ChatPage() {
     return selectedSession.unreadCount || 0;
   }, [selectedSession]);
 
+  const clearInviteTimer = () => {
+    if (inviteTimerRef.current) {
+      clearInterval(inviteTimerRef.current);
+      inviteTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    if (!isWaitingForApproval) {
+      clearInviteTimer();
+      return;
+    }
+
+    clearInviteTimer();
+    inviteTimerRef.current = setInterval(() => {
+      setInviteSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearInviteTimer();
+          setIsWaitingForApproval(false);
+          setPendingRequestSessionId(null);
+          showToast("Chat request timed out. Please try again.", "error");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      clearInviteTimer();
+    };
+  }, [isWaitingForApproval, showToast]);
+
   // Ensure only one session per astrologer is displayed in Conversations
   const uniqueSessionsByAstrologer = useMemo(() => {
     const map = new Map<string, ChatSessionSummary>();
@@ -252,6 +289,16 @@ function ChatPage() {
     loadMessages();
   }, [selectedSessionId]);
 
+  useEffect(() => {
+    if (!pendingRequestSessionId || !selectedSessionId) return;
+    if (pendingRequestSessionId !== selectedSessionId) {
+      setIsWaitingForApproval(false);
+      setInviteSecondsLeft(0);
+      setPendingRequestSessionId(null);
+      clearInviteTimer();
+    }
+  }, [pendingRequestSessionId, selectedSessionId]);
+
   // Setup Socket.IO listeners for the selected session
   useEffect(() => {
     if (!selectedSessionId || !isLoggedIn || loading) return;
@@ -290,21 +337,98 @@ function ChatPage() {
     };
 
     const handleChatUpdated = (payload: { sessionId: string; session: ChatSessionSummary }) => {
-      setSessions((prev) =>
-        prev.map((s) => {
-          if (s.id !== payload.sessionId) return s;
+      const incoming = payload.session;
 
-          const incoming = payload.session;
+      if (incoming.status !== "active" || incoming.requestStatus !== "approved") {
+        setSessions((prev) => prev.filter((s) => s.id !== payload.sessionId));
+      } else {
+        setSessions((prev) =>
+          prev.map((s) => {
+            if (s.id !== payload.sessionId) return s;
 
-          // Some chat:updated payloads may not include the astrologer object.
-          // Preserve existing astrologer info in that case so header/profile stays visible.
-          if (!incoming.astrologer && s.astrologer) {
-            return { ...incoming, astrologer: s.astrologer } as ChatSessionSummary;
+            // Some chat:updated payloads may not include the astrologer object.
+            // Preserve existing astrologer info in that case so header/profile stays visible.
+            if (!incoming.astrologer && s.astrologer) {
+              return { ...incoming, astrologer: s.astrologer } as ChatSessionSummary;
+            }
+
+            return incoming;
+          })
+        );
+      }
+
+      if (payload.sessionId === selectedSessionId) {
+        if (payload.session.requestStatus === "approved" && payload.session.status === "active") {
+          if (isWaitingForApproval) {
+            setIsWaitingForApproval(false);
+            setPendingRequestSessionId(null);
+            setInviteSecondsLeft(0);
+            clearInviteTimer();
+            showToast("Astrologer accepted your chat request", "success");
           }
+          if (!isChatSessionActive) {
+            setIsChatSessionActive(true);
+            startChatTimer();
+          }
+        }
 
-          return incoming;
-        })
-      );
+        if (payload.session.requestStatus === "rejected") {
+          setIsWaitingForApproval(false);
+          setPendingRequestSessionId(null);
+          setInviteSecondsLeft(0);
+          clearInviteTimer();
+          if (isChatSessionActive) {
+            setIsChatSessionActive(false);
+            stopChatTimer();
+          }
+          showToast("Astrologer rejected your chat request", "error");
+        }
+
+        if (payload.session.status !== "active" && isChatSessionActive) {
+          setIsChatSessionActive(false);
+          stopChatTimer();
+          setMessages([]);
+        }
+      }
+    };
+
+    const handleChatApproved = (payload: { sessionId: string }) => {
+      if (payload.sessionId !== selectedSessionId) return;
+      setIsWaitingForApproval(false);
+      setPendingRequestSessionId(null);
+      setInviteSecondsLeft(0);
+      clearInviteTimer();
+      if (!isChatSessionActive) {
+        setIsChatSessionActive(true);
+        startChatTimer();
+      }
+      showToast("Astrologer accepted your chat request", "success");
+    };
+
+    const handleChatRejected = (payload: { sessionId: string }) => {
+      if (payload.sessionId !== selectedSessionId) return;
+      setIsWaitingForApproval(false);
+      setPendingRequestSessionId(null);
+      setInviteSecondsLeft(0);
+      clearInviteTimer();
+      if (isChatSessionActive) {
+        setIsChatSessionActive(false);
+        stopChatTimer();
+      }
+      showToast("Astrologer rejected your chat request", "error");
+    };
+
+    const handleChatEnded = (payload: { sessionId: string; endedBy: string; reason?: string }) => {
+      if (payload.sessionId !== selectedSessionId) return;
+      setIsWaitingForApproval(false);
+      setPendingRequestSessionId(null);
+      setInviteSecondsLeft(0);
+      clearInviteTimer();
+      if (isChatSessionActive) {
+        setIsChatSessionActive(false);
+        stopChatTimer();
+      }
+      showToast("Chat session ended", "info");
     };
 
     const handleMessagesRead = (payload: { sessionId: string; readerRole: "user" | "astrologer" }) => {
@@ -372,6 +496,9 @@ function ChatPage() {
     socket.on("call:rejected", handleCallRejected);
     socket.on("call:ended", handleCallEnded);
     socket.on("wallet:updated", handleWalletUpdated);
+    socket.on("chat:approved", handleChatApproved);
+    socket.on("chat:rejected", handleChatRejected);
+    socket.on("chat:ended", handleChatEnded);
 
     return () => {
       socket.emit("leave_chat", { sessionId: selectedSessionId });
@@ -384,13 +511,25 @@ function ChatPage() {
       socket.off("call:rejected", handleCallRejected);
       socket.off("call:ended", handleCallEnded);
       socket.off("wallet:updated", handleWalletUpdated);
+      socket.off("chat:approved", handleChatApproved);
+      socket.off("chat:rejected", handleChatRejected);
+      socket.off("chat:ended", handleChatEnded);
       
       // Clean up typing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
     };
-  }, [selectedSessionId, isLoggedIn, loading]);
+  }, [
+    selectedSessionId,
+    isLoggedIn,
+    loading,
+    isWaitingForApproval,
+    isChatSessionActive,
+    showToast,
+    startChatTimer,
+    stopChatTimer,
+  ]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -404,6 +543,7 @@ function ChatPage() {
   useEffect(() => {
     return () => {
       stopChatTimer();
+      clearInviteTimer();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -473,6 +613,10 @@ function ChatPage() {
 
     // Require active chat session
     if (!isChatSessionActive) {
+      if (isWaitingForApproval) {
+        showToast("Please wait for astrologer to accept your request", "info");
+        return;
+      }
       showToast("Please start chat session first", "error");
       return;
     }
@@ -718,6 +862,75 @@ function ChatPage() {
     }
   };
 
+  const handleStartStopChat = async () => {
+    if (isChatSessionActive) {
+      try {
+        if (selectedSessionId) {
+          await endChatSession(selectedSessionId);
+        }
+      } catch (error) {
+        console.error("Failed to end chat session", error);
+      }
+
+      setIsChatSessionActive(false);
+      setIsWaitingForApproval(false);
+      setPendingRequestSessionId(null);
+      setInviteSecondsLeft(0);
+      clearInviteTimer();
+      stopChatTimer();
+      showToast("Chat session ended", "success");
+      return;
+    }
+
+    if (isWaitingForApproval) {
+      showToast("Waiting for astrologer response", "info");
+      return;
+    }
+
+    if (!hasSufficientBalance(pricePerMinute)) {
+      setShowInsufficientBalanceModal(true);
+      showToast("Insufficient balance to start chat", "error");
+      return;
+    }
+
+    if (!targetAstrologerId) {
+      showToast("Please select an astrologer first", "error");
+      return;
+    }
+
+    try {
+      const response = await startChatSession(targetAstrologerId);
+      const session = response.session;
+
+      setSessions((prev) => {
+        const filtered = prev.filter((s) => s.astrologerId !== targetAstrologerId);
+        return [session, ...filtered];
+      });
+      setSelectedSessionId(session.id);
+
+      if (session.requestStatus === "approved") {
+        setIsChatSessionActive(true);
+        setIsWaitingForApproval(false);
+        setPendingRequestSessionId(null);
+        setInviteSecondsLeft(0);
+        clearInviteTimer();
+        startChatTimer();
+        showToast(`Chat session started. ₹${pricePerMinute} will be deducted per minute.`, "success");
+      } else {
+        const timeoutSeconds = response.requestTimeoutSeconds || 30;
+        setIsWaitingForApproval(true);
+        setPendingRequestSessionId(session.id);
+        setInviteSecondsLeft(timeoutSeconds);
+        showToast("Chat request sent. Waiting for astrologer approval.", "info");
+      }
+    } catch (error: any) {
+      console.error("Failed to start chat session", error);
+      const backendMessage =
+        error?.response?.data?.message || "Unable to start chat session";
+      showToast(backendMessage, "error");
+    }
+  };
+
   return (
     <div className="flex md:py-5 h-screen bg-gray-50 overflow-hidden">
       {/* 1. Left Sidebar (Fixed) */}
@@ -826,31 +1039,29 @@ function ChatPage() {
           {/* Start/Stop Chat Button */}
           {selectedSession && (
             <button
-              onClick={() => {
-                if (isChatSessionActive) {
-                  setIsChatSessionActive(false);
-                  stopChatTimer();
-                  showToast("Chat session ended", "success");
-                } else {
-                  if (!hasSufficientBalance(pricePerMinute)) {
-                    setShowInsufficientBalanceModal(true);
-                    showToast("Insufficient balance to start chat", "error");
-                    return;
-                  }
-                  setIsChatSessionActive(true);
-                  startChatTimer();
-                  showToast(`Chat session started. ₹${pricePerMinute} will be deducted per minute.`, "success");
-                }
-              }}
-              disabled={!isChatSessionActive && !hasSufficientBalance(pricePerMinute)}
+              onClick={handleStartStopChat}
+              disabled={
+                (!isChatSessionActive && !isWaitingForApproval && !hasSufficientBalance(pricePerMinute)) ||
+                isWaitingForApproval
+              }
               className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm"
               style={{
-                backgroundColor: isChatSessionActive ? "#EF4444" : colors.primeGreen,
+                backgroundColor: isChatSessionActive
+                  ? "#EF4444"
+                  : isWaitingForApproval
+                  ? "#9CA3AF"
+                  : colors.primeGreen,
                 color: colors.white,
               }}
             >
               <Clock size={18} />
-              <span>{isChatSessionActive ? "Stop Chat" : "Start Chat"}</span>
+              <span>
+                {isChatSessionActive
+                  ? "Stop Chat"
+                  : isWaitingForApproval
+                  ? "Waiting..."
+                  : "Start Chat"}
+              </span>
             </button>
           )}
         </div>
@@ -903,34 +1114,28 @@ function ChatPage() {
 
             {/* Right Side: Start/Stop Chat, Timer, Wallet, Call Buttons */}
             <div className="flex items-center gap-1 sm:gap-3 shrink-0 flex-wrap justify-end">
-              {/* Start/Stop Chat Button */}
-              {selectedSession && (
+              {/* Keep Stop button in current easy-to-reach position */}
+              {selectedSession && isChatSessionActive && (
                 <button
-                  onClick={() => {
-                    if (isChatSessionActive) {
-                      setIsChatSessionActive(false);
-                      stopChatTimer();
-                      showToast("Chat session ended", "success");
-                    } else {
-                      if (!hasSufficientBalance(pricePerMinute)) {
-                        setShowInsufficientBalanceModal(true);
-                        showToast("Insufficient balance to start chat", "error");
-                        return;
-                      }
-                      setIsChatSessionActive(true);
-                      startChatTimer();
-                      showToast(`Chat session started. ₹${pricePerMinute} will be deducted per minute.`, "success");
-                    }
-                  }}
-                  disabled={!isChatSessionActive && !hasSufficientBalance(pricePerMinute)}
+                  onClick={handleStartStopChat}
+                  disabled={
+                    (!isChatSessionActive && !isWaitingForApproval && !hasSufficientBalance(pricePerMinute)) ||
+                    isWaitingForApproval
+                  }
                   className="flex items-center gap-0.5 sm:gap-1.5 px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-[10px] sm:text-xs font-semibold shrink-0"
                   style={{
-                    backgroundColor: isChatSessionActive ? "#EF4444" : colors.primeGreen,
+                    backgroundColor: isChatSessionActive
+                      ? "#EF4444"
+                      : isWaitingForApproval
+                      ? "#9CA3AF"
+                      : colors.primeGreen,
                     color: colors.white,
                   }}
                 >
                   <Clock size={16} className="sm:w-3.5 sm:h-3.5" />
-                  <span className="whitespace-nowrap text-sm">{isChatSessionActive ? "Stop" : "Start"}</span>
+                  <span className="whitespace-nowrap text-sm">
+                    Stop
+                  </span>
                 </button>
               )}
 
@@ -1244,7 +1449,9 @@ function ChatPage() {
                 value={inputMessage}
                 onChange={(e) => handleTypingChange(e.target.value)}
                 placeholder={
-                  !isChatSessionActive
+                  isWaitingForApproval
+                    ? `Waiting for astrologer acceptance (${inviteSecondsLeft}s)...`
+                    : !isChatSessionActive
                     ? "Click 'Start Chat' to begin..."
                     : "Ask Anything From Our Astrologer......"
                 }
@@ -1257,17 +1464,33 @@ function ChatPage() {
                   Astrologer is typing...
                 </div>
               )}
-              {/* Send Button Inside Input */}
-              <button
-                type="submit"
-                disabled={!inputMessage.trim()}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-all duration-200 disabled:opacity-50"
-                aria-label="Send message"
-              >
-                <Send className={`w-5 h-5 ${
-                  inputMessage.trim() ? "text-[#F0DF20] hover:text-[#ffea00]" : "text-gray-400"
-                }`} />
-              </button>
+              {/* Send / Start Button Inside Input */}
+              {isChatSessionActive ? (
+                <button
+                  type="submit"
+                  disabled={!inputMessage.trim()}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-all duration-200 disabled:opacity-50"
+                  aria-label="Send message"
+                >
+                  <Send className={`w-5 h-5 ${
+                    inputMessage.trim() ? "text-[#F0DF20] hover:text-[#ffea00]" : "text-gray-400"
+                  }`} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleStartStopChat}
+                  disabled={!isWaitingForApproval && !hasSufficientBalance(pricePerMinute)}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: isWaitingForApproval ? "#9CA3AF" : colors.primeGreen,
+                    color: colors.white,
+                  }}
+                  aria-label="Start chat"
+                >
+                  {isWaitingForApproval ? `Wait ${inviteSecondsLeft}s` : "Start"}
+                </button>
+              )}
             </div>
           </form>
             {isTypingAstrologer && (
@@ -1285,6 +1508,27 @@ function ChatPage() {
           callSession={activeCall} 
           onCallEnd={() => setActiveCall(null)} 
         />
+      )}
+
+      {isWaitingForApproval && (
+        <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-gray-900">
+              Waiting For Astrologer Response
+            </h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Your chat invitation has been sent. Please wait while astrologer accepts your request.
+            </p>
+            <div className="mt-4 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3">
+              <p className="text-sm font-semibold text-yellow-800">
+                Time left: {inviteSecondsLeft}s
+              </p>
+            </div>
+            <p className="mt-3 text-xs text-gray-500">
+              Wallet deduction starts only after astrologer accepts.
+            </p>
+          </div>
+        </div>
       )}
 
       {/* Insufficient Balance Modal */}
