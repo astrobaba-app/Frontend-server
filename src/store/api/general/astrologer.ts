@@ -70,6 +70,40 @@ export interface FollowResponse {
   followId?: string;
 }
 
+export interface FollowerCountResponse {
+  success: boolean;
+  astrologerId: string;
+  followerCount: number;
+}
+
+export interface FollowingAstrologer extends Astrologer {
+  followId: string;
+  followedAt: string;
+}
+
+export interface MyFollowingResponse {
+  success: boolean;
+  following: FollowingAstrologer[];
+  totalFollowing: number;
+  pagination?: Pagination;
+}
+
+export interface FollowerUser {
+  id: string;
+  fullName: string | null;
+  email: string | null;
+  createdAt: string;
+  followId: string;
+  followedAt: string;
+}
+
+export interface MyFollowersResponse {
+  success: boolean;
+  followers: FollowerUser[];
+  totalFollowers: number;
+  pagination?: Pagination;
+}
+
 export interface Pagination {
   total: number;
   page: number;
@@ -226,6 +260,54 @@ export const checkFollowStatus = async (astrologerId: string): Promise<FollowSta
     throw error.response?.data as ErrorResponseData || { 
       message: 'Failed to check follow status', 
       success: false 
+    };
+  }
+};
+
+export const getFollowerCount = async (astrologerId: string): Promise<FollowerCountResponse> => {
+  if (!astrologerId) {
+    throw new Error("Astrologer ID is required.");
+  }
+  try {
+    const url = `/follow/count/${astrologerId}`;
+    const response: AxiosResponse<FollowerCountResponse> = await api.get(url);
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data as ErrorResponseData || {
+      message: 'Failed to get follower count',
+      success: false
+    };
+  }
+};
+
+export const getMyFollowingAstrologers = async (
+  page: number = 1,
+  limit: number = 20
+): Promise<MyFollowingResponse> => {
+  try {
+    const url = `/follow/my-following-astro?page=${page}&limit=${limit}`;
+    const response: AxiosResponse<MyFollowingResponse> = await api.get(url);
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data as ErrorResponseData || {
+      message: 'Failed to get following list',
+      success: false
+    };
+  }
+};
+
+export const getMyFollowersUsers = async (
+  page: number = 1,
+  limit: number = 20
+): Promise<MyFollowersResponse> => {
+  try {
+    const url = `/follow/my-followers-user?page=${page}&limit=${limit}`;
+    const response: AxiosResponse<MyFollowersResponse> = await api.get(url);
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data as ErrorResponseData || {
+      message: 'Failed to get followers list',
+      success: false
     };
   }
 };

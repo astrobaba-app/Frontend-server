@@ -8,6 +8,7 @@ import {
   checkFollowStatus,
   followAstrologer,
   unfollowAstrologer,
+  getFollowerCount,
   getAstrologerReviews,
   Astrologer,
   Review,
@@ -119,6 +120,7 @@ export default function AstrologerDetailPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [ratingStats, setRatingStats] = useState<RatingStats | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -148,7 +150,18 @@ export default function AstrologerDetailPage() {
         const astroResponse = await getAstrologerById(id);
         if (astroResponse.success && astroResponse.astrologer) {
           setAstrologer(astroResponse.astrologer);
+          setFollowerCount(astroResponse.astrologer.followersCount || 0);
         }
+
+        try {
+          const followerCountResponse = await getFollowerCount(id);
+          if (followerCountResponse.success) {
+            setFollowerCount(followerCountResponse.followerCount || 0);
+          }
+        } catch (err) {
+          // Keep fallback value from astrologer payload if count endpoint fails.
+        }
+
         setReviewsLoading(true);
         const reviewsResponse = await getAstrologerReviews(id);
         if (reviewsResponse.success) {
@@ -190,6 +203,7 @@ export default function AstrologerDetailPage() {
   const handleFollowToggle = async () => {
     if (!isLoggedIn) {
       showToast("Please login to follow astrologers", "error");
+      router.push(`/auth/login?next=${encodeURIComponent(`/astrologer/${id}`)}`);
       return;
     }
 
@@ -199,12 +213,14 @@ export default function AstrologerDetailPage() {
         const response = await unfollowAstrologer(id);
         if (response.success) {
           setIsFollowing(false);
+          setFollowerCount((prev) => Math.max(0, prev - 1));
           showToast("Unfollowed successfully", "success");
         }
       } else {
         const response = await followAstrologer(id);
         if (response.success) {
           setIsFollowing(true);
+          setFollowerCount((prev) => prev + 1);
           showToast("Following successfully", "success");
         }
       }
@@ -317,7 +333,7 @@ export default function AstrologerDetailPage() {
               {/* Followers Badge */}
               {!id.startsWith("ai-astrologer-") && (
                 <div className="absolute -top-2 -right-2 bg-linear-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg border-2 border-white">
-                  {astrologer.followersCount || 0}
+                  {followerCount}
                 </div>
               )}
               {astrologer.isOnline && (
@@ -361,7 +377,7 @@ export default function AstrologerDetailPage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  {isLoggedIn && !id.startsWith("ai-astrologer-") && (
+                  {!id.startsWith("ai-astrologer-") && (
                     <Button
                       variant={isFollowing ? "secondary" : "primary"}
                       size="sm"
