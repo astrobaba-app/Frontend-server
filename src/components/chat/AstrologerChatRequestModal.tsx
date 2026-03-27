@@ -2,6 +2,10 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { approveChatRequest, rejectChatRequest } from "@/store/api/chat";
+import {
+  getWebPushPublicKey,
+  subscribeAstrologerWebPush,
+} from "@/store/api/notification/webPush";
 import { getChatSocket } from "@/utils/chatSocket";
 import { useRouter } from "next/navigation";
 
@@ -32,11 +36,93 @@ function buildDefaultExpiry() {
   return new Date(Date.now() + DEFAULT_TIMEOUT_SECONDS * 1000).toISOString();
 }
 
+function canUseBrowserNotifications() {
+  return typeof window !== "undefined" && "Notification" in window;
+}
+
+function canUseWebPush() {
+  return (
+    typeof window !== "undefined" &&
+    "serviceWorker" in navigator &&
+    "PushManager" in window &&
+    canUseBrowserNotifications()
+  );
+}
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+
+  return outputArray;
+}
+
 export default function AstrologerChatRequestModal() {
   const router = useRouter();
   const [requests, setRequests] = useState<PendingRequest[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [forceWarning, setForceWarning] = useState<ActiveSessionWarning | null>(null);
+
+  useEffect(() => {
+    if (!canUseWebPush()) return;
+
+    const setupWebPush = async () => {
+      const astrologerToken = localStorage.getItem("token_astrologer");
+      if (!astrologerToken) return;
+
+      let permission = Notification.permission;
+      if (permission === "default") {
+        permission = await Notification.requestPermission();
+      }
+      if (permission !== "granted") return;
+
+      const registration = await navigator.serviceWorker.register("/push-sw.js");
+      await navigator.serviceWorker.ready;
+
+      const vapidPublicKey =
+        process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY ||
+        (await getWebPushPublicKey()).publicKey;
+
+      const sanitizedPublicKey = (vapidPublicKey || "").trim();
+
+      if (!sanitizedPublicKey) {
+        console.warn("Missing VAPID public key for web push");
+        return;
+      }
+
+      let subscription = await registration.pushManager.getSubscription();
+
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(sanitizedPublicKey),
+        });
+      }
+
+      const payload = subscription.toJSON();
+      if (!payload.endpoint || !payload.keys?.p256dh || !payload.keys?.auth) {
+        return;
+      }
+
+      await subscribeAstrologerWebPush({
+        endpoint: payload.endpoint,
+        expirationTime: payload.expirationTime,
+        keys: {
+          p256dh: payload.keys.p256dh,
+          auth: payload.keys.auth,
+        },
+      });
+    };
+
+    setupWebPush().catch((error) => {
+      console.error("Web push setup failed:", error);
+    });
+  }, []);
 
   const currentRequest = useMemo(() => {
     if (requests.length === 0) return null;
@@ -68,6 +154,24 @@ export default function AstrologerChatRequestModal() {
         const filtered = prev.filter((item) => item.sessionId !== payload.sessionId);
         return [nextRequest, ...filtered];
       });
+
+      const shouldShowDesktopAlert =
+        canUseBrowserNotifications() &&
+        Notification.permission === "granted" &&
+        (document.hidden || !document.hasFocus());
+
+      if (shouldShowDesktopAlert) {
+        const notification = new Notification("New Chat Invitation", {
+          body: `${nextRequest.userName} wants to start a chat with you.`,
+          tag: `chat-request-${nextRequest.sessionId}`,
+        });
+
+        notification.onclick = () => {
+          window.focus();
+          router.push(`/astrologer/live-chats?sessionId=${nextRequest.sessionId}`);
+          notification.close();
+        };
+      }
     };
 
     const handleChatUpdated = (payload: {

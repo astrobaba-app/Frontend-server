@@ -6,6 +6,12 @@ let socket: Socket | null = null;
 
 function getApiBaseUrl() {
   if (typeof window === "undefined") return "";
+
+  // Prefer an explicit backend URL when available.
+  if (process.env.NEXT_PUBLIC_BACKEND_URL) {
+    return process.env.NEXT_PUBLIC_BACKEND_URL.replace(/\/$/, "");
+  }
+
   const env = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:6001/api";
   try {
     const url = new URL(env);
@@ -14,7 +20,10 @@ function getApiBaseUrl() {
     url.pathname = pathname;
     return url.toString().replace(/\/$/, "");
   } catch {
-    // Fallback
+    // Fallback to current origin for production browser environments.
+    if (typeof window !== "undefined" && !window.location.origin.includes("localhost")) {
+      return window.location.origin;
+    }
     return env.replace(/\/?api\/?$/, "");
   }
 }
@@ -36,17 +45,23 @@ export function getChatSocket(): Socket | null {
   }
 
   const baseUrl = getApiBaseUrl();
-  const token = getAuthToken();
+  const socketPath = process.env.NEXT_PUBLIC_SOCKET_PATH || "/socket.io";
 
   socket = io(baseUrl, {
-    path: "/socket.io",
+    path: socketPath,
     withCredentials: true,
-    transports: ["websocket"],
+    // Keep polling as fallback to avoid websocket-only connection failures.
+    transports: ["polling", "websocket"],
+    upgrade: true,
+    rememberUpgrade: true,
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionAttempts: 10,
     timeout: 20000,
-    auth: token ? { token } : undefined,
+    auth: (cb) => {
+      const token = getAuthToken();
+      cb(token ? { token } : {});
+    },
   });
 
   socket.on("connect", () => {
