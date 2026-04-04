@@ -24,6 +24,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 import { colors } from "@/utils/colors";
 
+import Image from "next/image";
 import Link from "next/link";
 
 import type { AstrologerProfile } from "@/store/api/astrologer/profile";
@@ -199,9 +200,14 @@ const Header = () => {
             href="/"
             className="flex items-center space-x-2 hover:opacity-90 transition duration-150"
           >
-            <img
+            <Image
               src="/images/logo.png"
-              alt="Logo"
+              alt="Graho logo"
+              width={220}
+              height={80}
+              priority
+              fetchPriority="high"
+              sizes="(max-width: 640px) 96px, (max-width: 768px) 112px, 160px"
               className="h-12 sm:h-14 md:h-20 w-auto object-contain"
             />
 

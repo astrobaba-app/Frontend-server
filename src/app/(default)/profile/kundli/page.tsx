@@ -11,7 +11,7 @@ import KundliCard from "@/components/card/KundliCard";
 import Toast from "@/components/atoms/Toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";
-import { getAllKundlis, createKundli } from "@/store/api/kundli";
+import { getAllKundlis, createKundli, deleteKundli } from "@/store/api/kundli";
 import api from "@/store/api";
 import { getProfile } from "@/store/api/auth/profile";
 import { KundliCardSkeleton } from "@/components/skeletons/KundliCardSkeleton";
@@ -30,6 +30,11 @@ export default function FreeKundliPage() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [profileFetching, setProfileFetching] = useState(false);
+  const [deletingKundliId, setDeletingKundliId] = useState<string | null>(null);
+  const [deleteConfirmState, setDeleteConfirmState] = useState<{
+    id: string;
+    fullName: string;
+  } | null>(null);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -149,6 +154,29 @@ export default function FreeKundliPage() {
       showToast(error?.message || "Failed to generate Kundli", "error");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteKundli = (userRequestId: string, fullName: string) => {
+    if (deletingKundliId) return;
+    setDeleteConfirmState({ id: userRequestId, fullName });
+  };
+
+  const confirmDeleteKundli = async () => {
+    if (!deleteConfirmState) return;
+
+    const { id } = deleteConfirmState;
+    try {
+      setDeletingKundliId(id);
+      await deleteKundli(id);
+      setKundliHistory((prev) => prev.filter((item) => item.id !== id));
+      showToast("Kundli deleted successfully", "success");
+    } catch (error: any) {
+      console.error("Failed to delete kundli:", error);
+      showToast(error?.message || "Failed to delete kundli", "error");
+    } finally {
+      setDeletingKundliId(null);
+      setDeleteConfirmState(null);
     }
   };
 
@@ -475,6 +503,8 @@ export default function FreeKundliPage() {
                       name={kundli.fullName}
                       dob={new Date(kundli.dateOfbirth).toLocaleDateString()}
                       birthPlace={kundli.placeOfBirth}
+                      onDelete={() => handleDeleteKundli(kundli.id, kundli.fullName)}
+                      isDeleting={deletingKundliId === kundli.id}
                       onClick={() =>
                         router.push(`/kundliReport?id=${kundli.id}`)
                       }
@@ -499,6 +529,42 @@ export default function FreeKundliPage() {
 </div>
         )}
       </main>
+
+      {deleteConfirmState && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-gray-900">Delete Kundli?</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Delete {deleteConfirmState.fullName}&apos;s kundli? This action cannot be undone.
+            </p>
+            <div className="mt-5 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmState(null)}
+                disabled={deletingKundliId === deleteConfirmState.id}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteKundli}
+                disabled={deletingKundliId === deleteConfirmState.id}
+                className="flex-1 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {deletingKundliId === deleteConfirmState.id ? (
+                  <span className="inline-flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Deleting...
+                  </span>
+                ) : (
+                  "Delete"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toastProps.isVisible && (
         <Toast

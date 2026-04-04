@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect, useMemo,Suspense } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { Send, ArrowLeft, Phone, ChevronRight, X, MoreVertical, Video, Clock, AlertCircle, Wallet as WalletIcon } from 'lucide-react';
 import { IoChatbubblesSharp } from "react-icons/io5";
 import Image from 'next/image';
@@ -55,6 +55,18 @@ type MessageGroup = {
   items: ChatMessageDto[];
 };
 
+type SessionMessageCache = {
+  messages: ChatMessageDto[];
+  cachedAt: number;
+  totalPages: number;
+  oldestLoadedPage: number;
+  newestLoadedPage: number;
+};
+
+const MESSAGE_PAGE_SIZE = 50;
+const MESSAGE_CACHE_TTL_MS = 30_000;
+const LOAD_OLDER_SCROLL_THRESHOLD = 100;
+
 function groupMessagesByDate(messages: ChatMessageDto[]): MessageGroup[] {
   const groups: Record<string, MessageGroup> = {};
 
@@ -77,6 +89,7 @@ function groupMessagesByDate(messages: ChatMessageDto[]): MessageGroup[] {
 }
 
 function ChatPage() {
+  const [isMounted, setIsMounted] = useState(false);
   const { isLoggedIn, loading, user } = useAuth();
   const router = useRouter();
   const { showToast, toastProps, hideToast } = useToast();
@@ -104,10 +117,29 @@ function ChatPage() {
   const [inviteSecondsLeft, setInviteSecondsLeft] = useState(0);
   const [pendingRequestSessionId, setPendingRequestSessionId] = useState<string | null>(null);
   const [showInsufficientBalanceModal, setShowInsufficientBalanceModal] = useState(false);
+  const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const astrologerTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const inviteTimerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingSentRef = useRef(false);
+  const selectedSessionIdRef = useRef<string | null>(null);
+  const isWaitingForApprovalRef = useRef(false);
+  const isChatSessionActiveRef = useRef(false);
+  const lastMarkReadAtRef = useRef<Map<string, number>>(new Map());
+  const messageCacheRef = useRef<Map<string, SessionMessageCache>>(new Map());
+  const messageFetchRef = useRef<Map<string, Promise<ChatMessageDto[]>>>(new Map());
+  const olderMessageFetchRef = useRef<Map<string, Promise<void>>>(new Map());
+  const pendingScrollAnchorRef = useRef<
+    { sessionId: string; previousHeight: number; previousTop: number } | null
+  >(null);
+  const shouldStickToBottomRef = useRef(true);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const selectedSession = useMemo(
     () => sessions.find((s) => s.id === selectedSessionId) || null,
@@ -176,6 +208,271 @@ function ChatPage() {
     },
   });
 
+  const showToastRef = useRef(showToast);
+  const startChatTimerRef = useRef(startChatTimer);
+  const stopChatTimerRef = useRef(stopChatTimer);
+
+  useEffect(() => {
+    selectedSessionIdRef.current = selectedSessionId;
+  }, [selectedSessionId]);
+
+  useEffect(() => {
+    setIsTypingAstrologer(false);
+    if (astrologerTypingTimeoutRef.current) {
+      clearTimeout(astrologerTypingTimeoutRef.current);
+      astrologerTypingTimeoutRef.current = null;
+    }
+  }, [selectedSessionId]);
+
+  useEffect(() => {
+    isWaitingForApprovalRef.current = isWaitingForApproval;
+  }, [isWaitingForApproval]);
+
+  useEffect(() => {
+    isChatSessionActiveRef.current = isChatSessionActive;
+  }, [isChatSessionActive]);
+
+  useEffect(() => {
+    showToastRef.current = showToast;
+  }, [showToast]);
+
+  useEffect(() => {
+    startChatTimerRef.current = startChatTimer;
+  }, [startChatTimer]);
+
+  useEffect(() => {
+    stopChatTimerRef.current = stopChatTimer;
+  }, [stopChatTimer]);
+
+  const cacheSessionMessages = useCallback(
+    (
+      sessionId: string,
+      sessionMessages: ChatMessageDto[],
+      metadata?: Partial<Pick<SessionMessageCache, "totalPages" | "oldestLoadedPage" | "newestLoadedPage">>
+    ) => {
+      const existing = messageCacheRef.current.get(sessionId);
+
+      messageCacheRef.current.set(sessionId, {
+        messages: sessionMessages,
+        cachedAt: Date.now(),
+        totalPages: metadata?.totalPages ?? existing?.totalPages ?? 1,
+        oldestLoadedPage: metadata?.oldestLoadedPage ?? existing?.oldestLoadedPage ?? 1,
+        newestLoadedPage: metadata?.newestLoadedPage ?? existing?.newestLoadedPage ?? 1,
+      });
+    },
+    []
+  );
+
+  const getFreshCachedSession = useCallback((sessionId: string) => {
+    const cacheEntry = messageCacheRef.current.get(sessionId);
+    if (!cacheEntry) return null;
+
+    if (Date.now() - cacheEntry.cachedAt > MESSAGE_CACHE_TTL_MS) {
+      return null;
+    }
+
+    return cacheEntry;
+  }, []);
+
+  const fetchLatestSessionMessages = useCallback(async (sessionId: string) => {
+    const firstPage = await getChatMessages(sessionId, {
+      page: 1,
+      limit: MESSAGE_PAGE_SIZE,
+    });
+
+    const totalPages = firstPage.pagination?.totalPages || 1;
+
+    if (totalPages <= 1) {
+      return {
+        messages: firstPage.messages || [],
+        totalPages,
+        latestPage: 1,
+      };
+    }
+
+    const latestPage = await getChatMessages(sessionId, {
+      page: totalPages,
+      limit: MESSAGE_PAGE_SIZE,
+    });
+
+    return {
+      messages: latestPage.messages || [],
+      totalPages,
+      latestPage: totalPages,
+    };
+  }, []);
+
+  const loadSessionMessages = useCallback(
+    async (sessionId: string, force = false) => {
+      if (!force) {
+        const cached = getFreshCachedSession(sessionId);
+        if (cached) {
+          return cached.messages;
+        }
+      }
+
+      const ongoingRequest = messageFetchRef.current.get(sessionId);
+      if (ongoingRequest) {
+        return ongoingRequest;
+      }
+
+      const requestPromise = (async () => {
+        try {
+          const latestResult = await fetchLatestSessionMessages(sessionId);
+          const existingCache = messageCacheRef.current.get(sessionId);
+          const existingCachedMessages = existingCache?.messages || [];
+          const mergedMap = new Map<string, ChatMessageDto>();
+
+          latestResult.messages.forEach((message) => {
+            mergedMap.set(message.id, message);
+          });
+
+          existingCachedMessages.forEach((message) => {
+            if (!mergedMap.has(message.id)) {
+              mergedMap.set(message.id, message);
+            }
+          });
+
+          const mergedMessages = Array.from(mergedMap.values()).sort(
+            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+
+          cacheSessionMessages(sessionId, mergedMessages, {
+            totalPages: latestResult.totalPages,
+            oldestLoadedPage: Math.min(existingCache?.oldestLoadedPage ?? latestResult.latestPage, latestResult.latestPage),
+            newestLoadedPage: latestResult.latestPage,
+          });
+
+          return mergedMessages;
+        } finally {
+          messageFetchRef.current.delete(sessionId);
+        }
+      })();
+
+      messageFetchRef.current.set(sessionId, requestPromise);
+      return requestPromise;
+    },
+    [cacheSessionMessages, fetchLatestSessionMessages, getFreshCachedSession]
+  );
+
+  const updateSessionMessages = useCallback(
+    (sessionId: string, updater: (previous: ChatMessageDto[]) => ChatMessageDto[]) => {
+      const previous = messageCacheRef.current.get(sessionId)?.messages || [];
+      const next = updater(previous);
+      cacheSessionMessages(sessionId, next);
+
+      if (selectedSessionIdRef.current === sessionId) {
+        setMessages(next);
+      }
+    },
+    [cacheSessionMessages]
+  );
+
+  const loadOlderMessages = useCallback(async () => {
+    const activeSessionId = selectedSessionIdRef.current;
+    if (!activeSessionId) return;
+
+    const activeCache = messageCacheRef.current.get(activeSessionId);
+    if (!activeCache || activeCache.oldestLoadedPage <= 1) {
+      return;
+    }
+
+    const existingRequest = olderMessageFetchRef.current.get(activeSessionId);
+    if (existingRequest) {
+      await existingRequest;
+      return;
+    }
+
+    const scrollContainer = chatScrollRef.current;
+    if (scrollContainer) {
+      pendingScrollAnchorRef.current = {
+        sessionId: activeSessionId,
+        previousHeight: scrollContainer.scrollHeight,
+        previousTop: scrollContainer.scrollTop,
+      };
+    }
+
+    setIsLoadingOlderMessages(true);
+    const targetPage = activeCache.oldestLoadedPage - 1;
+
+    const requestPromise = (async () => {
+      try {
+        const olderPage = await getChatMessages(activeSessionId, {
+          page: targetPage,
+          limit: MESSAGE_PAGE_SIZE,
+        });
+
+        const olderMessages = olderPage.messages || [];
+
+        updateSessionMessages(activeSessionId, (previous) => {
+          const mergedMap = new Map<string, ChatMessageDto>();
+
+          olderMessages.forEach((message) => {
+            mergedMap.set(message.id, message);
+          });
+
+          previous.forEach((message) => {
+            if (!mergedMap.has(message.id)) {
+              mergedMap.set(message.id, message);
+            }
+          });
+
+          return Array.from(mergedMap.values()).sort(
+            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+        });
+
+        const cacheAfterMerge = messageCacheRef.current.get(activeSessionId);
+        if (cacheAfterMerge) {
+          cacheSessionMessages(activeSessionId, cacheAfterMerge.messages, {
+            totalPages: olderPage.pagination?.totalPages || cacheAfterMerge.totalPages,
+            oldestLoadedPage: targetPage,
+            newestLoadedPage: cacheAfterMerge.newestLoadedPage,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load older chat messages", error);
+      } finally {
+        olderMessageFetchRef.current.delete(activeSessionId);
+        if (selectedSessionIdRef.current === activeSessionId) {
+          setIsLoadingOlderMessages(false);
+        }
+      }
+    })();
+
+    olderMessageFetchRef.current.set(activeSessionId, requestPromise);
+    await requestPromise;
+  }, [cacheSessionMessages, updateSessionMessages]);
+
+  const handleMessageAreaScroll = useCallback(() => {
+    const container = chatScrollRef.current;
+    if (!container) return;
+
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    shouldStickToBottomRef.current = distanceFromBottom < 120;
+
+    if (container.scrollTop <= LOAD_OLDER_SCROLL_THRESHOLD) {
+      void loadOlderMessages();
+    }
+  }, [loadOlderMessages]);
+
+  const emitMarkRead = useCallback((sessionId: string, force = false) => {
+    const now = Date.now();
+    const lastSent = lastMarkReadAtRef.current.get(sessionId) || 0;
+
+    if (!force && now - lastSent < 1200) {
+      return;
+    }
+
+    const socket = getChatSocket();
+    if (!socket || !socket.connected) {
+      return;
+    }
+
+    socket.emit("mark_read", { sessionId });
+    lastMarkReadAtRef.current.set(sessionId, now);
+  }, []);
+
   const userDisplayName = user?.fullName || "Friend";
 
   const selectedSessionUnread = useMemo(() => {
@@ -183,12 +480,28 @@ function ChatPage() {
     return selectedSession.unreadCount || 0;
   }, [selectedSession]);
 
-  const clearInviteTimer = () => {
+  const groupedMessages = useMemo(() => groupMessagesByDate(messages), [messages]);
+
+  const messageLookupById = useMemo(() => {
+    const lookup = new Map<string, ChatMessageDto>();
+    messages.forEach((message) => {
+      lookup.set(message.id, message);
+    });
+    return lookup;
+  }, [messages]);
+
+  const selectedSessionCache = selectedSessionId
+    ? messageCacheRef.current.get(selectedSessionId) || null
+    : null;
+
+  const hasOlderMessages = !!selectedSessionCache && selectedSessionCache.oldestLoadedPage > 1;
+
+  const clearInviteTimer = useCallback(() => {
     if (inviteTimerRef.current) {
       clearInterval(inviteTimerRef.current);
       inviteTimerRef.current = null;
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (!isWaitingForApproval) {
@@ -213,7 +526,7 @@ function ChatPage() {
     return () => {
       clearInviteTimer();
     };
-  }, [isWaitingForApproval, showToast]);
+  }, [clearInviteTimer, isWaitingForApproval, showToast]);
 
   // Ensure only one session per astrologer is displayed in Conversations
   const uniqueSessionsByAstrologer = useMemo(() => {
@@ -274,20 +587,35 @@ function ChatPage() {
   useEffect(() => {
     if (!selectedSessionId) return;
 
-    const loadMessages = async () => {
-      try {
-        const data = await getChatMessages(selectedSessionId, {
-          page: 1,
-          limit: 100,
-        });
-        setMessages(data.messages || []);
-      } catch (error) {
-        console.error("Failed to load chat messages", error);
-      }
-    };
+    shouldStickToBottomRef.current = true;
+    setIsLoadingOlderMessages(false);
 
-    loadMessages();
-  }, [selectedSessionId]);
+    let cancelled = false;
+    const cached = getFreshCachedSession(selectedSessionId);
+
+    if (cached) {
+      setMessages(cached.messages);
+      return;
+    }
+
+    // Avoid showing previous session messages while loading a new session.
+    setMessages([]);
+
+    loadSessionMessages(selectedSessionId)
+      .then((loadedMessages) => {
+        if (cancelled) return;
+        if (selectedSessionIdRef.current !== selectedSessionId) return;
+        setMessages(loadedMessages);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error("Failed to load chat messages", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [getFreshCachedSession, loadSessionMessages, selectedSessionId]);
 
   useEffect(() => {
     if (!pendingRequestSessionId || !selectedSessionId) return;
@@ -306,16 +634,21 @@ function ChatPage() {
     const socket = getChatSocket();
     if (!socket) return;
 
-    socket.emit("join_chat", { sessionId: selectedSessionId });
+    const activeSessionId = selectedSessionId;
 
-    // Mark messages as read when opening a chat
-    socket.emit("mark_read", { sessionId: selectedSessionId });
+    const ensureRoomJoin = () => {
+      socket.emit("join_chat", { sessionId: activeSessionId });
+      // Mark messages as read when opening/rejoining a chat.
+      emitMarkRead(activeSessionId, true);
+    };
+
+    ensureRoomJoin();
 
     const handleNewMessage = (payload: { sessionId: string; message: ChatMessageDto }) => {
-      if (payload.sessionId !== selectedSessionId) return;
+      if (payload.sessionId !== selectedSessionIdRef.current) return;
       
       // Add new message to the list (whether it's text or image)
-      setMessages((prev) => {
+      updateSessionMessages(payload.sessionId, (prev) => {
         // Check if message already exists to avoid duplicates
         if (prev.some(m => m.id === payload.message.id)) {
           return prev;
@@ -323,16 +656,35 @@ function ChatPage() {
         return [...prev, payload.message];
       });
 
-       // Immediately mark as read when user has this chat open
-       if (payload.message.senderType === "astrologer") {
-         socket.emit("mark_read", { sessionId: selectedSessionId });
-       }
+      // Immediately mark as read when user has this chat open (throttled).
+      if (payload.message.senderType === "astrologer") {
+        emitMarkRead(payload.sessionId);
+      }
     };
 
     const handleTyping = (payload: { sessionId: string; from: "user" | "astrologer"; isTyping: boolean }) => {
-      if (payload.sessionId !== selectedSessionId) return;
+      if (payload.sessionId !== selectedSessionIdRef.current) return;
       if (payload.from === "astrologer") {
-        setIsTypingAstrologer(payload.isTyping);
+        if (payload.isTyping) {
+          setIsTypingAstrologer(true);
+
+          if (astrologerTypingTimeoutRef.current) {
+            clearTimeout(astrologerTypingTimeoutRef.current);
+          }
+
+          // Failsafe: hide indicator if stop-typing event is delayed or missed.
+          astrologerTypingTimeoutRef.current = setTimeout(() => {
+            setIsTypingAstrologer(false);
+            astrologerTypingTimeoutRef.current = null;
+          }, 2200);
+        } else {
+          setIsTypingAstrologer(false);
+
+          if (astrologerTypingTimeoutRef.current) {
+            clearTimeout(astrologerTypingTimeoutRef.current);
+            astrologerTypingTimeoutRef.current = null;
+          }
+        }
       }
     };
 
@@ -357,84 +709,95 @@ function ChatPage() {
         );
       }
 
-      if (payload.sessionId === selectedSessionId) {
+      if (payload.sessionId === selectedSessionIdRef.current) {
         if (payload.session.requestStatus === "approved" && payload.session.status === "active") {
-          if (isWaitingForApproval) {
+          if (isWaitingForApprovalRef.current) {
             setIsWaitingForApproval(false);
+            isWaitingForApprovalRef.current = false;
             setPendingRequestSessionId(null);
             setInviteSecondsLeft(0);
             clearInviteTimer();
-            showToast("Astrologer accepted your chat request", "success");
+            showToastRef.current("Astrologer accepted your chat request", "success");
           }
-          if (!isChatSessionActive) {
+          if (!isChatSessionActiveRef.current) {
             setIsChatSessionActive(true);
-            startChatTimer();
+            isChatSessionActiveRef.current = true;
+            startChatTimerRef.current();
           }
         }
 
         if (payload.session.requestStatus === "rejected") {
           setIsWaitingForApproval(false);
+          isWaitingForApprovalRef.current = false;
           setPendingRequestSessionId(null);
           setInviteSecondsLeft(0);
           clearInviteTimer();
-          if (isChatSessionActive) {
+          if (isChatSessionActiveRef.current) {
             setIsChatSessionActive(false);
-            stopChatTimer();
+            isChatSessionActiveRef.current = false;
+            stopChatTimerRef.current();
           }
-          showToast("Astrologer rejected your chat request", "error");
+          showToastRef.current("Astrologer rejected your chat request", "error");
         }
 
-        if (payload.session.status !== "active" && isChatSessionActive) {
+        if (payload.session.status !== "active" && isChatSessionActiveRef.current) {
           setIsChatSessionActive(false);
-          stopChatTimer();
-          setMessages([]);
+          isChatSessionActiveRef.current = false;
+          stopChatTimerRef.current();
+          updateSessionMessages(payload.sessionId, () => []);
         }
       }
     };
 
     const handleChatApproved = (payload: { sessionId: string }) => {
-      if (payload.sessionId !== selectedSessionId) return;
+      if (payload.sessionId !== selectedSessionIdRef.current) return;
       setIsWaitingForApproval(false);
+      isWaitingForApprovalRef.current = false;
       setPendingRequestSessionId(null);
       setInviteSecondsLeft(0);
       clearInviteTimer();
-      if (!isChatSessionActive) {
+      if (!isChatSessionActiveRef.current) {
         setIsChatSessionActive(true);
-        startChatTimer();
+        isChatSessionActiveRef.current = true;
+        startChatTimerRef.current();
       }
-      showToast("Astrologer accepted your chat request", "success");
+      showToastRef.current("Astrologer accepted your chat request", "success");
     };
 
     const handleChatRejected = (payload: { sessionId: string }) => {
-      if (payload.sessionId !== selectedSessionId) return;
+      if (payload.sessionId !== selectedSessionIdRef.current) return;
       setIsWaitingForApproval(false);
+      isWaitingForApprovalRef.current = false;
       setPendingRequestSessionId(null);
       setInviteSecondsLeft(0);
       clearInviteTimer();
-      if (isChatSessionActive) {
+      if (isChatSessionActiveRef.current) {
         setIsChatSessionActive(false);
-        stopChatTimer();
+        isChatSessionActiveRef.current = false;
+        stopChatTimerRef.current();
       }
-      showToast("Astrologer rejected your chat request", "error");
+      showToastRef.current("Astrologer rejected your chat request", "error");
     };
 
     const handleChatEnded = (payload: { sessionId: string; endedBy: string; reason?: string }) => {
-      if (payload.sessionId !== selectedSessionId) return;
+      if (payload.sessionId !== selectedSessionIdRef.current) return;
       setIsWaitingForApproval(false);
+      isWaitingForApprovalRef.current = false;
       setPendingRequestSessionId(null);
       setInviteSecondsLeft(0);
       clearInviteTimer();
-      if (isChatSessionActive) {
+      if (isChatSessionActiveRef.current) {
         setIsChatSessionActive(false);
-        stopChatTimer();
+        isChatSessionActiveRef.current = false;
+        stopChatTimerRef.current();
       }
-      showToast("Chat session ended", "info");
+      showToastRef.current("Chat session ended", "info");
     };
 
     const handleMessagesRead = (payload: { sessionId: string; readerRole: "user" | "astrologer" }) => {
-      if (payload.sessionId !== selectedSessionId) return;
+      if (payload.sessionId !== selectedSessionIdRef.current) return;
 
-      setMessages((prev) =>
+      updateSessionMessages(payload.sessionId, (prev) =>
         prev.map((m) => {
           if (payload.readerRole === "user") {
             // Current user read astrologer messages
@@ -466,19 +829,19 @@ function ChatPage() {
       console.log("[User] Received call:accepted event:", payload);
       setActiveCall(payload.callSession);
       console.log("[User] Set activeCall state:", payload.callSession);
-      showToast("Astrologer accepted your call! Connecting...", "success");
+      showToastRef.current("Astrologer accepted your call! Connecting...", "success");
     };
 
     const handleCallRejected = (payload: { callSession: CallSession; reason: string }) => {
       console.log("[User] Received call:rejected event:", payload);
       setActiveCall(null);
-      showToast(`Call rejected: ${payload.reason}`, "error");
+      showToastRef.current(`Call rejected: ${payload.reason}`, "error");
     };
 
     const handleCallEnded = (payload: { callSession: CallSession; endedBy: string }) => {
       console.log("[User] Received call:ended event:", payload);
       setActiveCall(null);
-      showToast(`Call ended by ${payload.endedBy}`, "info");
+      showToastRef.current(`Call ended by ${payload.endedBy}`, "info");
     };
 
     const handleWalletUpdated = (payload: { balance: number; deduction: number; reason: string }) => {
@@ -489,6 +852,7 @@ function ChatPage() {
 
     socket.on("message:new", handleNewMessage);
     socket.on("typing", handleTyping);
+    socket.on("connect", ensureRoomJoin);
     socket.on("chat:updated", handleChatUpdated);
     socket.on("messages:read", handleMessagesRead);
     socket.on("unread:update", handleUnreadUpdate);
@@ -501,9 +865,26 @@ function ChatPage() {
     socket.on("chat:ended", handleChatEnded);
 
     return () => {
-      socket.emit("leave_chat", { sessionId: selectedSessionId });
+      socket.emit("leave_chat", { sessionId: activeSessionId });
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      if (typingSentRef.current && socket.connected) {
+        socket.emit("typing", { sessionId: activeSessionId, isTyping: false });
+      }
+      typingSentRef.current = false;
+
+      if (astrologerTypingTimeoutRef.current) {
+        clearTimeout(astrologerTypingTimeoutRef.current);
+        astrologerTypingTimeoutRef.current = null;
+      }
+      setIsTypingAstrologer(false);
+
       socket.off("message:new", handleNewMessage);
       socket.off("typing", handleTyping);
+      socket.off("connect", ensureRoomJoin);
       socket.off("chat:updated", handleChatUpdated);
       socket.off("messages:read", handleMessagesRead);
       socket.off("unread:update", handleUnreadUpdate);
@@ -514,30 +895,41 @@ function ChatPage() {
       socket.off("chat:approved", handleChatApproved);
       socket.off("chat:rejected", handleChatRejected);
       socket.off("chat:ended", handleChatEnded);
-      
-      // Clean up typing timeout
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
     };
   }, [
-    selectedSessionId,
+    clearInviteTimer,
+    emitMarkRead,
     isLoggedIn,
     loading,
-    isWaitingForApproval,
-    isChatSessionActive,
-    showToast,
-    startChatTimer,
-    stopChatTimer,
+    selectedSessionId,
+    updateSessionMessages,
   ]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
+  }, []);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    const pendingAnchor = pendingScrollAnchorRef.current;
+
+    if (
+      pendingAnchor &&
+      selectedSessionIdRef.current &&
+      pendingAnchor.sessionId === selectedSessionIdRef.current
+    ) {
+      const container = chatScrollRef.current;
+      if (container) {
+        const newHeight = container.scrollHeight;
+        container.scrollTop = pendingAnchor.previousTop + (newHeight - pendingAnchor.previousHeight);
+      }
+      pendingScrollAnchorRef.current = null;
+      return;
+    }
+
+    if (shouldStickToBottomRef.current) {
+      scrollToBottom("auto");
+    }
+  }, [messages, scrollToBottom]);
 
   // Cleanup timers on unmount
   useEffect(() => {
@@ -565,40 +957,8 @@ function ChatPage() {
     };
   }, [openMenuId]);
 
-  // Handle input change and emit typing events
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setInputMessage(value);
-
-    if (!selectedSessionId) return;
-
-    const socket = getChatSocket();
-    if (socket && socket.connected) {
-      // Emit typing event
-      socket.emit("typing", {
-        sessionId: selectedSessionId,
-        isTyping: value.length > 0,
-      });
-
-      // Clear existing timeout
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-
-      // Set timeout to stop typing indicator after user stops typing
-      if (value.length > 0) {
-        typingTimeoutRef.current = setTimeout(() => {
-          socket.emit("typing", {
-            sessionId: selectedSessionId,
-            isTyping: false,
-          });
-        }, 1000);
-      }
-    }
-  };
-
   // Don't render anything while checking auth or if not logged in
-  if (loading || !isLoggedIn) {
+  if (!isMounted || loading || !isLoggedIn) {
     return null;
   }
 
@@ -686,6 +1046,17 @@ function ChatPage() {
                 shouldFallbackToHttp = true;
               } else if (response?.success) {
                 shouldFallbackToHttp = false;
+
+                // Append immediately from ack payload so sender always sees message,
+                // even if room echo is delayed/missed after reconnect.
+                if (response.message && sessionId) {
+                  updateSessionMessages(sessionId, (prev) => {
+                    if (prev.some((m) => m.id === response.message?.id)) {
+                      return prev;
+                    }
+                    return [...prev, response.message as ChatMessageDto];
+                  });
+                }
               }
               resolve();
             }
@@ -704,7 +1075,10 @@ function ChatPage() {
         // Optimistically append the sent message from HTTP response so the
         // user immediately sees their message in the UI.
         if (response?.success && response.chatMessage) {
-          setMessages((prev) => [...prev, response.chatMessage as ChatMessageDto]);
+          updateSessionMessages(sessionId, (prev) => [
+            ...prev,
+            response.chatMessage as ChatMessageDto,
+          ]);
         }
       }
 
@@ -725,17 +1099,40 @@ function ChatPage() {
 
     if (!selectedSessionId) return;
     const socket = getChatSocket();
-    if (!socket) return;
+    if (!socket || !socket.connected) return;
 
-    socket.emit("typing", { sessionId: selectedSessionId, isTyping: true });
+    const sessionIdForTyping = selectedSessionId;
+    const trimmedValue = value.trim();
+
+    if (trimmedValue.length > 0 && !typingSentRef.current) {
+      socket.emit("typing", { sessionId: sessionIdForTyping, isTyping: true });
+      typingSentRef.current = true;
+    }
 
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
+    if (trimmedValue.length === 0) {
+      if (typingSentRef.current) {
+        socket.emit("typing", { sessionId: sessionIdForTyping, isTyping: false });
+        typingSentRef.current = false;
+      }
+      return;
+    }
+
     typingTimeoutRef.current = setTimeout(() => {
-      socket.emit("typing", { sessionId: selectedSessionId, isTyping: false });
-    }, 1500);
+      const activeSocket = getChatSocket();
+      if (
+        activeSocket &&
+        activeSocket.connected &&
+        typingSentRef.current &&
+        selectedSessionIdRef.current === sessionIdForTyping
+      ) {
+        activeSocket.emit("typing", { sessionId: sessionIdForTyping, isTyping: false });
+        typingSentRef.current = false;
+      }
+    }, 1200);
   };
 
   const handleAttachClick = () => {
@@ -1044,7 +1441,7 @@ function ChatPage() {
                 (!isChatSessionActive && !isWaitingForApproval && !hasSufficientBalance(pricePerMinute)) ||
                 isWaitingForApproval
               }
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm"
               style={{
                 backgroundColor: isChatSessionActive
                   ? "#EF4444"
@@ -1122,7 +1519,7 @@ function ChatPage() {
                     (!isChatSessionActive && !isWaitingForApproval && !hasSufficientBalance(pricePerMinute)) ||
                     isWaitingForApproval
                   }
-                  className="flex items-center gap-0.5 sm:gap-1.5 px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-[10px] sm:text-xs font-semibold shrink-0"
+                  className="flex items-center gap-0.5 sm:gap-1.5 px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-[10px] sm:text-xs font-semibold shrink-0"
                   style={{
                     backgroundColor: isChatSessionActive
                       ? "#EF4444"
@@ -1198,6 +1595,8 @@ function ChatPage() {
           
           {/* Chat Messages Area */}
           <div 
+          ref={chatScrollRef}
+          onScroll={handleMessageAreaScroll}
           className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4"
           style={{
             backgroundImage: `url("/images/bg4.png")`,
@@ -1225,7 +1624,17 @@ function ChatPage() {
           ) : (
             // Conversation History
             <div className="max-w-4xl mx-auto px-2">
-              {groupMessagesByDate(messages).map((group) => (
+              {(isLoadingOlderMessages || hasOlderMessages) && (
+                <div className="flex justify-center mb-3">
+                  <div className="bg-white/80 backdrop-blur-sm px-3 py-1 rounded-lg shadow-sm">
+                    <p className="text-xs text-gray-600 font-medium">
+                      {isLoadingOlderMessages ? "Loading older messages..." : "Scroll up to load older messages"}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {groupedMessages.map((group) => (
                 <div key={group.dateKey}>
                   <div className="flex justify-center mb-4">
                     <div className="bg-white/80 backdrop-blur-sm px-3 py-1 rounded-lg shadow-sm">
@@ -1236,7 +1645,7 @@ function ChatPage() {
                   {group.items.map((message) => {
                     const isUser = message.senderType === "user";
                     const repliedTo = message.replyToMessageId
-                      ? messages.find((m) => m.id === message.replyToMessageId) || null
+                      ? messageLookupById.get(message.replyToMessageId) || null
                       : null;
 
                     return (
@@ -1481,7 +1890,7 @@ function ChatPage() {
                   type="button"
                   onClick={handleStartStopChat}
                   disabled={!isWaitingForApproval && !hasSufficientBalance(pricePerMinute)}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     backgroundColor: isWaitingForApproval ? "#9CA3AF" : colors.primeGreen,
                     color: colors.white,
@@ -1493,11 +1902,6 @@ function ChatPage() {
               )}
             </div>
           </form>
-            {isTypingAstrologer && (
-              <div className="max-w-4xl mx-auto mt-2 text-xs text-gray-500">
-                Astrologer is typing...
-              </div>
-            )}
           </div>
         </div>
       </div>

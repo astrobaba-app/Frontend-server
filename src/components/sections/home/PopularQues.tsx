@@ -11,39 +11,33 @@ interface QuestionCardProps {
 }
 
 const QuestionCard: React.FC<QuestionCardProps> = ({ icon: Icon, title, questions, iconBg }) => (
-  <div className="bg-white rounded-xl sm:rounded-2xl shadow-md p-4 sm:p-6 relative overflow-hidden">
+  <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-4 sm:p-6 shadow-[0_8px_24px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_14px_30px_rgba(15,23,42,0.12)]">
     <div
-      style={{ background: colors.primeYellow }}
-      className="absolute left-0 top-0 h-full w-1 sm:w-1.5 rounded-l-xl sm:rounded-l-2xl"
-    ></div>
-
-    <div className="ml-2 sm:ml-3">
-      <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-lg sm:rounded-xl mb-3 sm:mb-4 shadow"
-        style={{ background: colors.primeYellow }}>
-        <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-      </div>
-
-      <p style={{ color: colors.darkGray }} className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">
-        {title}
-      </p>
-
-      <ul className="space-y-1.5 sm:space-y-2 mb-4 sm:mb-6">
-        {questions.map((q, index) => (
-          <li key={index} className="flex items-start">
-            <SiTicktick style={{ color: colors.primeYellow }} className="w-3 h-3 sm:w-4 sm:h-4 mt-1 mr-2 shrink-0" />
-            <span className="text-xs sm:text-sm text-gray-700">{q}</span>
-          </li>
-        ))}
-      </ul>
-
-      <Link
-        href="/astrologer?mode=chat"
-        className="font-semibold text-xs sm:text-sm inline-block"
-        style={{ color: colors.primeYellow }}
-      >
-        Ask Now
-      </Link>
+      className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-lg sm:rounded-xl mb-3 sm:mb-4 shadow-sm ${iconBg}`}
+    >
+      <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
     </div>
+
+    <p style={{ color: colors.darkGray }} className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 tracking-tight">
+      {title}
+    </p>
+
+    <ul className="space-y-1.5 sm:space-y-2 mb-4 sm:mb-6">
+      {questions.map((q, index) => (
+        <li key={index} className="flex items-start">
+          <SiTicktick style={{ color: colors.primeYellow }} className="w-3 h-3 sm:w-4 sm:h-4 mt-1 mr-2 shrink-0" />
+          <span className="text-xs sm:text-sm text-gray-700 leading-relaxed">{q}</span>
+        </li>
+      ))}
+    </ul>
+
+    <Link
+      href="/astrologer?mode=chat"
+      className="font-semibold text-xs sm:text-sm inline-flex items-center border-b border-transparent hover:border-current transition-colors"
+      style={{ color: colors.primeYellow }}
+    >
+      Ask Now
+    </Link>
   </div>
 )
 

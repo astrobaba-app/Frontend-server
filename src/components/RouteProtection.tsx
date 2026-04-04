@@ -71,6 +71,13 @@ export function RouteProtection({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [lastPathname, setLastPathname] = useState('');
+  const sharedKundliId = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    return new URLSearchParams(window.location.search).get('id');
+  }, [pathname]);
 
   // Check auth status
   const authStatus = useMemo(() => {
@@ -80,6 +87,7 @@ export function RouteProtection({ children }: { children: ReactNode }) {
 
     const astrologerToken = localStorage.getItem('token_astrologer');
     const middlewareToken = localStorage.getItem('token_middleware');
+    const isKundliShareView = pathname === '/kundliReport' && !!sharedKundliId;
 
     // PUBLIC ROUTES - Always accessible (unless blocked by other rules)
     const publicRoutes = [
@@ -100,6 +108,10 @@ export function RouteProtection({ children }: { children: ReactNode }) {
 
     // ASTROLOGER LOGGED IN
     if (astrologerToken) {
+      if (isKundliShareView) {
+        return { checking: false, authorized: true, shouldRedirect: false, redirectTo: '' };
+      }
+
       // Astrologers can ONLY access astrologer routes
       const isAstrologerRoute = ASTROLOGER_PROTECTED_ROUTE_PREFIXES.some(
         (prefix) => pathname.startsWith(prefix)
@@ -146,6 +158,10 @@ export function RouteProtection({ children }: { children: ReactNode }) {
       return { checking: false, authorized: true, shouldRedirect: false, redirectTo: '' };
     }
 
+    if (isKundliShareView) {
+      return { checking: false, authorized: true, shouldRedirect: false, redirectTo: '' };
+    }
+
     // NO ONE LOGGED IN (Guest)
     // Check if trying to access protected routes
     const isProtectedRoute = 
@@ -167,7 +183,7 @@ export function RouteProtection({ children }: { children: ReactNode }) {
 
     // Public route - allow access
     return { checking: false, authorized: true, shouldRedirect: false, redirectTo: '' };
-  }, [pathname]);
+  }, [pathname, sharedKundliId]);
 
   // Reset redirecting state when pathname changes
   useEffect(() => {

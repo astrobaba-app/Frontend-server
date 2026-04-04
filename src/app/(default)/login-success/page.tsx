@@ -18,17 +18,17 @@ export default function LoginSuccess() {
       );
     }
 
-    // For regular browsers (mobile or desktop), redirect to home
+    // For regular browsers (mobile or desktop), redirect to profile
     // Shorter delay for better UX
     const timer = setTimeout(() => {
-      router.replace("/");
+      router.replace("/profile");
     }, isInWebView ? 1000 : 500);
 
     return () => clearTimeout(timer);
   }, [router]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50">
+    <div className="flex items-center justify-center min-h-screen bg-linear-to-br from-yellow-50 to-orange-50">
       <div className="text-center p-8 max-w-md mx-auto">
         {/* Success Icon */}
         <div className="mb-6 flex justify-center">
@@ -43,7 +43,7 @@ export default function LoginSuccess() {
         </div>
         
         <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Login Successful!</h2>
-        <p className="text-gray-600 text-sm sm:text-base">Redirecting you to home page...</p>
+        <p className="text-gray-600 text-sm sm:text-base">Redirecting you to your profile...</p>
       </div>
     </div>
   );

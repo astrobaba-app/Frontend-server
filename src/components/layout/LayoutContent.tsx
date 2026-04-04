@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -15,6 +15,13 @@ export default function LayoutContent({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const isEmbed = useMemo(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    return new URLSearchParams(window.location.search).get("embed") === "1";
+  }, [pathname]);
 
   // Track Meta Pixel PageView on every route change (SPA navigation)
   useEffect(() => {
@@ -36,7 +43,8 @@ export default function LayoutContent({
     NO_LAYOUT_ROUTES.includes(pathname) ||
     pathname.startsWith("/astrologer/dashboard") ||
     pathname.match(/^\/live\/[^/]+$/) ||
-    pathname.match(/^\/astrologer\/live\/[^/]+$/);
+    pathname.match(/^\/astrologer\/live\/[^/]+$/) ||
+    isEmbed;
 
   return (
     <AuthProvider>

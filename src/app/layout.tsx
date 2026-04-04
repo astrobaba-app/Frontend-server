@@ -16,7 +16,7 @@ const kanit = Kanit({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   display: "swap",
-  preload: false,
+  preload: true,
 });
 
 export const metadata: Metadata = {
@@ -64,18 +64,17 @@ export default function RootLayout({
 
         {/* Prevent automatic scaling in landscape */}
         <meta name="format-detection" content="telephone=no" />
-
-        {/* Razorpay Script */}
-        <script
-          src="https://checkout.razorpay.com/v1/checkout.js"
-          async
-        ></script>
       </head>
       <body
         className={`${inter.variable} ${kanit.variable} antialiased`}
         suppressHydrationWarning
        >
         <LayoutContent>{children}</LayoutContent>
+
+        <Script
+          src="https://checkout.razorpay.com/v1/checkout.js"
+          strategy="lazyOnload"
+        />
 
         {/* ── Google Analytics (GA4) ── */}
         {process.env.NEXT_PUBLIC_GA4_ID && (

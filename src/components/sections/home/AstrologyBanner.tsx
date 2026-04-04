@@ -41,7 +41,7 @@ const AstrologyBannerSlider: React.FC = () => {
                 fill
                 className="object-contain object-bottom"
                 key={activeIndex}
-                priority={true}
+                loading="lazy"
                 sizes="(max-width: 640px) 180px, (max-width: 768px) 280px, 320px"
               />
             </div>

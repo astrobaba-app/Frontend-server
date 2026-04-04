@@ -1,11 +1,9 @@
-"use client";
-
 import React from "react";
+import Image from "next/image";
 import { IoChatbubblesSharp } from "react-icons/io5";
 import { FaStar, FaPhoneAlt } from "react-icons/fa";
 import Button from "@/components/atoms/Button";
 import { colors } from "@/utils/colors";
-import Link from "next/link";
 const customGradientStyle = {
   background:
     "linear-gradient(to bottom right, #FCFBF2, #FCF3C4, #FCF5CC, #FFF6E5, #FBFAF8)",
@@ -22,7 +20,7 @@ const Hero: React.FC = () => {
             Get Instant Answer to your
             <span style={{ color: colors.primeYellow }}>
               {" "}
-              Life's Biggest Questions
+              Life&apos;s Biggest Questions
             </span>
           </p>
 
@@ -87,9 +85,14 @@ const Hero: React.FC = () => {
         </div>
 
         <div className="flex justify-center lg:justify-end relative mt-6 lg:mt-0">
-          <img
+          <Image
             src="/images/hero.png"
             alt="An open, illuminated book with a zodiac wheel"
+            width={720}
+            height={560}
+            priority
+            fetchPriority="high"
+            sizes="(max-width: 640px) 280px, (max-width: 768px) 384px, (max-width: 1024px) 448px, 560px"
             className="w-full max-w-[280px] sm:max-w-sm md:max-w-md lg:max-w-lg h-auto object-contain rounded-xl shadow-2xl"
             style={{ filter: "brightness(1.1)" }}
           />

@@ -1,7 +1,13 @@
 "use client";
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { getKundli, checkAiReportStatus, KundliResponse } from "@/store/api/kundli";
+import {
+  getKundli,
+  checkAiReportStatus,
+  getSharedKundli,
+  createKundliShareLink,
+  KundliResponse,
+} from "@/store/api/kundli";
 import { useAuth } from "@/contexts/AuthContext";
 // import { KundliReportSkeleton } from "@/components/skeletons";
 import Toast from "@/components/atoms/Toast";
@@ -32,6 +38,11 @@ function KundliReportPage() {
   );
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [isSharedView, setIsSharedView] = useState(false);
+  const [loadErrorMessage, setLoadErrorMessage] = useState("");
+  const [shareLinkLoading, setShareLinkLoading] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("Basic");
   const [astrologers, setAstrologers] = useState<ApiAstrologer[]>([]);
   const [astrologersLoading, setAstrologersLoading] = useState(true);
@@ -103,7 +114,7 @@ function KundliReportPage() {
   };
 
   useEffect(() => {
-    if (!authLoading && !isLoggedIn) {
+    if (!authLoading && !isLoggedIn && !kundliId) {
       router.push(
         `/auth/login?redirect=/kundliReport${kundliId ? `?id=${kundliId}` : ""}`
       );
@@ -127,25 +138,45 @@ function KundliReportPage() {
 
   useEffect(() => {
     const fetchKundliData = async () => {
-      if (!isLoggedIn || !kundliId) return;
+      if (!kundliId) return;
+
       try {
         setLoading(true);
-        const response = await getKundli(kundliId);
+        setLoadErrorMessage("");
+
+        let response: KundliResponse;
+        let loadedAsShared = false;
+
+        if (isLoggedIn) {
+          try {
+            response = await getKundli(kundliId);
+          } catch {
+            response = await getSharedKundli(kundliId);
+            loadedAsShared = true;
+          }
+        } else {
+          response = await getSharedKundli(kundliId);
+          loadedAsShared = true;
+        }
+
         if (response.success && response.kundli) {
           setKundliData(response.kundli);
+          setIsSharedView(loadedAsShared || !!response.shared);
           
           // Don't start polling here - let the Free Report tab handle it
           // This prevents polling when user is not viewing the report
         }
       } catch (error: any) {
         console.error("Failed to fetch kundli:", error);
-        showToast(error?.message || "Failed to load kundli details", "error");
+        const message = error?.message || "Failed to load kundli details";
+        setLoadErrorMessage(message);
+        showToast(message, "error");
       } finally {
         setTimeout(() => setLoading(false), 200);
       }
     };
 
-    if (isLoggedIn && !authLoading && kundliId) {
+    if (kundliId && (isLoggedIn || !authLoading)) {
       fetchKundliData();
     }
 
@@ -164,7 +195,7 @@ function KundliReportPage() {
   useEffect(() => {
     const instanceId = componentInstanceIdRef.current;
     
-    if (activeTab === "Free Report" && kundliData && !kundliData.aiFreeReport && kundliId) {
+    if (!isSharedView && activeTab === "Free Report" && kundliData && !kundliData.aiFreeReport && kundliId) {
       console.log(`[${instanceId}] Free Report tab active - starting AI polling for ${kundliId}`);
       setAiReportLoading(true);
       startPollingForAiReport(kundliId);
@@ -186,7 +217,7 @@ function KundliReportPage() {
         setAiReportLoading(false);
       }
     };
-  }, [activeTab, kundliData?.aiFreeReport, kundliId]);
+  }, [activeTab, kundliData?.aiFreeReport, kundliId, isSharedView]);
 
   useEffect(() => {
     const fetchAstrologers = async () => {
@@ -205,13 +236,13 @@ function KundliReportPage() {
     fetchAstrologers();
   }, []);
 
-  if (authLoading || loading) {
+  if (loading || (!kundliId && authLoading)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6">
         <div className="w-full max-w-[300px] md:max-w-md">
           <div className="flex justify-between mb-2">
             <span className="text-sm font-semibold text-gray-700">
-              Generating Report...
+              Loading Report...
             </span>
             <span className="text-sm font-bold text-blue-600">{progress}%</span>
           </div>
@@ -222,21 +253,27 @@ function KundliReportPage() {
             />
           </div>
           <p className="mt-4 text-center text-gray-500 text-sm animate-pulse">
-            Please wait while we generate your kundli report...
+            Please wait while we Loading your kundli report...
           </p>
         </div>
       </div>
     );
   }
-  if (!isLoggedIn) return null;
+  if (!isLoggedIn && !kundliId) return null;
 
   if (!kundliData || !kundliData.userRequest) {
+    const deletedMessage =
+      loadErrorMessage && loadErrorMessage.toLowerCase().includes("deleted by user");
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="text-center">
           <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
-            Kundli Not Found
+            {deletedMessage ? "Kundli Deleted" : "Kundli Not Found"}
           </h2>
+          {loadErrorMessage && (
+            <p className="mb-3 text-sm text-gray-600">{loadErrorMessage}</p>
+          )}
           <Link
             href="/profile/kundli"
             className="text-blue-600 hover:underline"
@@ -277,6 +314,109 @@ function KundliReportPage() {
     router.push(`/astrologer/${astrologerId}?mode=chat`);
   };
 
+  const handleShareKundli = async () => {
+    if (!kundliId) {
+      showToast("Unable to share this kundli", "error");
+      return;
+    }
+
+    try {
+      setShareLinkLoading(true);
+      let currentShareUrl = shareUrl;
+
+      if (!currentShareUrl) {
+        const response = await createKundliShareLink(kundliId);
+        currentShareUrl = response.shareUrl;
+        setShareUrl(currentShareUrl);
+      }
+
+      setIsShareModalOpen(true);
+    } catch (error: any) {
+      console.error("Failed to create share link:", error);
+      showToast(error?.message || "Failed to create share link", "error");
+    } finally {
+      setShareLinkLoading(false);
+    }
+  };
+
+  const handleCopyShareLink = async () => {
+    if (!shareUrl) return;
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        showToast("Link copied", "success");
+        return;
+      }
+      showToast("Copy not supported on this browser", "error");
+    } catch (error) {
+      showToast("Failed to copy link", "error");
+    }
+  };
+
+  const shareMessage = "Check this Kundli report";
+
+  const openShareWindow = (url: string) => {
+    if (typeof window === "undefined") return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const shareToWhatsApp = () => {
+    if (!shareUrl) return;
+    openShareWindow(
+      `https://wa.me/?text=${encodeURIComponent(`${shareMessage} ${shareUrl}`)}`
+    );
+  };
+
+  const shareToTelegram = () => {
+    if (!shareUrl) return;
+    openShareWindow(
+      `https://t.me/share/url?url=${encodeURIComponent(
+        shareUrl
+      )}&text=${encodeURIComponent(shareMessage)}`
+    );
+  };
+
+  const shareToFacebook = () => {
+    if (!shareUrl) return;
+    openShareWindow(
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`
+    );
+  };
+
+  const shareToX = () => {
+    if (!shareUrl) return;
+    openShareWindow(
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+        shareMessage
+      )}&url=${encodeURIComponent(shareUrl)}`
+    );
+  };
+
+  const shareByEmail = () => {
+    if (!shareUrl) return;
+    if (typeof window === "undefined") return;
+    window.location.href = `mailto:?subject=${encodeURIComponent(
+      "Kundli Report"
+    )}&body=${encodeURIComponent(`${shareMessage}\n\n${shareUrl}`)}`;
+  };
+
+  const shareViaNative = async () => {
+    if (!shareUrl) return;
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({
+          title: "Kundli Report",
+          text: shareMessage,
+          url: shareUrl,
+        });
+      } else {
+        showToast("Native share is not supported on this browser", "error");
+      }
+    } catch {
+      // Share dialog dismissed by user
+    }
+  };
+
   const mapAstrologerData = (astrologer: ApiAstrologer) => ({
     photo: astrologer.photo,
     name: astrologer.fullName,
@@ -294,8 +434,20 @@ function KundliReportPage() {
   return (
     <div className="py-6 md:py-10 min-h-screen bg-gray-50">
       <h1 className="text-center mb-6 md:mb-10 font-bold text-2xl md:text-3xl px-4 text-gray-900">
-        Your Kundli Report
+        {isSharedView ? "Shared Kundli Report" : "Your Kundli Report"}
       </h1>
+
+      {!isSharedView && (
+        <div className="max-w-6xl mx-auto px-4 mb-4 flex justify-end">
+          <button
+            onClick={handleShareKundli}
+            disabled={shareLinkLoading}
+            className="px-4 py-2 rounded-lg bg-[#FFD900] text-gray-900 font-semibold hover:bg-yellow-300 disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {shareLinkLoading ? "Generating..." : "Share Kundli"}
+          </button>
+        </div>
+      )}
 
       <div className="max-w-6xl mx-auto px-4 mb-6">
         <div className="grid grid-cols-3 sm:flex sm:flex-nowrap border border-gray-300 rounded-lg bg-white overflow-hidden shadow-sm">
@@ -388,6 +540,68 @@ function KundliReportPage() {
           </div>
         </div>
       </div> */}
+
+      {isShareModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900">Share Kundli</h3>
+              <button
+                onClick={() => setIsShareModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700 text-xl leading-none"
+                aria-label="Close share modal"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              <button
+                onClick={shareToWhatsApp}
+                className="w-full py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium text-left px-4"
+              >
+                Share on WhatsApp
+              </button>
+              <button
+                onClick={shareToTelegram}
+                className="w-full py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium text-left px-4"
+              >
+                Share on Telegram
+              </button>
+              <button
+                onClick={shareToFacebook}
+                className="w-full py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium text-left px-4"
+              >
+                Share on Facebook
+              </button>
+              <button
+                onClick={shareToX}
+                className="w-full py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium text-left px-4"
+              >
+                Share on X
+              </button>
+              <button
+                onClick={shareByEmail}
+                className="w-full py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium text-left px-4"
+              >
+                Share via Email
+              </button>
+              <button
+                onClick={handleCopyShareLink}
+                className="w-full py-2.5 rounded-lg bg-[#FFD900] hover:bg-yellow-300 font-semibold text-gray-900"
+              >
+                Copy Link
+              </button>
+              <button
+                onClick={shareViaNative}
+                className="w-full py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium"
+              >
+                More Apps
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toastProps.isVisible && (
         <Toast

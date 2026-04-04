@@ -1,14 +1,13 @@
 import Image from 'next/image'
-import { Lightbulb, LucideIcon } from 'lucide-react'
+import { Lightbulb } from 'lucide-react'
 import { FaBrain } from "react-icons/fa6"
 import { RiRobot2Line } from "react-icons/ri"
 import { BiSolidZap } from "react-icons/bi"
 import { colors } from '@/utils/colors'
 import { Button } from '@/components/atoms'
-import Link from 'next/link'
 
 interface FeatureCardProps {
-  icon: LucideIcon | any
+  icon: React.ComponentType<{ className?: string }>
   title: string
   description: string
   bgColor: string
@@ -38,7 +37,7 @@ const Hero2: React.FC = () => {
                 alt="AI Astrologer Expert"
                 fill
                 style={{ objectFit: "cover" }}
-                priority
+                sizes="(max-width: 1024px) 100vw, 50vw"
               />
             </div>
           </div>

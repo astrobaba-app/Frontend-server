@@ -13,6 +13,7 @@ export interface KundliRequest {
 
 export interface KundliResponse {
   success: boolean;
+  shared?: boolean;
   kundli: {
     id: string;
     requestId: string;
@@ -33,7 +34,7 @@ export interface KundliResponse {
     updatedAt: string;
     userRequest: {
       id: string;
-      userId: string;
+      userId?: string;
       fullName: string;
       dateOfbirth: string;
       timeOfbirth: string;
@@ -66,6 +67,12 @@ export interface KundliResponse {
   };
 }
 
+export interface ShareKundliLinkResponse {
+  success: boolean;
+  message: string;
+  shareUrl: string;
+}
+
 export interface AiReportStatusResponse {
   success: boolean;
   isReady: boolean;
@@ -81,6 +88,11 @@ export interface AllKundlisResponse {
     timeOfbirth: string;
     placeOfBirth: string;
   }>;
+}
+
+export interface DeleteKundliResponse {
+  success: boolean;
+  message: string;
 }
 
 export const createKundli = async (data: KundliRequest): Promise<KundliResponse> => {
@@ -102,6 +114,15 @@ export const getAllKundlis = async (): Promise<AllKundlisResponse> => {
   }
 };
 
+export const deleteKundli = async (userRequestId: string): Promise<DeleteKundliResponse> => {
+  try {
+    const response: AxiosResponse<DeleteKundliResponse> = await api.delete(`/kundli/${userRequestId}`);
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || { message: 'Failed to delete kundli', success: false };
+  }
+};
+
 export const getKundli = async (userRequestId: string): Promise<KundliResponse> => {
   try {
     const response: AxiosResponse<KundliResponse> = await api.get(`/kundli/${userRequestId}`);
@@ -109,6 +130,24 @@ export const getKundli = async (userRequestId: string): Promise<KundliResponse> 
     return response.data;
   } catch (error: any) {
     throw error.response?.data || { message: 'Failed to fetch kundli details', success: false };
+  }
+};
+
+export const getSharedKundli = async (userRequestId: string): Promise<KundliResponse> => {
+  try {
+    const response: AxiosResponse<KundliResponse> = await api.get(`/kundli/shared/${encodeURIComponent(userRequestId)}`);
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || { message: 'Failed to fetch shared kundli details', success: false };
+  }
+};
+
+export const createKundliShareLink = async (userRequestId: string): Promise<ShareKundliLinkResponse> => {
+  try {
+    const response: AxiosResponse<ShareKundliLinkResponse> = await api.post(`/kundli/${userRequestId}/share-link`);
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || { message: 'Failed to create share link', success: false };
   }
 };
 

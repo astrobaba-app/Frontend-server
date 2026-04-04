@@ -24,6 +24,14 @@ export interface ChatSessionSummary {
     id: string;
     fullName: string;
     email: string;
+    mobile?: number | string | null;
+    gender?: string | null;
+    dateOfbirth?: string | null;
+    timeOfbirth?: string | null;
+    placeOfBirth?: string | null;
+    city?: string | null;
+    state?: string | null;
+    country?: string | null;
   };
 }
 

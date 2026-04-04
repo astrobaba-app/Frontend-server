@@ -32,6 +32,11 @@ import {
   sendChatMessageHttp,
 } from "@/store/api/chat";
 import {
+  getKundliShareViewForChat,
+  getUserKundlisForChat,
+  type ChatUserKundliListItem,
+} from "@/store/api/chat/kundli";
+import {
   acceptCall,
   rejectCall,
   getCallToken,
@@ -123,12 +128,27 @@ function LiveChatsPageContent() {
   const [showLeaveSectionConfirm, setShowLeaveSectionConfirm] = useState(false);
   const [showUserEndedModal, setShowUserEndedModal] = useState(false);
   const [userEndedModalName, setUserEndedModalName] = useState<string>("User");
+  const [showKundliModal, setShowKundliModal] = useState(false);
+  const [kundliModalStep, setKundliModalStep] = useState<"choose" | "render">(
+    "choose"
+  );
+  const [userKundlis, setUserKundlis] = useState<ChatUserKundliListItem[]>([]);
+  const [kundliListLoading, setKundliListLoading] = useState(false);
+  const [kundliRenderLoading, setKundliRenderLoading] = useState(false);
+  const [selectedKundliUrl, setSelectedKundliUrl] = useState<string | null>(
+    null
+  );
+  const [kundliModalError, setKundliModalError] = useState<string | null>(null);
   const [pendingSwitchSessionId, setPendingSwitchSessionId] = useState<
     string | null
   >(null);
   const typingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const autoOpenProcessedSessionRef = React.useRef<string | null>(null);
+  const kundliListCacheRef = React.useRef<Map<string, ChatUserKundliListItem[]>>(
+    new Map()
+  );
+  const allowNextPopRef = React.useRef(false);
 
   const selectedSession = useMemo(
     () => chatSessions.find((s) => s.id === selectedSessionId) || null,
@@ -152,6 +172,65 @@ function LiveChatsPageContent() {
     );
   }, [selectedSession]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const currentState = window.history.state;
+    if (!currentState?.__astrologerLiveChatsBackGuard) {
+      window.history.pushState(
+        {
+          ...(currentState || {}),
+          __astrologerLiveChatsBackGuard: true,
+        },
+        "",
+        window.location.href
+      );
+    }
+
+    const handlePopState = () => {
+      if (allowNextPopRef.current) {
+        allowNextPopRef.current = false;
+        return;
+      }
+
+      if (hasActiveSelectedChat && selectedSessionId) {
+        setShowLeaveSectionConfirm(true);
+        window.history.pushState(
+          {
+            ...(window.history.state || {}),
+            __astrologerLiveChatsBackGuard: true,
+          },
+          "",
+          window.location.href
+        );
+        return;
+      }
+
+      allowNextPopRef.current = true;
+      window.history.back();
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [hasActiveSelectedChat, selectedSessionId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasActiveSelectedChat || !selectedSessionId) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasActiveSelectedChat, selectedSessionId]);
+
   const filteredChats = useMemo(
     () =>
       chatSessions.filter((session) =>
@@ -171,6 +250,35 @@ function LiveChatsPageContent() {
       ),
     [requestSessions, searchQuery]
   );
+
+  const isChoosingKundli = kundliModalStep === "choose";
+
+  const chooseModalWidthClass = useMemo(() => {
+    if (kundliListLoading || kundliModalError) return "max-w-3xl";
+
+    if (userKundlis.length <= 1) return "max-w-2xl";
+    if (userKundlis.length <= 2) return "max-w-3xl";
+    if (userKundlis.length <= 4) return "max-w-4xl";
+    return "max-w-6xl";
+  }, [kundliListLoading, kundliModalError, userKundlis.length]);
+
+  const chooseModalBodyClass = useMemo(() => {
+    if (userKundlis.length > 8) {
+      return "max-h-[72vh] overflow-y-auto p-4 sm:p-6";
+    }
+
+    if (userKundlis.length > 4) {
+      return "max-h-[64vh] overflow-y-auto p-4 sm:p-6";
+    }
+
+    return "p-4 sm:p-6";
+  }, [userKundlis.length]);
+
+  const chooseGridClass = useMemo(() => {
+    if (userKundlis.length <= 1) return "grid grid-cols-1 gap-4";
+    if (userKundlis.length <= 2) return "grid grid-cols-1 md:grid-cols-2 gap-4";
+    return "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4";
+  }, [userKundlis.length]);
 
   // Ensure a valid selected session whenever the chat session list changes
   useEffect(() => {
@@ -808,6 +916,95 @@ function LiveChatsPageContent() {
     }
   };
 
+  const closeKundliModal = () => {
+    setShowKundliModal(false);
+    setKundliModalStep("choose");
+    setSelectedKundliUrl(null);
+    setKundliModalError(null);
+  };
+
+  const openKundliChooser = async () => {
+    if (!selectedSessionId) {
+      showToast("Select a chat first", "info");
+      return;
+    }
+
+    setShowKundliModal(true);
+    setKundliModalStep("choose");
+    setSelectedKundliUrl(null);
+    setKundliModalError(null);
+
+    const cached = kundliListCacheRef.current.get(selectedSessionId);
+    if (cached) {
+      setUserKundlis(cached);
+      return;
+    }
+
+    try {
+      setKundliListLoading(true);
+      const response = await getUserKundlisForChat(selectedSessionId);
+      const list = response.userRequests || [];
+      setUserKundlis(list);
+      kundliListCacheRef.current.set(selectedSessionId, list);
+    } catch (error: any) {
+      const message =
+        error?.message ||
+        error?.response?.data?.message ||
+        "Failed to load generated kundlis";
+      setKundliModalError(message);
+      showToast(message, "error");
+    } finally {
+      setKundliListLoading(false);
+    }
+  };
+
+  const renderSelectedKundli = async (userRequestId: string) => {
+    if (!selectedSessionId) return;
+
+    try {
+      setKundliRenderLoading(true);
+      setKundliModalError(null);
+
+      const response = await getKundliShareViewForChat(
+        selectedSessionId,
+        userRequestId
+      );
+
+      let embedUrl = response.shareUrl;
+      try {
+        const parsed = new URL(response.shareUrl, window.location.origin);
+        parsed.searchParams.set("embed", "1");
+        embedUrl = parsed.toString();
+      } catch {
+        embedUrl = `${response.shareUrl}${response.shareUrl.includes("?") ? "&" : "?"}embed=1`;
+      }
+
+      setSelectedKundliUrl(embedUrl);
+      setKundliModalStep("render");
+    } catch (error: any) {
+      const message =
+        error?.message ||
+        error?.response?.data?.message ||
+        "Failed to open kundli report";
+      setKundliModalError(message);
+      showToast(message, "error");
+    } finally {
+      setKundliRenderLoading(false);
+    }
+  };
+
+  const formatUserRequestDate = (value: string) => {
+    if (!value) return "--";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+
+    return date.toLocaleDateString([], {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Left Panel - Chat List */}
@@ -1063,6 +1260,14 @@ function LiveChatsPageContent() {
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                  <button
+                    type="button"
+                    onClick={openKundliChooser}
+                    className="px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-full bg-yellow-100 text-gray-800 hover:bg-yellow-200 transition-colors"
+                    title="View User Generated Kundli"
+                  >
+                    Kundli
+                  </button>
                   <button
                     className="p-1.5 sm:p-2 cursor-pointer hover:bg-yellow-200 rounded-full transition-colors"
                     title="Voice Call"
@@ -1399,6 +1604,117 @@ function LiveChatsPageContent() {
           </div>
         )}
       </div>
+
+      {showKundliModal && (
+        <div className="fixed inset-0 z-120 flex items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4">
+          <div
+            className={`w-full bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col ${
+              isChoosingKundli
+                ? `${chooseModalWidthClass} h-auto`
+                : "max-w-6xl h-[90vh]"
+            }`}
+          >
+            <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                {kundliModalStep === "render" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setKundliModalStep("choose");
+                      setSelectedKundliUrl(null);
+                      setKundliModalError(null);
+                    }}
+                    className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50"
+                  >
+                    Back
+                  </button>
+                )}
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+                  {kundliModalStep === "choose"
+                    ? "Choose User Generated Kundli"
+                    : "Kundli Report"}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={closeKundliModal}
+                className="p-2 rounded-full hover:bg-gray-100"
+                aria-label="Close kundli modal"
+              >
+                <RxCross2 className="w-5 h-5 text-gray-700" />
+              </button>
+            </div>
+
+            <div className={isChoosingKundli ? "bg-gray-50" : "flex-1 min-h-0 bg-gray-50"}>
+              {kundliModalStep === "choose" ? (
+                <div className={chooseModalBodyClass}>
+                  {kundliListLoading ? (
+                    <div className="min-h-[180px] flex items-center justify-center text-gray-600">
+                      Loading user generated kundlis...
+                    </div>
+                  ) : kundliModalError ? (
+                    <div className="min-h-[180px] flex flex-col items-center justify-center text-center px-4">
+                      <p className="text-red-600 font-medium">{kundliModalError}</p>
+                      <button
+                        type="button"
+                        onClick={openKundliChooser}
+                        className="mt-3 px-4 py-2 rounded-lg bg-yellow-400 text-gray-900 font-semibold hover:bg-yellow-500"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  ) : userKundlis.length === 0 ? (
+                    <div className="min-h-[180px] flex items-center justify-center text-gray-600">
+                      No user-generated kundli found.
+                    </div>
+                  ) : (
+                    <div className={chooseGridClass}>
+                      {userKundlis.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => renderSelectedKundli(item.id)}
+                          disabled={kundliRenderLoading}
+                          className="text-left rounded-xl border border-gray-200 bg-white p-4 hover:border-yellow-400 hover:shadow-sm transition disabled:opacity-60"
+                        >
+                          <h4 className="font-semibold text-gray-900 truncate">
+                            {item.fullName || "User"}
+                          </h4>
+                          <div className="mt-2 space-y-1 text-sm text-gray-600">
+                            <p>Date: {formatUserRequestDate(item.dateOfbirth)}</p>
+                            <p>Time: {item.timeOfbirth || "--"}</p>
+                            <p className="wrap-break-word">
+                              Place: {item.placeOfBirth || "--"}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="h-full">
+                  {kundliRenderLoading ? (
+                    <div className="h-full flex items-center justify-center text-gray-600">
+                      Opening kundli report...
+                    </div>
+                  ) : selectedKundliUrl ? (
+                    <iframe
+                      src={selectedKundliUrl}
+                      title="User Kundli Report"
+                      className="w-full h-full border-0 bg-white"
+                    />
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-gray-600">
+                      Select a kundli to continue.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Incoming Call Modal */}
       {incomingCall && (
