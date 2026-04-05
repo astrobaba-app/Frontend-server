@@ -24,7 +24,9 @@ export const metadata: Metadata = {
     siteName: 'Graho',
     images: [
       {
-        url: '/images/og-image.png',
+        url: '/images/og-image.png?v=20260405',
+        secureUrl: 'https://graho.in/images/og-image.png?v=20260405',
+        type: 'image/png',
         width: 1200,
         height: 630,
         alt: 'Graho - Astrology Platform',
@@ -35,7 +37,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Graho',
     description: 'Graho is an astrology platform offering free Kundli, horoscope, matchmaking, and instant chat or call with verified astrologers. From questions to remedies - all in one place.',
-    images: ['/images/og-image.png'],
+    images: ['/images/og-image.png?v=20260405'],
   },
   robots: {
     index: true,
