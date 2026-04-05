@@ -20,11 +20,11 @@ export const metadata: Metadata = {
     description: 'Graho is an astrology platform offering free Kundli, horoscope, matchmaking, and instant chat or call with verified astrologers. From questions to remedies - all in one place.',
     type: 'website',
     locale: 'en_US',
-    url: 'https://www.graho.in',
+    url: '/',
     siteName: 'Graho',
     images: [
       {
-        url: 'https://www.graho.in/images/logo.png',
+        url: '/images/og-image.png',
         width: 1200,
         height: 630,
         alt: 'Graho - Astrology Platform',
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Graho',
     description: 'Graho is an astrology platform offering free Kundli, horoscope, matchmaking, and instant chat or call with verified astrologers. From questions to remedies - all in one place.',
-    images: ['https://www.graho.in/images/logo.png'],
+    images: ['/images/og-image.png'],
   },
   robots: {
     index: true,

@@ -20,26 +20,41 @@ const kanit = Kanit({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.graho.in"),
   title: "Graho",
   description:
     "Graho is an astrology platform offering free Kundli, horoscope, matchmaking, and instant chat or call with verified astrologers. From questions to remedies - all in one place.",
+  alternates: {
+    canonical: "/",
+  },
   icons: {
-    icon: "/images/logo.png",
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/images/logo.png", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/images/logo.png",
   },
   openGraph: {
     title: 'Graho',
     description: 'Graho is an astrology platform offering free Kundli, horoscope, matchmaking, and instant chat or call with verified astrologers. From questions to remedies - all in one place.',
-    url: 'https://www.graho.in',
+    url: '/',
     siteName: 'Graho',
     images: [
       {
-        url: 'https://www.graho.in/images/logo.png',
+        url: '/images/og-image.png',
         width: 1200,
         height: 630,
         alt: 'Graho - Astrology Platform',
       },
     ],
     type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Graho',
+    description: 'Graho is an astrology platform offering free Kundli, horoscope, matchmaking, and instant chat or call with verified astrologers. From questions to remedies - all in one place.',
+    images: ['/images/og-image.png'],
   },
 };
 
