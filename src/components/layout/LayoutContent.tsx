@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -15,12 +15,18 @@ export default function LayoutContent({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isEmbed = useMemo(() => {
+  const [isEmbed, setIsEmbed] = useState(false);
+
+  useEffect(() => {
     if (typeof window === "undefined") {
-      return false;
+      return;
     }
 
-    return new URLSearchParams(window.location.search).get("embed") === "1";
+    const hasEmbedParam =
+      new URLSearchParams(window.location.search).get("embed") === "1";
+    const isInsideIframe = window.self !== window.top;
+
+    setIsEmbed(hasEmbedParam || isInsideIframe);
   }, [pathname]);
 
   // Track Meta Pixel PageView on every route change (SPA navigation)
