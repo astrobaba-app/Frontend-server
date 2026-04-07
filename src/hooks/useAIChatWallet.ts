@@ -146,7 +146,7 @@ export const useAIChatWallet = ({
    * Start chat timer
    */
   const startChatTimer = useCallback(() => {
-    if (isChatting) {
+    if (isChatting || chatTimerRef.current) {
       console.log('[PRODUCTION DEBUG FRONTEND] Chat timer already running');
       return; // Already running
     }
@@ -166,6 +166,7 @@ export const useAIChatWallet = ({
         balance,
         required: AI_CHAT_PRICE_PER_MINUTE
       });
+      setIsChatting(false);
       onInsufficientBalance?.();
       return;
     }
@@ -260,7 +261,7 @@ export const useAIChatWallet = ({
    * Start voice call timer
    */
   const startVoiceTimer = useCallback(() => {
-    if (isVoiceCalling) {
+    if (isVoiceCalling || voiceTimerRef.current) {
       console.log('[PRODUCTION DEBUG FRONTEND] Voice timer already running');
       return; // Already running
     }
@@ -280,6 +281,7 @@ export const useAIChatWallet = ({
         balance,
         required: AI_VOICE_PRICE_PER_MINUTE
       });
+      setIsVoiceCalling(false);
       onInsufficientBalance?.();
       return;
     }

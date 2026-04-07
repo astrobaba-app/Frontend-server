@@ -8,12 +8,6 @@ interface UseAstrologerChatWalletProps {
   onBalanceUpdate?: (newBalance: number) => void;
 }
 
-interface WalletDeduction {
-  amount: number;
-  type: 'chat';
-  minutes: number;
-}
-
 interface UseAstrologerChatWalletReturn {
   // Balance state
   balance: number;
@@ -73,45 +67,6 @@ export const useAstrologerChatWallet = ({
   }, [onBalanceUpdate]);
 
   /**
-   * Deduct amount from wallet for astrologer chat usage
-   */
-  const deductFromWallet = async (deduction: WalletDeduction): Promise<boolean> => {
-    try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6001/api';
-      
-      const response = await fetch(`${API_URL}/wallet/ai-deduct`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: deduction.amount,
-          type: deduction.type,
-          minutes: deduction.minutes,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to deduct from wallet');
-      }
-
-      const data = await response.json();
-      
-      // Update local balance
-      setBalance(data.newBalance);
-      onBalanceUpdate?.(data.newBalance);
-      
-      console.log(`✓ Deducted ₹${deduction.amount} for ${deduction.type} (${deduction.minutes} min)`);
-      return true;
-    } catch (err: any) {
-      console.error('Wallet deduction error:', err);
-      return false;
-    }
-  };
-
-  /**
    * Check if balance is sufficient for minimum amount
    */
   const checkSufficientBalance = useCallback((minAmount: number): boolean => {
@@ -122,7 +77,7 @@ export const useAstrologerChatWallet = ({
    * Start chat timer
    */
   const startChatTimer = useCallback(() => {
-    if (isChatting) return; // Already running
+    if (isChatting || chatTimerRef.current) return; // Already running
     
     console.log(`Starting astrologer chat timer at ₹${astrologerPricePerMinute}/min...`);
     setIsChatting(true);
@@ -132,28 +87,24 @@ export const useAstrologerChatWallet = ({
     // Check initial balance
     if (!checkSufficientBalance(astrologerPricePerMinute)) {
       console.log('Insufficient balance to start chat');
+      setIsChatting(false);
       onInsufficientBalance?.();
       return;
     }
 
-    // Start timer (tick every second)
+    // Human chat billing is handled on backend when session ends.
+    // This timer is only for UI duration/cost tracking.
     chatTimerRef.current = setInterval(() => {
       setChatMinutes((prevMinutes) => {
         const newMinutes = prevMinutes + 1 / 60; // Add 1 second
         const completedMinutes = Math.floor(newMinutes);
 
-        // Deduct every completed minute
+        // Keep client-side guard so users cannot exceed visible wallet capacity.
         if (completedMinutes > lastChatDeductionRef.current) {
           lastChatDeductionRef.current = completedMinutes;
 
-          // Check if balance is sufficient for this deduction
-          if (checkSufficientBalance(astrologerPricePerMinute)) {
-            deductFromWallet({
-              amount: astrologerPricePerMinute,
-              type: 'chat',
-              minutes: completedMinutes,
-            });
-          } else {
+          const projectedCost = completedMinutes * astrologerPricePerMinute;
+          if (projectedCost > balance) {
             console.log('Insufficient balance during chat');
             stopChatTimer();
             onInsufficientBalance?.();
@@ -177,24 +128,9 @@ export const useAstrologerChatWallet = ({
       chatTimerRef.current = null;
     }
 
-    // Final deduction - round up to full minute
-    // If user chatted for any amount of time, charge at least 1 minute
-    // If user is at 1:40 (1.67 minutes), charge for 2 full minutes
-    const totalMinutesUsed = chatMinutes > 0 ? Math.ceil(chatMinutes) : 1;
-    const alreadyDeducted = lastChatDeductionRef.current;
-    const remainingMinutes = totalMinutesUsed - alreadyDeducted;
-
-    if (remainingMinutes > 0 && balance >= (astrologerPricePerMinute * remainingMinutes)) {
-      deductFromWallet({
-        amount: astrologerPricePerMinute * remainingMinutes,
-        type: 'chat',
-        minutes: totalMinutesUsed,
-      });
-    }
-
     setChatMinutes(0);
     lastChatDeductionRef.current = 0;
-  }, [chatMinutes, balance, astrologerPricePerMinute]);
+  }, []);
 
   /**
    * Format minutes to MM:SS

@@ -1270,7 +1270,9 @@ function ChatPage() {
       }
 
       setIsChatSessionActive(false);
+      isChatSessionActiveRef.current = false;
       setIsWaitingForApproval(false);
+      isWaitingForApprovalRef.current = false;
       setPendingRequestSessionId(null);
       setInviteSecondsLeft(0);
       clearInviteTimer();
@@ -1307,7 +1309,9 @@ function ChatPage() {
 
       if (session.requestStatus === "approved") {
         setIsChatSessionActive(true);
+        isChatSessionActiveRef.current = true;
         setIsWaitingForApproval(false);
+        isWaitingForApprovalRef.current = false;
         setPendingRequestSessionId(null);
         setInviteSecondsLeft(0);
         clearInviteTimer();
@@ -1316,6 +1320,7 @@ function ChatPage() {
       } else {
         const timeoutSeconds = response.requestTimeoutSeconds || 30;
         setIsWaitingForApproval(true);
+        isWaitingForApprovalRef.current = true;
         setPendingRequestSessionId(session.id);
         setInviteSecondsLeft(timeoutSeconds);
         showToast("Chat request sent. Waiting for astrologer approval.", "info");
