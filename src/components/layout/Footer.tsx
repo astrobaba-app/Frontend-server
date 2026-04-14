@@ -36,6 +36,7 @@ const QUICK_LINKS: LinkItem[] = [
   { name: "Terms & Conditions", href: "/policies/terms_conditions" },
   { name: "Privacy Policy", href: "/policies/privacy" },
   { name: "Shipping Policy", href: "/policies/shipping_delivery" },
+  { name: "carrer@graho", href: "https://carrer.graho.in" },
 ];
 
 const CONTACT_INFO = {
@@ -176,12 +177,23 @@ const Footer: React.FC = () => {
             <ul className="space-y-3">
               {QUICK_LINKS.map((link) => (
                 <li key={link.name}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 block"
-                  >
-                    {link.name}
-                  </Link>
+                  {link.href.startsWith("http") ? (
+                    <a
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 block"
+                    >
+                      {link.name}
+                    </a>
+                  ) : (
+                    <Link
+                      href={link.href}
+                      className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 block"
+                    >
+                      {link.name}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
