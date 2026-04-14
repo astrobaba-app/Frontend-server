@@ -36,7 +36,7 @@ const QUICK_LINKS: LinkItem[] = [
   { name: "Terms & Conditions", href: "/policies/terms_conditions" },
   { name: "Privacy Policy", href: "/policies/privacy" },
   { name: "Shipping Policy", href: "/policies/shipping_delivery" },
-  { name: "carrer@graho", href: "https://carrer.graho.in" },
+  { name: "careers@graho", href: "https://careers.graho.in" },
 ];
 
 const CONTACT_INFO = {
