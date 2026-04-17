@@ -124,6 +124,9 @@ function LiveChatsPageContent() {
     null
   );
   const [kundliModalError, setKundliModalError] = useState<string | null>(null);
+  const [visualViewportHeight, setVisualViewportHeight] = useState<number | null>(
+    null
+  );
   const typingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const messageInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -914,9 +917,33 @@ function LiveChatsPageContent() {
     });
   };
 
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.visualViewport) return;
+
+    const viewport = window.visualViewport;
+    const syncViewportHeight = () => {
+      setVisualViewportHeight(Math.round(viewport.height));
+    };
+
+    syncViewportHeight();
+    viewport.addEventListener("resize", syncViewportHeight);
+
+    return () => {
+      viewport.removeEventListener("resize", syncViewportHeight);
+    };
+  }, []);
+
+  const rootContainerStyle =
+    visualViewportHeight && visualViewportHeight > 0
+      ? { height: `${visualViewportHeight}px` }
+      : undefined;
+
   return (
-    <div className="flex h-screen overflow-hidden">
-      <div className="flex-1 flex flex-col">
+    <div
+      className="flex h-[100dvh] min-h-0 overflow-hidden"
+      style={rootContainerStyle}
+    >
+      <div className="flex-1 min-h-0 flex flex-col">
         <div className="border-b border-gray-200 bg-white px-3 py-3 sm:px-4 sm:py-4">
           <div className="flex items-center gap-2">
             <button
@@ -936,7 +963,7 @@ function LiveChatsPageContent() {
         {selectedUser && selectedSession ? (
           <>
             {/* Chat Header */}
-            <div className="border-b border-gray-200 p-3 sm:p-4">
+            <div className="shrink-0 border-b border-gray-200 p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                   {/* Avatar */}
@@ -989,7 +1016,7 @@ function LiveChatsPageContent() {
             </div>
 
             {/* Chat Messages Area */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 min-h-0 overflow-y-auto p-6">
               <div className="max-w-4xl mx-auto space-y-4 relative z-10">
                 {groupMessagesByDate(messages).map((group) => (
                   <div key={group.dateKey}>
@@ -1154,7 +1181,7 @@ function LiveChatsPageContent() {
             </div>
 
             {/* Message Input Area */}
-            <div className=" border-t border-gray-200 p-4 relative">
+            <div className="shrink-0 border-t border-gray-200 p-4 relative">
               {" "}
               {/* Image Preview Modal */}
               {imagePreview && (
