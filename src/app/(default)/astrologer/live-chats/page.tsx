@@ -2,21 +2,15 @@
 
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import {
-  FiSearch,
   FiPhone,
   FiVideo,
   FiMoreVertical,
   FiPaperclip,
-  FiMic,
-  FiCamera,
   FiSend,
   FiCheck,
-  FiCheckCircle,
 } from "react-icons/fi";
-import { GiHamburgerMenu } from "react-icons/gi";
 import { RxCross2 } from "react-icons/rx";
 import { IoMdArrowBack } from "react-icons/io";
-import { colors } from "@/utils/colors";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getChatSocket } from "@/utils/chatSocket";
@@ -28,7 +22,6 @@ import {
   endAstrologerChatSession,
   getAstrologerChatSessions,
   getChatMessages,
-  rejectChatRequest,
   sendChatMessageHttp,
 } from "@/store/api/chat";
 import {
@@ -39,8 +32,6 @@ import {
 import {
   acceptCall,
   rejectCall,
-  getCallToken,
-  endCall,
 } from "@/store/api/call";
 import { useToast } from "@/hooks/useToast";
 import Toast from "@/components/atoms/Toast";
@@ -93,8 +84,6 @@ function groupMessagesByDate(messages: ChatMessageDto[]): MessageGroup[] {
   );
 }
 
-type TabType = "chats" | "requests";
-
 function LiveChatsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -111,8 +100,6 @@ function LiveChatsPageContent() {
     null
   );
   const [messages, setMessages] = useState<ChatMessageDto[]>([]);
-  const [activeTab, setActiveTab] = useState<TabType>("chats");
-  const [searchQuery, setSearchQuery] = useState("");
   const [messageInput, setMessageInput] = useState("");
   const [isTypingUser, setIsTypingUser] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -123,8 +110,6 @@ function LiveChatsPageContent() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [incomingCall, setIncomingCall] = useState<CallSession | null>(null);
   const [activeCall, setActiveCall] = useState<CallSession | null>(null);
-  const [showSidebar, setShowSidebar] = useState(false);
-  const [showLeaveChatConfirm, setShowLeaveChatConfirm] = useState(false);
   const [showLeaveSectionConfirm, setShowLeaveSectionConfirm] = useState(false);
   const [showUserEndedModal, setShowUserEndedModal] = useState(false);
   const [userEndedModalName, setUserEndedModalName] = useState<string>("User");
@@ -139,9 +124,6 @@ function LiveChatsPageContent() {
     null
   );
   const [kundliModalError, setKundliModalError] = useState<string | null>(null);
-  const [pendingSwitchSessionId, setPendingSwitchSessionId] = useState<
-    string | null
-  >(null);
   const typingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const autoOpenProcessedSessionRef = React.useRef<string | null>(null);
@@ -230,26 +212,6 @@ function LiveChatsPageContent() {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [hasActiveSelectedChat, selectedSessionId]);
-
-  const filteredChats = useMemo(
-    () =>
-      chatSessions.filter((session) =>
-        (session.user?.fullName || "")
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase())
-      ),
-    [chatSessions, searchQuery]
-  );
-
-  const filteredRequests = useMemo(
-    () =>
-      requestSessions.filter((session) =>
-        (session.user?.fullName || "")
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase())
-      ),
-    [requestSessions, searchQuery]
-  );
 
   const isChoosingKundli = kundliModalStep === "choose";
 
@@ -341,7 +303,6 @@ function LiveChatsPageContent() {
     const matchingSession = chatSessions.find((s) => s.id === sessionIdFromUrl);
     if (matchingSession && selectedSessionId !== matchingSession.id) {
       setSelectedSessionId(matchingSession.id);
-      setActiveTab("chats");
     }
   }, [sessionIdFromUrl, chatSessions, selectedSessionId]);
 
@@ -354,7 +315,6 @@ function LiveChatsPageContent() {
     if (alreadyApproved) {
       autoOpenProcessedSessionRef.current = sessionIdFromUrl;
       setSelectedSessionId(sessionIdFromUrl);
-      setActiveTab("chats");
       return;
     }
 
@@ -379,7 +339,6 @@ function LiveChatsPageContent() {
 
         await refreshSessions();
         setSelectedSessionId(sessionIdFromUrl);
-        setActiveTab("chats");
       } catch (error) {
         console.error("Failed to auto-approve notification chat session", error);
         showToast("Could not auto-open chat request", "error");
@@ -407,7 +366,7 @@ function LiveChatsPageContent() {
 
   // Close menu when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = () => {
       if (openMenuId) {
         setOpenMenuId(null);
       }
@@ -778,63 +737,6 @@ function LiveChatsPageContent() {
     }
   };
 
-  const handleAcceptRequest = async (sessionId: string) => {
-    try {
-      await approveChatRequest(sessionId);
-      setRequestSessions((prev) => prev.filter((s) => s.id !== sessionId));
-      await refreshSessions();
-    } catch (error) {
-      console.error("Failed to approve chat request", error);
-    }
-  };
-
-  const handleDeclineRequest = async (sessionId: string) => {
-    try {
-      await rejectChatRequest(sessionId);
-      setRequestSessions((prev) => prev.filter((s) => s.id !== sessionId));
-      await refreshSessions();
-    } catch (error) {
-      console.error("Failed to reject chat request", error);
-    }
-  };
-
-  const requestSessionSwitch = (sessionId: string) => {
-    if (!selectedSessionId || selectedSessionId === sessionId) {
-      setSelectedSessionId(sessionId);
-      return;
-    }
-
-    setPendingSwitchSessionId(sessionId);
-    setShowLeaveChatConfirm(true);
-  };
-
-  const confirmEndCurrentChatAndSwitch = async () => {
-    if (!selectedSessionId || !pendingSwitchSessionId) {
-      setShowLeaveChatConfirm(false);
-      return;
-    }
-
-    try {
-      await endAstrologerChatSession(selectedSessionId);
-      setChatSessions((prev) => prev.filter((s) => s.id !== selectedSessionId));
-      setMessages([]);
-      setSelectedSessionId(pendingSwitchSessionId);
-      showToast("Current chat ended", "success");
-    } catch (error) {
-      console.error("Failed to end active chat before switching", error);
-      showToast("Could not end current chat", "error");
-    } finally {
-      setShowLeaveChatConfirm(false);
-      setPendingSwitchSessionId(null);
-      await refreshSessions();
-    }
-  };
-
-  const cancelSessionSwitch = () => {
-    setShowLeaveChatConfirm(false);
-    setPendingSwitchSessionId(null);
-  };
-
   const requestLeaveSection = () => {
     if (!hasActiveSelectedChat || !selectedSessionId) {
       router.back();
@@ -1007,234 +909,29 @@ function LiveChatsPageContent() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Left Panel - Chat List */}
-      <div
-        className={`fixed inset-y-0 left-0 z-30 w-full sm:w-80 md:w-96 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-300 lg:static lg:translate-x-0 lg:z-auto ${
-          showSidebar ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        }`}
-      >
-        {/* Header */}
-        <div className="p-3 sm:p-4 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <button
-                type="button"
-                onClick={requestLeaveSection}
-                className="p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition-colors shrink-0"
-                aria-label="Go back"
-              >
-                <IoMdArrowBack className="w-5 h-5 text-gray-700" />
-              </button>
-              <h2
-                className="text-xl sm:text-2xl font-bold truncate"
-                style={{ color: colors.black }}
-              >
-                Live Chats
-              </h2>
-            </div>
+      <div className="flex-1 flex flex-col">
+        <div className="border-b border-gray-200 bg-white px-3 py-3 sm:px-4 sm:py-4">
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setShowSidebar(false)}
-              className="lg:hidden p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition-colors shrink-0"
-              aria-label="Close sidebar"
+              onClick={requestLeaveSection}
+              className="p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition-colors shrink-0"
+              aria-label="Go back"
             >
-              <RxCross2 className="w-5 h-5 rotate-90 text-gray-700" />
+              <IoMdArrowBack className="w-5 h-5 text-gray-700" />
             </button>
-          </div>
-
-          {/* Search Bar */}
-          <div className="relative">
-            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-[#FFD700]"
-            />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+              Live Chats
+            </h2>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab("chats")}
-            className={`flex-1 py-2.5 sm:py-3 text-center text-sm sm:text-base font-medium transition-colors ${
-              activeTab === "chats"
-                ? "text-gray-900 border-b-2 border-[#FFD700] bg-yellow-50"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            Chats
-            {chatSessions.filter((s) => s.unreadCount > 0).length > 0 && (
-              <span className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 bg-[#FFD700] text-[10px] sm:text-xs rounded-full">
-                {chatSessions.reduce((acc, s) => acc + (s.unreadCount || 0), 0)}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab("requests")}
-            className={`flex-1 py-2.5 sm:py-3 text-center text-sm sm:text-base font-medium transition-colors ${
-              activeTab === "requests"
-                ? "text-gray-900 border-b-2 border-[#FFD700] bg-yellow-50"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            Requests
-            {requestSessions.length > 0 && (
-              <span className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 bg-red-500 text-white text-[10px] sm:text-xs rounded-full">
-                {requestSessions.length}
-              </span>
-            )}
-          </button>
-        </div>
-
-        {/* Chat/Request List */}
-        <div className="flex-1 overflow-y-auto">
-          {activeTab === "chats" ? (
-            // Chats List
-            filteredChats.length > 0 ? (
-              filteredChats.map((session) => (
-                <div
-                  key={session.id}
-                  onClick={() => requestSessionSwitch(session.id)}
-                  className={`p-3 sm:p-4 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 ${
-                    selectedSessionId === session.id ? "bg-yellow-50" : ""
-                  }`}
-                >
-                  <div className="flex items-start gap-2 sm:gap-3">
-                    {/* Avatar */}
-                    <div className="relative shrink-0">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-linear-to-br from-yellow-200 to-yellow-300 flex items-center justify-center">
-                        <span className="text-base sm:text-lg font-semibold text-gray-700">
-                          {(session.user?.fullName || "?").charAt(0)}
-                        </span>
-                      </div>
-                      {true && (
-                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-                      )}
-                    </div>
-
-                    {/* Chat Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
-                          {session.user?.fullName || "User"}
-                        </h4>
-                        <span className="text-[10px] sm:text-xs text-gray-500 ml-2 shrink-0">
-                          {session.lastMessageAt
-                            ? new Date(
-                                session.lastMessageAt
-                              ).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                            : ""}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <p className="text-sm text-gray-600 truncate">
-                          {session.lastMessagePreview || "No messages yet"}
-                        </p>
-                        {session.unreadCount > 0 && (
-                          <span className="ml-2 px-2 py-0.5 bg-[#FFD700] text-xs rounded-full font-medium shrink-0">
-                            {session.unreadCount}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="p-6 sm:p-8 text-center text-gray-500 text-sm sm:text-base">
-                No chats found
-              </div>
-            )
-          ) : // Requests List
-          filteredRequests.length > 0 ? (
-            filteredRequests.map((session) => (
-              <div
-                key={session.id}
-                className="p-3 sm:p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-start gap-2 sm:gap-3">
-                  {/* Avatar */}
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-linear-to-br from-blue-200 to-blue-300 flex items-center justify-center shrink-0">
-                    <span className="text-base sm:text-lg font-semibold text-gray-700">
-                      {(session.user?.fullName || "?").charAt(0)}
-                    </span>
-                  </div>
-
-                  {/* Request Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start mb-1">
-                      <h4 className="font-semibold text-gray-900">
-                        {session.user?.fullName || "User"}
-                      </h4>
-                      <span className="text-xs text-gray-500 ml-2">
-                        {session.startTime
-                          ? new Date(session.startTime).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          : ""}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2">
-                      {session.lastMessagePreview || "New chat request"}
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        className="px-2.5 sm:px-3 py-1 bg-[#FFD700] text-xs sm:text-sm font-medium rounded hover:bg-yellow-500 transition-colors"
-                        onClick={() => handleAcceptRequest(session.id)}
-                      >
-                        Accept
-                      </button>
-                      <button
-                        className="px-2.5 sm:px-3 py-1 bg-gray-200 text-xs sm:text-sm font-medium rounded hover:bg-gray-300 transition-colors"
-                        onClick={() => handleDeclineRequest(session.id)}
-                      >
-                        Decline
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="p-6 sm:p-8 text-center text-gray-500 text-sm sm:text-base">
-              No pending requests
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Overlay for mobile sidebar */}
-      {showSidebar && (
-        <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-20 lg:hidden"
-          onClick={() => setShowSidebar(false)}
-        />
-      )}
-
-      {/* Right Panel - Chat Window */}
-      <div className="flex-1 flex flex-col lg:ml-0">
         {selectedUser && selectedSession ? (
           <>
             {/* Chat Header */}
             <div className="border-b border-gray-200 p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                  {/* Mobile: open sidebar */}
-                  <button
-                    type="button"
-                    onClick={() => setShowSidebar(true)}
-                    className="lg:hidden p-1.5 sm:p-2 rounded-full hover:bg-gray-100 transition-colors shrink-0"
-                    aria-label="Open chat list"
-                  >
-                    <GiHamburgerMenu className="w-5 h-5 text-gray-800" />
-                  </button>
                   {/* Avatar */}
                   <div className="relative shrink-0">
                     <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-linear-to-br from-yellow-200 to-yellow-300 flex items-center justify-center">
@@ -1574,32 +1271,19 @@ function LiveChatsPageContent() {
           </>
         ) : (
           // No Chat Selected
-          <div className="flex-1 flex bg-linear-to-br from-yellow-50 to-orange-50 p-4">
-            <button
-                type="button"
-                onClick={() => setShowSidebar(true)}
-                className="lg:hidden mb-4 p-3 h-12 bg-white rounded-full shadow-md hover:shadow-lg transition-all"
-                aria-label="Open chat list"
-              >
-                <GiHamburgerMenu className="w-6 h-6 text-gray-800" />
-              </button>
-            <div className="flex-1 flex items-center justify-center bg-linear-to-br from-yellow-50 to-orange-50 p-4">
-              
-              <div className="text-center max-w-md">
-                {/* Mobile hamburger to open sidebar when no chat selected */}
-
-                <div className="text-6xl sm:text-7xl md:text-8xl mb-3 sm:mb-4">
-                  💬
-                </div>
-                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-                  Welcome to Live Chats
-                </h3>
-                <p className="text-sm sm:text-base text-gray-600 px-4">
-                  {chatSessions.length === 0 && requestSessions.length === 0
-                    ? "No chats or requests yet. Waiting for clients..."
-                    : "Select a conversation to start chatting with your clients"}
-                </p>
+          <div className="flex-1 flex items-center justify-center bg-linear-to-br from-yellow-50 to-orange-50 p-4">
+            <div className="text-center max-w-md">
+              <div className="text-6xl sm:text-7xl md:text-8xl mb-3 sm:mb-4">
+                💬
               </div>
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+                Welcome to Live Chats
+              </h3>
+              <p className="text-sm sm:text-base text-gray-600 px-4">
+                {chatSessions.length === 0 && requestSessions.length === 0
+                  ? "No chats or requests yet. Waiting for clients..."
+                  : "No active chat right now. Waiting for the next client..."}
+              </p>
             </div>
           </div>
         )}
@@ -1753,33 +1437,6 @@ function LiveChatsPageContent() {
           callSession={activeCall}
           onCallEnd={() => setActiveCall(null)}
         />
-      )}
-
-      {showLeaveChatConfirm && (
-        <div className="fixed inset-0 z-130 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-            <h3 className="text-lg font-bold text-gray-900">Leave Current Chat?</h3>
-            <p className="mt-2 text-sm text-gray-600">
-              If you leave this chat, the current chat session will end immediately.
-            </p>
-            <div className="mt-5 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={cancelSessionSwitch}
-                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmEndCurrentChatAndSwitch}
-                className="flex-1 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-600"
-              >
-                End And Continue
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {showLeaveSectionConfirm && (
