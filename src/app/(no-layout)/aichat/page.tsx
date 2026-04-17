@@ -34,6 +34,7 @@ import {
   getVoiceConfig,
   attachKundliToSession,
   greetSession,
+  getAutoFollowUpQuestion,
   AIChatMessage,
   AIChatSession,
 } from "@/store/api/aichat";
@@ -70,7 +71,85 @@ const PROMPT_SUGGESTIONS = [
   "How can I improve my financial situation?",
 ];
 
+const AI_ASTROLOGER_GENDER_MAP: Record<string, "male" | "female"> = {
+  "ai-astrologer-devansh": "male",
+  "ai-astrologer-ritika": "female",
+  "ai-astrologer-arjun": "male",
+};
+
+const getGreetingGrammar = (
+  astrologerId?: string | null,
+  astrologerName?: string | null
+) => {
+  const normalizedAstrologerId = (astrologerId || "").toLowerCase();
+  const normalizedName = (astrologerName || "").toLowerCase();
+
+  const gender =
+    AI_ASTROLOGER_GENDER_MAP[normalizedAstrologerId] ||
+    (normalizedName.includes("ritika") ? "female" : "male");
+
+  return {
+    possessivePronoun: gender === "female" ? "aapki" : "aapka",
+    helpingVerb: gender === "female" ? "kar sakti hun" : "kar sakta hun",
+  };
+};
+
+const normalizeAssistantGreetingText = (
+  content: string,
+  astrologerId?: string | null,
+  astrologerName?: string | null
+) => {
+  if (!content) return content;
+
+  const { possessivePronoun, helpingVerb } = getGreetingGrammar(
+    astrologerId,
+    astrologerName
+  );
+
+  return content
+    .replace(/\baapka\s+ai\s+astrologer\b/gi, `${possessivePronoun} astrologer`)
+    .replace(/\baapki\s+astrologer\b/gi, `${possessivePronoun} astrologer`)
+    .replace(/\baapka\s+astrologer\b/gi, `${possessivePronoun} astrologer`)
+    .replace(
+      /\baaj\s+main\s+aapki\s+kya\s+madad\s+kar\s+sakta\s+hun\b/gi,
+      `Aaj main aapki kya madad ${helpingVerb}`
+    )
+    .replace(
+      /\baaj\s+main\s+aapki\s+kya\s+madad\s+kar\s+sakti\s+hun\b/gi,
+      `Aaj main aapki kya madad ${helpingVerb}`
+    );
+};
+
+const normalizeAssistantMessage = (
+  message: AIChatMessage,
+  astrologerId?: string | null,
+  astrologerName?: string | null
+): AIChatMessage => {
+  if (message.role !== "assistant") return message;
+
+  const normalizedContent = normalizeAssistantGreetingText(
+    message.content,
+    astrologerId,
+    astrologerName
+  );
+  if (normalizedContent === message.content) return message;
+
+  return {
+    ...message,
+    content: normalizedContent,
+  };
+};
+
 const STICK_TO_BOTTOM_THRESHOLD = 48;
+const AUTO_FOLLOW_UP_FIRST_DELAY_MIN_MS = 3000;
+const AUTO_FOLLOW_UP_FIRST_DELAY_MAX_MS = 4000;
+const AUTO_FOLLOW_UP_NEXT_DELAY_MIN_MS = 3000;
+const AUTO_FOLLOW_UP_NEXT_DELAY_MAX_MS = 4000;
+
+const randomDelayBetween = (minMs: number, maxMs: number) => {
+  if (maxMs <= minMs) return minMs;
+  return Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+};
 
 const AIChatPageContent = () => {
   const { isLoggedIn, loading, user } = useAuth();
@@ -123,6 +202,14 @@ const AIChatPageContent = () => {
   const messageInputRef = useRef<HTMLInputElement | null>(null);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const shouldStickToBottomRef = useRef(true);
+  const autoFollowUpTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoFollowUpGenerationRef = useRef(0);
+  const autoFollowUpRequestInFlightRef = useRef(false);
+  const currentSessionIdRef = useRef<string | null>(null);
+  const isChatSessionActiveRef = useRef(false);
+  const isTypingRef = useRef(false);
+  const inputMessageRef = useRef("");
+  const userActivityAtRef = useRef<number>(Date.now());
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -156,6 +243,132 @@ const AIChatPageContent = () => {
     },
   });
 
+  const clearAutoFollowUpTimers = useCallback(() => {
+    if (autoFollowUpTimerRef.current) {
+      clearTimeout(autoFollowUpTimerRef.current);
+      autoFollowUpTimerRef.current = null;
+    }
+  }, []);
+
+  const registerUserActivity = useCallback(() => {
+    userActivityAtRef.current = Date.now();
+    autoFollowUpGenerationRef.current += 1;
+    clearAutoFollowUpTimers();
+  }, [clearAutoFollowUpTimers]);
+
+  const queueNextAutoFollowUp = useCallback(
+    (sessionId: string, isFirstRound: boolean, generationId: number) => {
+      const requiredIdleMs = isFirstRound
+        ? randomDelayBetween(
+            AUTO_FOLLOW_UP_FIRST_DELAY_MIN_MS,
+            AUTO_FOLLOW_UP_FIRST_DELAY_MAX_MS
+          )
+        : randomDelayBetween(
+            AUTO_FOLLOW_UP_NEXT_DELAY_MIN_MS,
+            AUTO_FOLLOW_UP_NEXT_DELAY_MAX_MS
+          );
+
+      autoFollowUpTimerRef.current = setTimeout(() => {
+        autoFollowUpTimerRef.current = null;
+
+        if (generationId !== autoFollowUpGenerationRef.current) return;
+        if (currentSessionIdRef.current !== sessionId) return;
+        if (!isChatSessionActiveRef.current) return;
+        if (isTypingRef.current) return;
+        if (inputMessageRef.current.trim().length > 0) return;
+
+        const idleForMs = Date.now() - userActivityAtRef.current;
+        if (idleForMs < requiredIdleMs - 120) return;
+
+        if (autoFollowUpRequestInFlightRef.current) {
+          queueNextAutoFollowUp(sessionId, false, generationId);
+          return;
+        }
+
+        const fetchAndQueue = async () => {
+          try {
+            autoFollowUpRequestInFlightRef.current = true;
+            const response = await getAutoFollowUpQuestion(sessionId);
+
+            if (generationId !== autoFollowUpGenerationRef.current) return;
+            if (currentSessionIdRef.current !== sessionId) return;
+            if (!isChatSessionActiveRef.current) return;
+            if (isTypingRef.current) return;
+            if (inputMessageRef.current.trim().length > 0) return;
+
+            const followUpMessage = response.followUpMessage;
+            if (followUpMessage?.content) {
+              shouldStickToBottomRef.current = true;
+              setMessages((prev) => {
+                if (prev.some((msg) => msg.id === followUpMessage.id)) {
+                  return prev;
+                }
+
+                return [
+                  ...prev,
+                  normalizeAssistantMessage(
+                    followUpMessage,
+                    astrologerId,
+                    astrologerName
+                  ),
+                ];
+              });
+            }
+          } catch (error) {
+            console.error("Failed to generate dynamic follow-up question:", error);
+          } finally {
+            autoFollowUpRequestInFlightRef.current = false;
+
+            if (generationId !== autoFollowUpGenerationRef.current) return;
+            if (currentSessionIdRef.current !== sessionId) return;
+            if (!isChatSessionActiveRef.current) return;
+            if (inputMessageRef.current.trim().length > 0) return;
+
+            queueNextAutoFollowUp(sessionId, false, generationId);
+          }
+        };
+
+        void fetchAndQueue();
+      }, requiredIdleMs);
+    },
+    [astrologerId, astrologerName]
+  );
+
+  const startDynamicAutoFollowUps = useCallback(
+    (sessionId: string) => {
+      clearAutoFollowUpTimers();
+
+      autoFollowUpGenerationRef.current += 1;
+      const generationId = autoFollowUpGenerationRef.current;
+      queueNextAutoFollowUp(sessionId, true, generationId);
+    },
+    [clearAutoFollowUpTimers, queueNextAutoFollowUp]
+  );
+
+  const handleInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      registerUserActivity();
+      setInputMessage(event.target.value);
+    },
+    [registerUserActivity]
+  );
+
+  useEffect(() => {
+    currentSessionIdRef.current = currentSessionId;
+  }, [currentSessionId]);
+
+  useEffect(() => {
+    isChatSessionActiveRef.current = isChatSessionActive;
+  }, [isChatSessionActive]);
+
+  useEffect(() => {
+    isTypingRef.current = isTyping;
+  }, [isTyping]);
+
+  useEffect(() => {
+    inputMessageRef.current = inputMessage;
+  }, [inputMessage]);
+
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!loading && !isLoggedIn) {
@@ -177,7 +390,10 @@ const AIChatPageContent = () => {
     }
 
     shouldStickToBottomRef.current = true;
-  }, [currentSessionId]);
+    clearAutoFollowUpTimers();
+    autoFollowUpGenerationRef.current += 1;
+    userActivityAtRef.current = Date.now();
+  }, [currentSessionId, clearAutoFollowUpTimers]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -316,11 +532,13 @@ const AIChatPageContent = () => {
   useEffect(() => {
     return () => {
       // This cleanup only runs when component unmounts
+      clearAutoFollowUpTimers();
+      autoFollowUpGenerationRef.current += 1;
       stopChatTimer();
       stopVoiceTimer();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [clearAutoFollowUpTimers]);
 
   // Fetch all user kundlis and open the selection modal
   const openKundliModal = async () => {
@@ -351,11 +569,11 @@ const AIChatPageContent = () => {
       );
       // Inject greeting message returned by backend (only present for fresh sessions)
       if (resp.greetingMessage) {
-        const greetMsg: AIChatMessage = {
+        const greetMsg: AIChatMessage = normalizeAssistantMessage({
           ...resp.greetingMessage,
           sessionId: currentSessionId,
           updatedAt: resp.greetingMessage.updatedAt || resp.greetingMessage.createdAt,
-        };
+        }, astrologerId, astrologerName);
         setMessages((prev) => {
           // Avoid duplicates in case messages were loaded in parallel
           if (prev.some((m) => m.id === greetMsg.id)) return prev;
@@ -425,7 +643,11 @@ const AIChatPageContent = () => {
     try {
       setIsLoading(true);
       const response = await getChatMessages(sessionId, 1, 50);
-      setMessages(response.messages);
+      setMessages(
+        response.messages.map((message) =>
+          normalizeAssistantMessage(message, astrologerId, astrologerName)
+        )
+      );
       setError(null);
 
       // If session already has a kundli but NO messages, auto-send greeting
@@ -434,11 +656,11 @@ const AIChatPageContent = () => {
         try {
           const greetResp = await greetSession(sessionId);
           if (greetResp.greetingMessage) {
-            const greetMsg: AIChatMessage = {
+            const greetMsg: AIChatMessage = normalizeAssistantMessage({
               ...greetResp.greetingMessage,
               sessionId,
               updatedAt: greetResp.greetingMessage.updatedAt || greetResp.greetingMessage.createdAt,
-            };
+            }, astrologerId, astrologerName);
             setMessages([greetMsg]);
           }
         } catch (greetErr) {
@@ -1127,6 +1349,7 @@ const AIChatPageContent = () => {
       updatedAt: new Date().toISOString(),
     };
 
+    registerUserActivity();
     shouldStickToBottomRef.current = true;
     setMessages((prev) => [...prev, tempUserMessage]);
     setInputMessage("");
@@ -1159,11 +1382,18 @@ const AIChatPageContent = () => {
         const aiMsg: AIChatMessage = {
           ...response.aiMessage,
           sessionId: currentSessionId,
+          content: normalizeAssistantGreetingText(
+            response.aiMessage.content,
+            astrologerId,
+            astrologerName
+          ),
           updatedAt: response.aiMessage.createdAt,
         };
 
         return [...withoutTemp, userMsg, aiMsg];
       });
+
+      startDynamicAutoFollowUps(currentSessionId);
 
       // Update session title in list if it changed
       const sessionIndex = sessions.findIndex((s) => s.id === currentSessionId);
@@ -1187,6 +1417,7 @@ const AIChatPageContent = () => {
   };
 
   const handlePromptClick = (prompt: string) => {
+    registerUserActivity();
     shouldStickToBottomRef.current = true;
     handleSendMessage({ preventDefault: () => {} } as React.FormEvent, prompt);
   };
@@ -1208,6 +1439,8 @@ const AIChatPageContent = () => {
 
   // Stop chat session
   const handleStopChat = () => {
+    clearAutoFollowUpTimers();
+    autoFollowUpGenerationRef.current += 1;
     setIsChatSessionActive(false);
     stopChatTimer();
     showToast("Chat session ended", "success");
@@ -1899,7 +2132,7 @@ const AIChatPageContent = () => {
                 ref={messageInputRef}
                 type="text"
                 value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
+                onChange={handleInputChange}
                 placeholder={
                   !hasSufficientBalance(10)
                     ? "Insufficient balance..."

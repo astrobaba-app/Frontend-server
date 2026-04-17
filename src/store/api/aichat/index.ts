@@ -54,6 +54,12 @@ export interface SendMessageResponse {
   tokensUsed: number;
 }
 
+export interface AutoFollowUpQuestionResponse {
+  success: boolean;
+  followUpQuestion: string | null;
+  followUpMessage: AIChatMessage | null;
+}
+
 export interface GetSessionsResponse {
   success: boolean;
   sessions: AIChatSession[];
@@ -268,5 +274,24 @@ export const greetSession = async (sessionId: string): Promise<GreetSessionRespo
     return response.data;
   } catch (error: any) {
     throw error.response?.data || { message: 'Failed to send greeting', success: false };
+  }
+};
+
+/**
+ * Generate one dynamic AI follow-up question for idle chat moments.
+ */
+export const getAutoFollowUpQuestion = async (
+  sessionId: string
+): Promise<AutoFollowUpQuestionResponse> => {
+  try {
+    const response: AxiosResponse<AutoFollowUpQuestionResponse> = await api.post(
+      `${BASE_URL}/session/${sessionId}/follow-up-question`
+    );
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || {
+      message: 'Failed to generate follow-up question',
+      success: false,
+    };
   }
 };
