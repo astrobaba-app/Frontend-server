@@ -1131,6 +1131,12 @@ const AIChatPageContent = () => {
     setMessages((prev) => [...prev, tempUserMessage]);
     setInputMessage("");
 
+    if (typeof window !== "undefined") {
+      window.requestAnimationFrame(() => {
+        messageInputRef.current?.focus();
+      });
+    }
+
     // Show typing indicator immediately
     setIsTyping(true);
 
@@ -1240,7 +1246,7 @@ const AIChatPageContent = () => {
       : {}),
     ...(isMobileAppWebView
       ? {
-          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
           boxSizing: "border-box" as const,
         }
       : {}),
@@ -1901,7 +1907,7 @@ const AIChatPageContent = () => {
                     ? "Click 'Start Chat' to begin..."
                     : `Message ${AI_ASTROLOGER_INFO.name}...`
                 }
-                disabled={!currentSessionId || isTyping || !isChatSessionActive}
+                disabled={!currentSessionId || !isChatSessionActive}
                 className="w-full px-4 sm:px-5 py-2.5 sm:py-3 pr-14 sm:pr-16 bg-gray-100 border border-gray-200 rounded-full focus:outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400 text-sm text-gray-900 placeholder-gray-400 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200"
                 autoFocus
               />
