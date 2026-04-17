@@ -731,12 +731,6 @@ function LiveChatsPageContent() {
 
       setMessageInput("");
       setReplyTo(null);
-
-      if (typeof window !== "undefined") {
-        window.setTimeout(() => {
-          messageInputRef.current?.focus();
-        }, 0);
-      }
     } catch (error) {
       console.error("Error sending message", error);
       if (typeof window !== "undefined") {
@@ -933,6 +927,38 @@ function LiveChatsPageContent() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const html = document.documentElement;
+    const body = document.body;
+
+    const prevHtmlOverflow = html.style.overflow;
+    const prevHtmlHeight = html.style.height;
+    const prevHtmlOverscrollY = html.style.overscrollBehaviorY;
+    const prevBodyOverflow = body.style.overflow;
+    const prevBodyHeight = body.style.height;
+    const prevBodyOverscrollY = body.style.overscrollBehaviorY;
+
+    html.style.overflow = "hidden";
+    html.style.height = "100%";
+    html.style.overscrollBehaviorY = "none";
+
+    body.style.overflow = "hidden";
+    body.style.height = "100%";
+    body.style.overscrollBehaviorY = "none";
+
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      html.style.height = prevHtmlHeight;
+      html.style.overscrollBehaviorY = prevHtmlOverscrollY;
+
+      body.style.overflow = prevBodyOverflow;
+      body.style.height = prevBodyHeight;
+      body.style.overscrollBehaviorY = prevBodyOverscrollY;
+    };
+  }, []);
+
   const rootContainerStyle =
     visualViewportHeight && visualViewportHeight > 0
       ? { height: `${visualViewportHeight}px` }
@@ -940,7 +966,7 @@ function LiveChatsPageContent() {
 
   return (
     <div
-      className="flex h-[100dvh] min-h-0 overflow-hidden"
+      className="flex h-dvh min-h-0 overflow-hidden overscroll-none"
       style={rootContainerStyle}
     >
       <div className="flex-1 min-h-0 flex flex-col">
@@ -1016,7 +1042,7 @@ function LiveChatsPageContent() {
             </div>
 
             {/* Chat Messages Area */}
-            <div className="flex-1 min-h-0 overflow-y-auto p-6">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-6">
               <div className="max-w-4xl mx-auto space-y-4 relative z-10">
                 {groupMessagesByDate(messages).map((group) => (
                   <div key={group.dateKey}>
@@ -1289,6 +1315,9 @@ function LiveChatsPageContent() {
                   <button
                     type="submit"
                     disabled={!messageInput.trim() || isSending}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                    }}
                     className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-colors disabled:opacity-50"
                     title="Send message"
                   >
