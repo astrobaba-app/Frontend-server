@@ -925,7 +925,10 @@ function ChatPage() {
   ]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
+    const container = chatScrollRef.current;
+    if (!container) return;
+
+    container.scrollTo({ top: container.scrollHeight, behavior });
   }, []);
 
   useEffect(() => {
@@ -1044,6 +1047,7 @@ function ChatPage() {
     }
 
     try {
+      shouldStickToBottomRef.current = true;
       setIsSending(true);
       const socket = getChatSocket();
 
@@ -1190,6 +1194,7 @@ function ChatPage() {
     if (!selectedFile || !selectedSessionId) return;
 
     try {
+      shouldStickToBottomRef.current = true;
       setIsUploading(true);
       await sendChatMessageHttp(selectedSessionId, {
         message: "[Image]",
@@ -1902,6 +1907,9 @@ function ChatPage() {
                 <button
                   type="submit"
                   disabled={!inputMessage.trim()}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                  }}
                   className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-all duration-200 disabled:opacity-50"
                   aria-label="Send message"
                 >
