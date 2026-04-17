@@ -119,6 +119,7 @@ function ChatPage() {
   const [showInsufficientBalanceModal, setShowInsufficientBalanceModal] = useState(false);
   const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
   const [isMobileAppWebView, setIsMobileAppWebView] = useState(false);
+  const [visualViewportHeight, setVisualViewportHeight] = useState<number | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const astrologerTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const inviteTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -152,6 +153,56 @@ function ChatPage() {
 
     setIsMobileAppWebView(fromWindow || fromStorage);
   }, []);
+
+  useEffect(() => {
+    if (!isMobileAppWebView) return;
+    if (typeof window === "undefined" || !window.visualViewport) return;
+
+    const viewport = window.visualViewport;
+    const syncViewportHeight = () => {
+      setVisualViewportHeight(Math.round(viewport.height));
+    };
+
+    syncViewportHeight();
+    viewport.addEventListener("resize", syncViewportHeight);
+
+    return () => {
+      viewport.removeEventListener("resize", syncViewportHeight);
+    };
+  }, [isMobileAppWebView]);
+
+  useEffect(() => {
+    if (!isMobileAppWebView) return;
+    if (typeof document === "undefined") return;
+
+    const html = document.documentElement;
+    const body = document.body;
+
+    const prevHtmlOverflow = html.style.overflow;
+    const prevHtmlHeight = html.style.height;
+    const prevHtmlOverscrollY = html.style.overscrollBehaviorY;
+    const prevBodyOverflow = body.style.overflow;
+    const prevBodyHeight = body.style.height;
+    const prevBodyOverscrollY = body.style.overscrollBehaviorY;
+
+    html.style.overflow = "hidden";
+    html.style.height = "100%";
+    html.style.overscrollBehaviorY = "none";
+
+    body.style.overflow = "hidden";
+    body.style.height = "100%";
+    body.style.overscrollBehaviorY = "none";
+
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      html.style.height = prevHtmlHeight;
+      html.style.overscrollBehaviorY = prevHtmlOverscrollY;
+
+      body.style.overflow = prevBodyOverflow;
+      body.style.height = prevBodyHeight;
+      body.style.overscrollBehaviorY = prevBodyOverscrollY;
+    };
+  }, [isMobileAppWebView]);
 
   const selectedSession = useMemo(
     () => sessions.find((s) => s.id === selectedSessionId) || null,
@@ -201,12 +252,17 @@ function ChatPage() {
     return price;
   }, [selectedSession]);
 
-  const rootContainerStyle = isMobileAppWebView
-    ? {
-        paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
-        boxSizing: "border-box" as const,
-      }
-    : undefined;
+  const rootContainerStyle = {
+    ...(isMobileAppWebView && visualViewportHeight && visualViewportHeight > 0
+      ? { height: `${visualViewportHeight}px` }
+      : {}),
+    ...(isMobileAppWebView
+      ? {
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
+          boxSizing: "border-box" as const,
+        }
+      : {}),
+  };
 
   // Wallet integration
   const {
@@ -1358,7 +1414,7 @@ function ChatPage() {
   };
 
   return (
-    <div className="flex md:py-5 h-dvh bg-gray-50 overflow-hidden" style={rootContainerStyle}>
+    <div className="flex md:py-5 h-dvh min-h-0 bg-gray-50 overflow-hidden" style={rootContainerStyle}>
       {/* 1. Left Sidebar (Fixed) */}
       <div
         className={`${showSidebar ? 'translate-x-0' : '-translate-x-full'} lg:hidden fixed left-0 top-0 w-80 h-full bg-gray-50 border-r border-gray-200 transition-transform duration-300 z-30 flex flex-col`}
@@ -1494,8 +1550,8 @@ function ChatPage() {
       </div>
       
       {/* 2. Right Chat Area (Main Content) */}
-      <div className="flex-1 flex justify-center items-stretch px-0 lg:px-0">
-        <div className="w-full max-w-5xl h-full lg:my-4 lg:border-2 lg:border-[#F0DF20] lg:rounded-xl bg-transparent flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 flex justify-center items-stretch px-0 lg:px-0">
+        <div className="w-full max-w-5xl h-full lg:my-4 lg:border-2 lg:border-[#F0DF20] lg:rounded-xl bg-transparent flex flex-col min-h-0 overflow-hidden">
           {/* Header - Back, Astrologer, Time, Balance, Call */}
           <div className="px-2 sm:px-6 py-4 sm:py-4 flex items-center justify-between sticky top-0 z-10 gap-1 sm:gap-2" style={{ backgroundColor: colors.primeYellow }}>
             <div className="flex items-center gap-1 sm:gap-3 shrink-0">
@@ -1626,7 +1682,7 @@ function ChatPage() {
           <div 
           ref={chatScrollRef}
           onScroll={handleMessageAreaScroll}
-          className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4"
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-6 space-y-4"
           style={{
             backgroundImage: `url("/images/bg4.png")`,
             backgroundRepeat: 'repeat',
