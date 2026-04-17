@@ -126,6 +126,7 @@ function LiveChatsPageContent() {
   const [kundliModalError, setKundliModalError] = useState<string | null>(null);
   const typingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const messageInputRef = React.useRef<HTMLInputElement | null>(null);
   const autoOpenProcessedSessionRef = React.useRef<string | null>(null);
   const kundliListCacheRef = React.useRef<Map<string, ChatUserKundliListItem[]>>(
     new Map()
@@ -727,6 +728,12 @@ function LiveChatsPageContent() {
 
       setMessageInput("");
       setReplyTo(null);
+
+      if (typeof window !== "undefined") {
+        window.setTimeout(() => {
+          messageInputRef.current?.focus();
+        }, 0);
+      }
     } catch (error) {
       console.error("Error sending message", error);
       if (typeof window !== "undefined") {
@@ -1238,6 +1245,7 @@ function LiveChatsPageContent() {
                 {/* Message Input with Send Button Inside */}
                 <div className="flex-1 relative">
                   <input
+                    ref={messageInputRef}
                     type="text"
                     value={messageInput}
                     onChange={handleInputChange}
