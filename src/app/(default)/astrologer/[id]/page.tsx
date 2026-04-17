@@ -349,11 +349,6 @@ export default function AstrologerDetailPage() {
                   <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
                     {astrologer.fullName}
                   </h1>
-                  {id.startsWith("ai-astrologer-") && (
-                    <span className="px-3 py-1 text-xs sm:text-sm font-bold rounded-full bg-linear-to-r from-yellow-400 to-yellow-300 text-white">
-                      AI Astrologer
-                    </span>
-                  )}
                 </div>
                 <p className="text-gray-600 text-base mb-1">
                   {astrologer.skills.join(", ")}

@@ -55,7 +55,6 @@ const OurAstrologerCard: React.FC<OurAstrologerCardProps> = ({
     skills,
     pricePerMinute,
     isOnline,
-    isAI = false,
   } = astrologer;
 
   const specialties = Array.isArray(skills) ? skills : [];
@@ -97,12 +96,6 @@ const OurAstrologerCard: React.FC<OurAstrologerCardProps> = ({
                 className="absolute top-3 -right-8 px-2 py-0.5 text-[10px] sm:text-xs font-semibold rounded-full text-white"
               >
                 Online
-              </div>
-            )}
-            {/* AI Astrologer Badge */}
-            {isAI && (
-              <div className="absolute top-3 -left-8 px-2 py-0.5 text-[10px] sm:text-xs font-bold rounded-full bg-linear-to-r from-yellow-400 to-yellow-300 text-white z-10">
-                AI
               </div>
             )}
 

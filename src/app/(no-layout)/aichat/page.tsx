@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect, Suspense } from "react";
+import React, { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import {
   Send,
   ArrowLeft,
@@ -70,6 +70,8 @@ const PROMPT_SUGGESTIONS = [
   "How can I improve my financial situation?",
 ];
 
+const STICK_TO_BOTTOM_THRESHOLD = 48;
+
 const AIChatPageContent = () => {
   const { isLoggedIn, loading, user } = useAuth();
   const router = useRouter();
@@ -113,8 +115,14 @@ const AIChatPageContent = () => {
   >([]);
   const [kundliListLoading, setKundliListLoading] = useState(false);
   const [attachingKundli, setAttachingKundli] = useState(false);
+  const [isMobileAppWebView, setIsMobileAppWebView] = useState(false);
+  const [visualViewportHeight, setVisualViewportHeight] = useState<number | null>(
+    null
+  );
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageInputRef = useRef<HTMLInputElement | null>(null);
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  const shouldStickToBottomRef = useRef(true);
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -167,12 +175,121 @@ const AIChatPageContent = () => {
     if (currentSessionId) {
       loadMessages(currentSessionId);
     }
+
+    shouldStickToBottomRef.current = true;
   }, [currentSessionId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const detectMobileAppWebView = () => {
+      const fromBridge = Boolean(
+        (window as Window & { ReactNativeWebView?: unknown }).ReactNativeWebView
+      );
+      const fromWindow = Boolean(
+        (window as Window & { isGrahoMobileApp?: boolean }).isGrahoMobileApp
+      );
+      const fromStorage =
+        window.localStorage.getItem("isGrahoMobileApp") === "true";
+
+      if (fromBridge || fromWindow || fromStorage) {
+        setIsMobileAppWebView(true);
+      }
+    };
+
+    detectMobileAppWebView();
+    const firstRetry = window.setTimeout(detectMobileAppWebView, 300);
+    const secondRetry = window.setTimeout(detectMobileAppWebView, 1200);
+
+    return () => {
+      window.clearTimeout(firstRetry);
+      window.clearTimeout(secondRetry);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileAppWebView) return;
+    if (typeof window === "undefined" || !window.visualViewport) return;
+
+    const viewport = window.visualViewport;
+    const syncViewportHeight = () => {
+      setVisualViewportHeight(Math.round(viewport.height));
+    };
+
+    syncViewportHeight();
+    viewport.addEventListener("resize", syncViewportHeight);
+
+    return () => {
+      viewport.removeEventListener("resize", syncViewportHeight);
+    };
+  }, [isMobileAppWebView]);
+
+  useEffect(() => {
+    if (!isMobileAppWebView) return;
+    if (typeof document === "undefined") return;
+
+    const html = document.documentElement;
+    const body = document.body;
+
+    const prevHtmlOverflow = html.style.overflow;
+    const prevHtmlHeight = html.style.height;
+    const prevHtmlOverscrollY = html.style.overscrollBehaviorY;
+    const prevBodyOverflow = body.style.overflow;
+    const prevBodyHeight = body.style.height;
+    const prevBodyOverscrollY = body.style.overscrollBehaviorY;
+
+    html.style.overflow = "hidden";
+    html.style.height = "100%";
+    html.style.overscrollBehaviorY = "none";
+
+    body.style.overflow = "hidden";
+    body.style.height = "100%";
+    body.style.overscrollBehaviorY = "none";
+
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      html.style.height = prevHtmlHeight;
+      html.style.overscrollBehaviorY = prevHtmlOverscrollY;
+
+      body.style.overflow = prevBodyOverflow;
+      body.style.height = prevBodyHeight;
+      body.style.overscrollBehaviorY = prevBodyOverscrollY;
+    };
+  }, [isMobileAppWebView]);
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const container = chatScrollRef.current;
+    if (!container) return;
+
+    container.scrollTo({ top: container.scrollHeight, behavior });
+  }, []);
+
+  const handleMessagesAreaScroll = useCallback(
+    (event: React.UIEvent<HTMLDivElement>) => {
+      const container = event.currentTarget;
+      const distanceFromBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight;
+      shouldStickToBottomRef.current =
+        distanceFromBottom <= STICK_TO_BOTTOM_THRESHOLD;
+    },
+    []
+  );
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (!shouldStickToBottomRef.current) return;
+    scrollToBottom(messages.length <= 1 ? "auto" : "smooth");
+  }, [messages.length, scrollToBottom]);
+
+  useEffect(() => {
+    if (!isMobileAppWebView) return;
+    if (!messageInputRef.current) return;
+    if (document.activeElement !== messageInputRef.current) return;
+
+    if (shouldStickToBottomRef.current) {
+      scrollToBottom("auto");
+    }
+  }, [isMobileAppWebView, visualViewportHeight, scrollToBottom]);
 
   // Call timer
   useEffect(() => {
@@ -204,10 +321,6 @@ const AIChatPageContent = () => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
 
   // Fetch all user kundlis and open the selection modal
   const openKundliModal = async () => {
@@ -1014,6 +1127,7 @@ const AIChatPageContent = () => {
       updatedAt: new Date().toISOString(),
     };
 
+    shouldStickToBottomRef.current = true;
     setMessages((prev) => [...prev, tempUserMessage]);
     setInputMessage("");
 
@@ -1067,6 +1181,7 @@ const AIChatPageContent = () => {
   };
 
   const handlePromptClick = (prompt: string) => {
+    shouldStickToBottomRef.current = true;
     handleSendMessage({ preventDefault: () => {} } as React.FormEvent, prompt);
   };
 
@@ -1119,8 +1234,23 @@ const AIChatPageContent = () => {
     showToast("Voice session ended", "success");
   };
 
+  const rootContainerStyle = {
+    ...(isMobileAppWebView && visualViewportHeight && visualViewportHeight > 0
+      ? { height: `${visualViewportHeight}px` }
+      : {}),
+    ...(isMobileAppWebView
+      ? {
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
+          boxSizing: "border-box" as const,
+        }
+      : {}),
+  };
+
   return (
-    <div className="flex min-h-screen  lg:h-screen bg-gradient-to-br from-gray-50 via-white to-yellow-50 overflow-hidden">
+    <div
+      className="relative flex h-dvh min-h-0 bg-linear-to-br from-gray-50 via-white to-yellow-50 overflow-hidden overscroll-none"
+      style={rootContainerStyle}
+    >
       {/* Sidebar - Chat Sessions */}
       <div
         className={`${
@@ -1289,10 +1419,10 @@ const AIChatPageContent = () => {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex flex-col flex-1 h-screen bg-white/90 backdrop-blur-sm">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white/90 backdrop-blur-sm">
         {/* Header */}
         <div
-          className="sticky top-0 z-20 shadow-sm border-b bg-white backdrop-blur-md"
+          className="z-20 shrink-0 border-b bg-white shadow-sm backdrop-blur-md"
           style={{ borderColor: colors.gray + "20" }}
         >
           <div className="px-4 py-3 flex items-center justify-between">
@@ -1482,7 +1612,11 @@ const AIChatPageContent = () => {
         </div>
 
         {/* Chat Messages Area */}
-        <div className="flex-1 overflow-y-auto">
+        <div
+          ref={chatScrollRef}
+          onScroll={handleMessagesAreaScroll}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+        >
           <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-4">
             {/* Error Message */}
             {error && (
@@ -1600,7 +1734,7 @@ const AIChatPageContent = () => {
                                 : colors.darkGray,
                           }}
                         >
-                          <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words">
+                          <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">
                             {message.content}
                           </p>
                         </div>
@@ -1666,7 +1800,6 @@ const AIChatPageContent = () => {
                   </div>
                 )}
 
-                <div ref={messagesEndRef} />
               </div>
             )}
 
@@ -1702,7 +1835,7 @@ const AIChatPageContent = () => {
 
         {/* Input Area - Fixed at bottom like ChatGPT */}
         <div
-          className="sticky bottom-0   z-20"
+          className="z-20 shrink-0"
           style={{ borderColor: colors.gray + "20" }}
         >
           <div className="max-w-4xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3">
@@ -1718,7 +1851,7 @@ const AIChatPageContent = () => {
               >
                 <Clock
                   size={16}
-                  className="sm:w-[18px] sm:h-[18px] flex-shrink-0 mt-0.5 sm:mt-0"
+                  className="sm:w-[18px] sm:h-[18px] shrink-0 mt-0.5 sm:mt-0"
                   style={{ color: colors.primeYellow }}
                 />
                 <p className="text-xs sm:text-sm">
@@ -1740,7 +1873,7 @@ const AIChatPageContent = () => {
               >
                 <AlertCircle
                   size={16}
-                  className="sm:w-[18px] sm:h-[18px] flex-shrink-0 mt-0.5 sm:mt-0"
+                  className="sm:w-[18px] sm:h-[18px] shrink-0 mt-0.5 sm:mt-0"
                 />
                 <p className="text-xs sm:text-sm">
                   Insufficient balance. Please{" "}
@@ -1757,6 +1890,7 @@ const AIChatPageContent = () => {
 
             <form onSubmit={handleSendMessage} className="relative">
               <input
+                ref={messageInputRef}
                 type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
@@ -1774,6 +1908,9 @@ const AIChatPageContent = () => {
               {/* Send Button — WhatsApp style */}
               <button
                 type="submit"
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                }}
                 disabled={
                   !inputMessage.trim() ||
                   !currentSessionId ||
@@ -1791,7 +1928,7 @@ const AIChatPageContent = () => {
               >
                 <Send
                   size={16}
-                  className="sm:w-[18px] sm:h-[18px] translate-x-[1px]"
+                  className="sm:w-[18px] sm:h-[18px] translate-x-px"
                   color="#ffffff"
                 />
               </button>
