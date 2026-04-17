@@ -118,6 +118,7 @@ function ChatPage() {
   const [pendingRequestSessionId, setPendingRequestSessionId] = useState<string | null>(null);
   const [showInsufficientBalanceModal, setShowInsufficientBalanceModal] = useState(false);
   const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
+  const [isMobileAppWebView, setIsMobileAppWebView] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const astrologerTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const inviteTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -139,6 +140,17 @@ function ChatPage() {
 
   useEffect(() => {
     setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const fromWindow = Boolean(
+      (window as Window & { isGrahoMobileApp?: boolean }).isGrahoMobileApp
+    );
+    const fromStorage = window.localStorage.getItem("isGrahoMobileApp") === "true";
+
+    setIsMobileAppWebView(fromWindow || fromStorage);
   }, []);
 
   const selectedSession = useMemo(
@@ -188,6 +200,13 @@ function ChatPage() {
     console.log('Final price:', price);
     return price;
   }, [selectedSession]);
+
+  const rootContainerStyle = isMobileAppWebView
+    ? {
+        paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
+        boxSizing: "border-box" as const,
+      }
+    : undefined;
 
   // Wallet integration
   const {
@@ -1334,7 +1353,7 @@ function ChatPage() {
   };
 
   return (
-    <div className="flex md:py-5 h-screen bg-gray-50 overflow-hidden">
+    <div className="flex md:py-5 h-dvh bg-gray-50 overflow-hidden" style={rootContainerStyle}>
       {/* 1. Left Sidebar (Fixed) */}
       <div
         className={`${showSidebar ? 'translate-x-0' : '-translate-x-full'} lg:hidden fixed left-0 top-0 w-80 h-full bg-gray-50 border-r border-gray-200 transition-transform duration-300 z-30 flex flex-col`}

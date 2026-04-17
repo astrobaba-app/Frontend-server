@@ -127,14 +127,40 @@ function LiveChatsPageContent() {
   const [visualViewportHeight, setVisualViewportHeight] = useState<number | null>(
     null
   );
+  const [isMobileAppWebView, setIsMobileAppWebView] = useState(false);
   const typingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const messageInputRef = React.useRef<HTMLInputElement | null>(null);
+  const chatScrollRef = React.useRef<HTMLDivElement | null>(null);
   const autoOpenProcessedSessionRef = React.useRef<string | null>(null);
   const kundliListCacheRef = React.useRef<Map<string, ChatUserKundliListItem[]>>(
     new Map()
   );
   const allowNextPopRef = React.useRef(false);
+  const shouldStickToBottomRef = React.useRef(true);
+
+  const isNearBottom = React.useCallback((container: HTMLDivElement) => {
+    const distanceFromBottom =
+      container.scrollHeight - (container.scrollTop + container.clientHeight);
+    return distanceFromBottom <= 120;
+  }, []);
+
+  const scrollMessagesToBottom = React.useCallback(
+    (behavior: ScrollBehavior = "auto") => {
+      const container = chatScrollRef.current;
+      if (!container) return;
+
+      container.scrollTo({ top: container.scrollHeight, behavior });
+    },
+    []
+  );
+
+  const handleMessagesAreaScroll = React.useCallback(
+    (event: React.UIEvent<HTMLDivElement>) => {
+      shouldStickToBottomRef.current = isNearBottom(event.currentTarget);
+    },
+    [isNearBottom]
+  );
 
   const selectedSession = useMemo(
     () => chatSessions.find((s) => s.id === selectedSessionId) || null,
@@ -614,6 +640,7 @@ function LiveChatsPageContent() {
     if (!selectedFile || !selectedSessionId) return;
 
     try {
+      shouldStickToBottomRef.current = true;
       setIsUploading(true);
       await sendChatMessageHttp(selectedSessionId, {
         message: "[Image]",
@@ -677,6 +704,7 @@ function LiveChatsPageContent() {
     if (!messageInput.trim() || !selectedSessionId || isSending) return;
 
     try {
+      shouldStickToBottomRef.current = true;
       setIsSending(true);
       const socket = getChatSocket();
       let shouldFallbackToHttp = true;
@@ -912,6 +940,24 @@ function LiveChatsPageContent() {
   };
 
   useEffect(() => {
+    if (!selectedSessionId) return;
+
+    shouldStickToBottomRef.current = true;
+    window.requestAnimationFrame(() => {
+      scrollMessagesToBottom("auto");
+    });
+  }, [selectedSessionId, scrollMessagesToBottom]);
+
+  useEffect(() => {
+    if (!selectedSessionId || messages.length === 0) return;
+    if (!shouldStickToBottomRef.current) return;
+
+    window.requestAnimationFrame(() => {
+      scrollMessagesToBottom(messages.length > 1 ? "smooth" : "auto");
+    });
+  }, [messages.length, selectedSessionId, scrollMessagesToBottom]);
+
+  useEffect(() => {
     if (typeof window === "undefined" || !window.visualViewport) return;
 
     const viewport = window.visualViewport;
@@ -925,6 +971,17 @@ function LiveChatsPageContent() {
     return () => {
       viewport.removeEventListener("resize", syncViewportHeight);
     };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const fromWindow = Boolean(
+      (window as Window & { isGrahoMobileApp?: boolean }).isGrahoMobileApp
+    );
+    const fromStorage = window.localStorage.getItem("isGrahoMobileApp") === "true";
+
+    setIsMobileAppWebView(fromWindow || fromStorage);
   }, []);
 
   useEffect(() => {
@@ -959,10 +1016,17 @@ function LiveChatsPageContent() {
     };
   }, []);
 
-  const rootContainerStyle =
-    visualViewportHeight && visualViewportHeight > 0
+  const rootContainerStyle = {
+    ...(visualViewportHeight && visualViewportHeight > 0
       ? { height: `${visualViewportHeight}px` }
-      : undefined;
+      : {}),
+    ...(isMobileAppWebView
+      ? {
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
+          boxSizing: "border-box" as const,
+        }
+      : {}),
+  };
 
   return (
     <div
@@ -1042,7 +1106,11 @@ function LiveChatsPageContent() {
             </div>
 
             {/* Chat Messages Area */}
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-6">
+            <div
+              ref={chatScrollRef}
+              onScroll={handleMessagesAreaScroll}
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-6"
+            >
               <div className="max-w-4xl mx-auto space-y-4 relative z-10">
                 {groupMessagesByDate(messages).map((group) => (
                   <div key={group.dateKey}>
