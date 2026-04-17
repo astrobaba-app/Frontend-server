@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Heart, MessageSquareText, Minus, Plus, Send, Share2, X } from 'lucide-react';
@@ -46,6 +46,7 @@ export default function ForumDetailPage() {
   const [submittingReport, setSubmittingReport] = useState(false);
   const [viewerImage, setViewerImage] = useState<string | null>(null);
   const [viewerZoom, setViewerZoom] = useState(1);
+  const isLikeRequestInFlightRef = useRef(false);
 
   const redirectToLogin = () => {
     router.push(`/auth/login?redirect=/forum/${postId}`);
@@ -132,15 +133,52 @@ export default function ForumDetailPage() {
       return;
     }
 
+    if (isLikeRequestInFlightRef.current) {
+      return;
+    }
+
+    const previousLikeState = {
+      likeCount: post.likeCount,
+      isLikedByCurrentUser: post.isLikedByCurrentUser,
+    };
+    const nextIsLiked = !post.isLikedByCurrentUser;
+
+    setPost((currentPost) =>
+      currentPost
+        ? {
+            ...currentPost,
+            isLikedByCurrentUser: nextIsLiked,
+            likeCount: Math.max(0, currentPost.likeCount + (nextIsLiked ? 1 : -1)),
+          }
+        : currentPost,
+    );
+
+    isLikeRequestInFlightRef.current = true;
+
     try {
       const response = await toggleForumPostLike(post.id);
-      setPost({
-        ...post,
-        likeCount: response.likeCount,
-        isLikedByCurrentUser: response.isLiked,
-      });
+      setPost((currentPost) =>
+        currentPost
+          ? {
+              ...currentPost,
+              likeCount: response.likeCount,
+              isLikedByCurrentUser: response.isLiked,
+            }
+          : currentPost,
+      );
     } catch (error: any) {
+      setPost((currentPost) =>
+        currentPost
+          ? {
+              ...currentPost,
+              likeCount: previousLikeState.likeCount,
+              isLikedByCurrentUser: previousLikeState.isLikedByCurrentUser,
+            }
+          : currentPost,
+      );
       showToast(error?.message || 'Failed to update like', 'error');
+    } finally {
+      isLikeRequestInFlightRef.current = false;
     }
   };
 
@@ -278,7 +316,7 @@ export default function ForumDetailPage() {
           Back to Forum
         </Link>
 
-        <article className="mt-6 rounded-4xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+        <article className="mt-6 rounded-none border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-5">
             <div className="flex items-center gap-3">
               <ForumAvatar name={post.authorName} seed={post.authorAvatarSeed} size="lg" />
@@ -328,7 +366,7 @@ export default function ForumDetailPage() {
                   key={`${image}-${index}`}
                   type="button"
                   onClick={() => openImageViewer(image)}
-                  className="overflow-hidden rounded-3xl"
+                  className="overflow-hidden rounded-none"
                 >
                   <img
                     src={image}
@@ -367,7 +405,7 @@ export default function ForumDetailPage() {
           </div>
         </article>
 
-        <section className="mt-8 rounded-4xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+        <section className="mt-8 rounded-none border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.24em] text-gray-400">Comments</p>
@@ -391,7 +429,7 @@ export default function ForumDetailPage() {
               }}
               rows={3}
               placeholder="Join the conversation"
-              className="w-full rounded-3xl border border-gray-200 bg-white px-4 py-4 text-sm text-gray-700 outline-none focus:border-gray-300"
+              className="w-full rounded-none border border-gray-200 bg-white px-4 py-4 text-sm text-gray-700 outline-none focus:border-gray-300"
             />
 
             {(commentComposerActive || commentContent.trim()) && (
@@ -422,7 +460,7 @@ export default function ForumDetailPage() {
 
           <div className="mt-6 space-y-4">
             {comments.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-gray-300 px-6 py-10 text-center text-sm text-gray-500">
+              <div className="rounded-none border border-dashed border-gray-300 px-6 py-10 text-center text-sm text-gray-500">
                 No comments yet. Start the first thread.
               </div>
             ) : (

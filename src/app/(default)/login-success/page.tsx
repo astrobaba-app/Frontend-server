@@ -3,28 +3,117 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+interface ReactNativeWebViewBridge {
+  postMessage: (message: string) => void;
+}
+
+interface WindowWithReactNativeWebView extends Window {
+  ReactNativeWebView?: ReactNativeWebViewBridge;
+}
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:6001/api";
+
+const getCookieValue = (cookieName: string): string | null => {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const cookies = document.cookie.split(";");
+  for (const cookie of cookies) {
+    const [name, value] = cookie.trim().split("=");
+    if (name === cookieName && value) {
+      return value;
+    }
+  }
+
+  return null;
+};
+
+const fetchMiddlewareTokenFromRefresh = async (): Promise<string | null> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    return data.middlewareToken || data.token || null;
+  } catch {
+    return null;
+  }
+};
+
 export default function LoginSuccess() {
   const router = useRouter();
 
   useEffect(() => {
-    const isInWebView = typeof window !== "undefined" && (window as any).ReactNativeWebView;
-    
-    // Notify mobile app that login succeeded (if in WebView)
-    if (isInWebView) {
-      (window as any).ReactNativeWebView.postMessage(
-        JSON.stringify({ 
-          type: "LOGIN_SUCCESS" 
-        })
+    let isMounted = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const completeOAuthLogin = async () => {
+      const appWindow = window as WindowWithReactNativeWebView;
+      const isInWebView = Boolean(appWindow.ReactNativeWebView);
+
+      let middlewareToken = getCookieValue("token_middleware");
+      if (!middlewareToken) {
+        middlewareToken = await fetchMiddlewareTokenFromRefresh();
+      }
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (middlewareToken) {
+        localStorage.setItem("token_middleware", middlewareToken);
+        window.dispatchEvent(new Event("auth_change"));
+        sessionStorage.setItem("loginSuccess", "true");
+      }
+
+      if (isInWebView) {
+        if (middlewareToken) {
+          appWindow.ReactNativeWebView?.postMessage(
+            JSON.stringify({
+              type: "AUTH_STATUS",
+              isAuthenticated: true,
+              token: middlewareToken,
+              role: "user",
+            })
+          );
+        }
+
+        appWindow.ReactNativeWebView?.postMessage(
+          JSON.stringify({
+            type: "LOGIN_SUCCESS",
+          })
+        );
+      }
+
+      const redirectPath = middlewareToken ? "/profile" : "/auth/login?error=auth_failed";
+      timer = setTimeout(
+        () => {
+          if (isMounted) {
+            router.replace(redirectPath);
+          }
+        },
+        isInWebView ? 900 : 450
       );
-    }
+    };
 
-    // For regular browsers (mobile or desktop), redirect to profile
-    // Shorter delay for better UX
-    const timer = setTimeout(() => {
-      router.replace("/profile");
-    }, isInWebView ? 1000 : 500);
+    completeOAuthLogin();
 
-    return () => clearTimeout(timer);
+    return () => {
+      isMounted = false;
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
   }, [router]);
 
   return (

@@ -172,12 +172,12 @@ export default function ForumCommentThread({
           )}
 
           {showEditBox && isOwner && !comment.isRemovedByModerator && !isCommentDeleted && (
-            <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
+            <div className="mt-3 rounded-none border border-gray-200 bg-gray-50 p-3">
               <textarea
                 value={editContent}
                 onChange={(event) => setEditContent(event.target.value)}
                 rows={3}
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-amber-400"
+                className="w-full rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-amber-400"
                 placeholder="Edit your comment"
               />
               <div className="mt-3 flex justify-end gap-2">
@@ -206,7 +206,7 @@ export default function ForumCommentThread({
                 value={replyContent}
                 onChange={(event) => setReplyContent(event.target.value)}
                 rows={3}
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-amber-400"
+                className="w-full rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-amber-400"
                 placeholder="Write a reply"
               />
               <div className="mt-3 flex justify-end">

@@ -13,6 +13,14 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
 }
 
+interface ReactNativeWebViewBridge {
+  postMessage: (message: string) => void;
+}
+
+interface WindowWithReactNativeWebView extends Window {
+  ReactNativeWebView?: ReactNativeWebViewBridge;
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -92,9 +100,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const cookieBase = '; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.graho.in; secure; samesite=none';
       document.cookie = 'token=' + cookieBase;
       document.cookie = 'token_middleware=' + cookieBase;
+      document.cookie = 'refresh_token=' + cookieBase;
       // Also clear without domain as a fallback for local/non-prod envs
       document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
       document.cookie = 'token_middleware=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+      document.cookie = 'refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
       
       window.dispatchEvent(new Event('auth_change'));
     }
@@ -107,8 +117,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Notify React Native WebView so it can clear native state
-    if (typeof window !== 'undefined' && (window as any).ReactNativeWebView) {
-      (window as any).ReactNativeWebView.postMessage(
+    if (typeof window !== 'undefined') {
+      const appWindow = window as WindowWithReactNativeWebView;
+      appWindow.ReactNativeWebView?.postMessage(
         JSON.stringify({ type: 'LOGOUT' })
       );
     }

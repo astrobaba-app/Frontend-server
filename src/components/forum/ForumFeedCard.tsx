@@ -20,7 +20,7 @@ export default function ForumFeedCard({
   canReport?: boolean;
 }) {
   return (
-    <article className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md sm:p-6">
+    <article className="rounded-none border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           <ForumAvatar name={post.authorName} seed={post.authorAvatarSeed} />
@@ -61,7 +61,7 @@ export default function ForumFeedCard({
       )}
 
       {post.images.length > 0 && (
-        <Link href={`/forum/${post.id}`} className="mt-4 block overflow-hidden rounded-3xl border border-gray-100">
+        <Link href={`/forum/${post.id}`} className="mt-4 block overflow-hidden rounded-none border border-gray-100">
           <img src={post.images[0]} alt={post.title} className="h-64 w-full object-cover" />
         </Link>
       )}

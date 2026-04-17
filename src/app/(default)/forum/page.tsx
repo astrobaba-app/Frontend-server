@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowUpRight, Filter, PenLine, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -42,6 +42,7 @@ export default function ForumPage() {
   const [submittingReport, setSubmittingReport] = useState(false);
   const [identityMode, setIdentityMode] = useState<ForumIdentityMode>(user?.forumIdentityMode || 'real');
   const [updatingIdentity, setUpdatingIdentity] = useState(false);
+  const pendingLikePostIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     setIdentityMode(user?.forumIdentityMode || 'real');
@@ -99,6 +100,35 @@ export default function ForumPage() {
       return;
     }
 
+    if (pendingLikePostIdsRef.current.has(postId)) {
+      return;
+    }
+
+    const targetPost = posts.find((post) => post.id === postId);
+    if (!targetPost) {
+      return;
+    }
+
+    const previousLikeState = {
+      likeCount: targetPost.likeCount,
+      isLikedByCurrentUser: Boolean(targetPost.isLikedByCurrentUser),
+    };
+    const nextIsLiked = !previousLikeState.isLikedByCurrentUser;
+
+    setPosts((currentPosts) =>
+      currentPosts.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              isLikedByCurrentUser: nextIsLiked,
+              likeCount: Math.max(0, post.likeCount + (nextIsLiked ? 1 : -1)),
+            }
+          : post,
+      ),
+    );
+
+    pendingLikePostIdsRef.current.add(postId);
+
     try {
       const response = await toggleForumPostLike(postId);
       setPosts((currentPosts) =>
@@ -113,7 +143,20 @@ export default function ForumPage() {
         ),
       );
     } catch (error: any) {
+      setPosts((currentPosts) =>
+        currentPosts.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                likeCount: previousLikeState.likeCount,
+                isLikedByCurrentUser: previousLikeState.isLikedByCurrentUser,
+              }
+            : post,
+        ),
+      );
       showToast(error?.message || 'Failed to update like', 'error');
+    } finally {
+      pendingLikePostIdsRef.current.delete(postId);
     }
   };
 
@@ -266,11 +309,11 @@ export default function ForumPage() {
           {loading ? (
             <div className="space-y-4">
               {[1, 2, 3].map((item) => (
-                <div key={item} className="h-64 animate-pulse rounded-3xl bg-white" />
+                <div key={item} className="h-64 animate-pulse rounded-none bg-white" />
               ))}
             </div>
           ) : posts.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-gray-300 bg-white p-10 text-center">
+            <div className="rounded-none border border-dashed border-gray-300 bg-white p-10 text-center">
               <p className="text-lg font-bold text-gray-900">No discussions yet</p>
               <p className="mt-2 text-sm text-gray-500">The first question sets the tone for the community.</p>
             </div>
@@ -302,7 +345,7 @@ export default function ForumPage() {
         </div>
 
         <aside className="order-1 space-y-4 lg:order-2">
-          <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-none border border-gray-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <p className="text-xs font-black uppercase tracking-[0.22em] text-gray-400">Posting Rules</p>
               <button
@@ -327,7 +370,7 @@ export default function ForumPage() {
               <li>Use Report for violations—repeated policy breaks can cause temporary blocks or permanent forum ban.</li>
             </ol>
           </div>
-          <div className="rounded-3xl border border-amber-100 bg-amber-50 p-6">
+          <div className="rounded-none border border-amber-100 bg-amber-50 p-6">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-700">Identity Mode</p>
             <p className="mt-3 text-sm leading-7 text-amber-900">
               Switch between real identity and anonymous mode from your profile settings. Anonymous interactions keep their alias permanently.
