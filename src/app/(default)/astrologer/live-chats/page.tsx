@@ -142,7 +142,7 @@ function LiveChatsPageContent() {
   const isNearBottom = React.useCallback((container: HTMLDivElement) => {
     const distanceFromBottom =
       container.scrollHeight - (container.scrollTop + container.clientHeight);
-    return distanceFromBottom <= 120;
+    return distanceFromBottom <= 48;
   }, []);
 
   const scrollMessagesToBottom = React.useCallback(
@@ -976,12 +976,28 @@ function LiveChatsPageContent() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const fromWindow = Boolean(
-      (window as Window & { isGrahoMobileApp?: boolean }).isGrahoMobileApp
-    );
-    const fromStorage = window.localStorage.getItem("isGrahoMobileApp") === "true";
+    const detectMobileAppWebView = () => {
+      const fromBridge = Boolean(
+        (window as Window & { ReactNativeWebView?: unknown }).ReactNativeWebView
+      );
+      const fromWindow = Boolean(
+        (window as Window & { isGrahoMobileApp?: boolean }).isGrahoMobileApp
+      );
+      const fromStorage = window.localStorage.getItem("isGrahoMobileApp") === "true";
 
-    setIsMobileAppWebView(fromWindow || fromStorage);
+      if (fromBridge || fromWindow || fromStorage) {
+        setIsMobileAppWebView(true);
+      }
+    };
+
+    detectMobileAppWebView();
+    const firstRetry = window.setTimeout(detectMobileAppWebView, 300);
+    const secondRetry = window.setTimeout(detectMobileAppWebView, 1200);
+
+    return () => {
+      window.clearTimeout(firstRetry);
+      window.clearTimeout(secondRetry);
+    };
   }, []);
 
   useEffect(() => {

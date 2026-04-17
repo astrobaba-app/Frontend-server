@@ -66,6 +66,7 @@ type SessionMessageCache = {
 const MESSAGE_PAGE_SIZE = 50;
 const MESSAGE_CACHE_TTL_MS = 30_000;
 const LOAD_OLDER_SCROLL_THRESHOLD = 100;
+const STICK_TO_BOTTOM_THRESHOLD = 48;
 
 function groupMessagesByDate(messages: ChatMessageDto[]): MessageGroup[] {
   const groups: Record<string, MessageGroup> = {};
@@ -146,12 +147,28 @@ function ChatPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const fromWindow = Boolean(
-      (window as Window & { isGrahoMobileApp?: boolean }).isGrahoMobileApp
-    );
-    const fromStorage = window.localStorage.getItem("isGrahoMobileApp") === "true";
+    const detectMobileAppWebView = () => {
+      const fromBridge = Boolean(
+        (window as Window & { ReactNativeWebView?: unknown }).ReactNativeWebView
+      );
+      const fromWindow = Boolean(
+        (window as Window & { isGrahoMobileApp?: boolean }).isGrahoMobileApp
+      );
+      const fromStorage = window.localStorage.getItem("isGrahoMobileApp") === "true";
 
-    setIsMobileAppWebView(fromWindow || fromStorage);
+      if (fromBridge || fromWindow || fromStorage) {
+        setIsMobileAppWebView(true);
+      }
+    };
+
+    detectMobileAppWebView();
+    const firstRetry = window.setTimeout(detectMobileAppWebView, 300);
+    const secondRetry = window.setTimeout(detectMobileAppWebView, 1200);
+
+    return () => {
+      window.clearTimeout(firstRetry);
+      window.clearTimeout(secondRetry);
+    };
   }, []);
 
   useEffect(() => {
@@ -524,7 +541,7 @@ function ChatPage() {
     if (!container) return;
 
     const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-    shouldStickToBottomRef.current = distanceFromBottom < 120;
+    shouldStickToBottomRef.current = distanceFromBottom < STICK_TO_BOTTOM_THRESHOLD;
 
     if (container.scrollTop <= LOAD_OLDER_SCROLL_THRESHOLD) {
       void loadOlderMessages();
@@ -1007,7 +1024,7 @@ function ChatPage() {
     if (shouldStickToBottomRef.current) {
       scrollToBottom("auto");
     }
-  }, [messages, scrollToBottom]);
+  }, [messages.length, scrollToBottom]);
 
   // Cleanup timers on unmount
   useEffect(() => {
@@ -1553,7 +1570,7 @@ function ChatPage() {
       <div className="flex-1 min-h-0 flex justify-center items-stretch px-0 lg:px-0">
         <div className="w-full max-w-5xl h-full lg:my-4 lg:border-2 lg:border-[#F0DF20] lg:rounded-xl bg-transparent flex flex-col min-h-0 overflow-hidden">
           {/* Header - Back, Astrologer, Time, Balance, Call */}
-          <div className="px-2 sm:px-6 py-4 sm:py-4 flex items-center justify-between sticky top-0 z-10 gap-1 sm:gap-2" style={{ backgroundColor: colors.primeYellow }}>
+          <div className="px-2 sm:px-6 py-4 sm:py-4 flex items-center justify-between shrink-0 z-10 gap-1 sm:gap-2" style={{ backgroundColor: colors.primeYellow }}>
             <div className="flex items-center gap-1 sm:gap-3 shrink-0">
               <button
                 type="button"
