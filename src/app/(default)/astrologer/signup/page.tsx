@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import type { ConfirmationResult } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Input from "@/components/atoms/Input";
@@ -9,10 +10,16 @@ import Toast from "@/components/atoms/Toast";
 import { useToast } from "@/hooks/useToast";
 import { colors } from "@/utils/colors";
 import {
-  sendRegistrationOTP,
   verifyRegistrationOTP,
 } from "@/store/api/astrologer/auth";
 import { ArrowLeft } from "lucide-react";
+import {
+  clearRecaptchaVerifier,
+  confirmFirebaseOtp,
+  sendFirebaseOtp,
+} from "@/utils/firebasePhoneAuth";
+
+const ASTROLOGER_SIGNUP_RECAPTCHA_CONTAINER_ID = "astrologer-signup-firebase-recaptcha";
 
 export default function AstrologerSignup() {
   const router = useRouter();
@@ -21,6 +28,8 @@ export default function AstrologerSignup() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
+  const [confirmationResult, setConfirmationResult] =
+    useState<ConfirmationResult | null>(null);
 
   // Check if someone is already logged in
   useEffect(() => {
@@ -38,6 +47,12 @@ export default function AstrologerSignup() {
     }
   }, [router]);
 
+  useEffect(() => {
+    return () => {
+      clearRecaptchaVerifier();
+    };
+  }, []);
+
   const handleSendOTP = async () => {
     // Validate phone number
     if (!/^\d{10}$/.test(phoneNumber)) {
@@ -47,11 +62,15 @@ export default function AstrologerSignup() {
 
     setLoading(true);
     try {
-      const response = await sendRegistrationOTP({ phoneNumber });
-      if (response.success) {
-        showToast("OTP sent successfully!", "success");
-        setStep("otp");
-      }
+      // Legacy Twilio flow retained for reference:
+      // const response = await sendRegistrationOTP({ phoneNumber });
+      const confirmation = await sendFirebaseOtp(
+        phoneNumber,
+        ASTROLOGER_SIGNUP_RECAPTCHA_CONTAINER_ID
+      );
+      setConfirmationResult(confirmation);
+      showToast("OTP sent successfully!", "success");
+      setStep("otp");
     } catch (err: any) {
       showToast(err.message || "Failed to send OTP", "error");
     } finally {
@@ -79,14 +98,30 @@ export default function AstrologerSignup() {
       return;
     }
 
+    if (!confirmationResult) {
+      showToast("Please request OTP again", "error");
+      return;
+    }
+
     setLoading(true);
     try {
+      const { firebaseIdToken } = await confirmFirebaseOtp(
+        confirmationResult,
+        otpString
+      );
+
       const response = await verifyRegistrationOTP({
         phoneNumber,
-        otp: otpString,
+        firebaseIdToken,
       });
+
+      // Legacy Twilio payload retained for reference:
+      // const response = await verifyRegistrationOTP({ phoneNumber, otp: otpString });
+
       if (response.success) {
         showToast("OTP verified successfully!", "success");
+        clearRecaptchaVerifier();
+        setConfirmationResult(null);
         setTimeout(() => {
           router.push(`/astrologer/register?phone=${phoneNumber}`);
         }, 1000);
@@ -254,6 +289,7 @@ export default function AstrologerSignup() {
                 onClick={() => {
                   setStep("phone");
                   setOtp(["", "", "", "", "", ""]);
+                  setConfirmationResult(null);
                 }}
                 className="text-sm"
                 style={{ color: colors.gray }}
@@ -304,6 +340,7 @@ export default function AstrologerSignup() {
       {toast.show && (
         <Toast message={toast.message} type={toast.type} onClose={hideToast} />
       )}
+      <div id={ASTROLOGER_SIGNUP_RECAPTCHA_CONTAINER_ID}></div>
     </div>
   );
 }

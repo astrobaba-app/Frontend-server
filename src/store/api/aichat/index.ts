@@ -52,6 +52,7 @@ export interface SendMessageResponse {
     createdAt: string;
   };
   tokensUsed: number;
+  disableAutoFollowUp?: boolean;
 }
 
 export interface AutoFollowUpQuestionResponse {

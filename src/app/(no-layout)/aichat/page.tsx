@@ -141,14 +141,79 @@ const normalizeAssistantMessage = (
 };
 
 const STICK_TO_BOTTOM_THRESHOLD = 48;
-const AUTO_FOLLOW_UP_FIRST_DELAY_MIN_MS = 3000;
-const AUTO_FOLLOW_UP_FIRST_DELAY_MAX_MS = 4000;
-const AUTO_FOLLOW_UP_NEXT_DELAY_MIN_MS = 3000;
-const AUTO_FOLLOW_UP_NEXT_DELAY_MAX_MS = 4000;
+const AUTO_FOLLOW_UP_DELAY_SHORT_MIN_MS = 2200;
+const AUTO_FOLLOW_UP_DELAY_SHORT_MAX_MS = 3200;
+const AUTO_FOLLOW_UP_DELAY_MEDIUM_MIN_MS = 3000;
+const AUTO_FOLLOW_UP_DELAY_MEDIUM_MAX_MS = 3900;
+const AUTO_FOLLOW_UP_DELAY_LONG_MIN_MS = 4000;
+const AUTO_FOLLOW_UP_DELAY_LONG_MAX_MS = 5000;
+const AUTO_FOLLOW_UP_ESTIMATED_CHARS_PER_LINE = 85;
+const AUTO_FOLLOW_UP_RANDOM_COUNT_MIN = 1;
+const AUTO_FOLLOW_UP_RANDOM_COUNT_MAX = 4;
 
 const randomDelayBetween = (minMs: number, maxMs: number) => {
   if (maxMs <= minMs) return minMs;
   return Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+};
+
+const randomAutoFollowUpCount = (previousCount: number | null) => {
+  const choices: number[] = [];
+  for (
+    let count = AUTO_FOLLOW_UP_RANDOM_COUNT_MIN;
+    count <= AUTO_FOLLOW_UP_RANDOM_COUNT_MAX;
+    count += 1
+  ) {
+    choices.push(count);
+  }
+
+  if (choices.length <= 1 || previousCount == null) {
+    return choices[randomDelayBetween(0, choices.length - 1)];
+  }
+
+  // Avoid immediate repeats to make the pattern feel more naturally random.
+  const filteredChoices = choices.filter((count) => count !== previousCount);
+  const pool = filteredChoices.length > 0 ? filteredChoices : choices;
+  return pool[randomDelayBetween(0, pool.length - 1)];
+};
+
+const estimateAssistantResponseLineCount = (content: string) => {
+  const normalized = String(content || "").replace(/\r/g, "").trim();
+  if (!normalized) return 1;
+
+  const explicitLineCount = normalized
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean).length;
+
+  const estimatedWrapLineCount = Math.max(
+    1,
+    Math.ceil(normalized.length / AUTO_FOLLOW_UP_ESTIMATED_CHARS_PER_LINE)
+  );
+
+  return Math.max(explicitLineCount || 1, estimatedWrapLineCount);
+};
+
+const getAdaptiveAutoFollowUpDelayMs = (assistantContent: string) => {
+  const lineCount = estimateAssistantResponseLineCount(assistantContent);
+
+  if (lineCount >= 3) {
+    return randomDelayBetween(
+      AUTO_FOLLOW_UP_DELAY_LONG_MIN_MS,
+      AUTO_FOLLOW_UP_DELAY_LONG_MAX_MS
+    );
+  }
+
+  if (lineCount === 2) {
+    return randomDelayBetween(
+      AUTO_FOLLOW_UP_DELAY_MEDIUM_MIN_MS,
+      AUTO_FOLLOW_UP_DELAY_MEDIUM_MAX_MS
+    );
+  }
+
+  return randomDelayBetween(
+    AUTO_FOLLOW_UP_DELAY_SHORT_MIN_MS,
+    AUTO_FOLLOW_UP_DELAY_SHORT_MAX_MS
+  );
 };
 
 const AIChatPageContent = () => {
@@ -205,6 +270,9 @@ const AIChatPageContent = () => {
   const autoFollowUpTimerRef = useRef<NodeJS.Timeout | null>(null);
   const autoFollowUpGenerationRef = useRef(0);
   const autoFollowUpRequestInFlightRef = useRef(false);
+  const autoFollowUpRemainingCountRef = useRef(0);
+  const lastAutoFollowUpCountRef = useRef<number | null>(null);
+  const lastAssistantResponseContentRef = useRef("");
   const currentSessionIdRef = useRef<string | null>(null);
   const isChatSessionActiveRef = useRef(false);
   const isTypingRef = useRef(false);
@@ -253,20 +321,17 @@ const AIChatPageContent = () => {
   const registerUserActivity = useCallback(() => {
     userActivityAtRef.current = Date.now();
     autoFollowUpGenerationRef.current += 1;
+    autoFollowUpRemainingCountRef.current = 0;
     clearAutoFollowUpTimers();
   }, [clearAutoFollowUpTimers]);
 
   const queueNextAutoFollowUp = useCallback(
-    (sessionId: string, isFirstRound: boolean, generationId: number) => {
-      const requiredIdleMs = isFirstRound
-        ? randomDelayBetween(
-            AUTO_FOLLOW_UP_FIRST_DELAY_MIN_MS,
-            AUTO_FOLLOW_UP_FIRST_DELAY_MAX_MS
-          )
-        : randomDelayBetween(
-            AUTO_FOLLOW_UP_NEXT_DELAY_MIN_MS,
-            AUTO_FOLLOW_UP_NEXT_DELAY_MAX_MS
-          );
+    (sessionId: string, generationId: number) => {
+      if (autoFollowUpRemainingCountRef.current <= 0) return;
+
+      const requiredIdleMs = getAdaptiveAutoFollowUpDelayMs(
+        lastAssistantResponseContentRef.current
+      );
 
       autoFollowUpTimerRef.current = setTimeout(() => {
         autoFollowUpTimerRef.current = null;
@@ -274,6 +339,7 @@ const AIChatPageContent = () => {
         if (generationId !== autoFollowUpGenerationRef.current) return;
         if (currentSessionIdRef.current !== sessionId) return;
         if (!isChatSessionActiveRef.current) return;
+        if (autoFollowUpRemainingCountRef.current <= 0) return;
         if (isTypingRef.current) return;
         if (inputMessageRef.current.trim().length > 0) return;
 
@@ -281,11 +347,13 @@ const AIChatPageContent = () => {
         if (idleForMs < requiredIdleMs - 120) return;
 
         if (autoFollowUpRequestInFlightRef.current) {
-          queueNextAutoFollowUp(sessionId, false, generationId);
+          queueNextAutoFollowUp(sessionId, generationId);
           return;
         }
 
         const fetchAndQueue = async () => {
+          let hasConsumedRound = false;
+
           try {
             autoFollowUpRequestInFlightRef.current = true;
             const response = await getAutoFollowUpQuestion(sessionId);
@@ -296,35 +364,48 @@ const AIChatPageContent = () => {
             if (isTypingRef.current) return;
             if (inputMessageRef.current.trim().length > 0) return;
 
+            hasConsumedRound = true;
+
             const followUpMessage = response.followUpMessage;
             if (followUpMessage?.content) {
+              const normalizedFollowUpMessage = normalizeAssistantMessage(
+                followUpMessage,
+                astrologerId,
+                astrologerName
+              );
+
+              lastAssistantResponseContentRef.current =
+                normalizedFollowUpMessage.content || "";
+
               shouldStickToBottomRef.current = true;
               setMessages((prev) => {
                 if (prev.some((msg) => msg.id === followUpMessage.id)) {
                   return prev;
                 }
 
-                return [
-                  ...prev,
-                  normalizeAssistantMessage(
-                    followUpMessage,
-                    astrologerId,
-                    astrologerName
-                  ),
-                ];
+                return [...prev, normalizedFollowUpMessage];
               });
             }
           } catch (error) {
             console.error("Failed to generate dynamic follow-up question:", error);
+            hasConsumedRound = true;
           } finally {
             autoFollowUpRequestInFlightRef.current = false;
+
+            if (hasConsumedRound) {
+              autoFollowUpRemainingCountRef.current = Math.max(
+                0,
+                autoFollowUpRemainingCountRef.current - 1
+              );
+            }
 
             if (generationId !== autoFollowUpGenerationRef.current) return;
             if (currentSessionIdRef.current !== sessionId) return;
             if (!isChatSessionActiveRef.current) return;
             if (inputMessageRef.current.trim().length > 0) return;
+            if (autoFollowUpRemainingCountRef.current <= 0) return;
 
-            queueNextAutoFollowUp(sessionId, false, generationId);
+            queueNextAutoFollowUp(sessionId, generationId);
           }
         };
 
@@ -339,8 +420,11 @@ const AIChatPageContent = () => {
       clearAutoFollowUpTimers();
 
       autoFollowUpGenerationRef.current += 1;
+      const nextCount = randomAutoFollowUpCount(lastAutoFollowUpCountRef.current);
+      lastAutoFollowUpCountRef.current = nextCount;
+      autoFollowUpRemainingCountRef.current = nextCount;
       const generationId = autoFollowUpGenerationRef.current;
-      queueNextAutoFollowUp(sessionId, true, generationId);
+      queueNextAutoFollowUp(sessionId, generationId);
     },
     [clearAutoFollowUpTimers, queueNextAutoFollowUp]
   );
@@ -369,6 +453,20 @@ const AIChatPageContent = () => {
     inputMessageRef.current = inputMessage;
   }, [inputMessage]);
 
+  useEffect(() => {
+    let latestAssistantContent = "";
+
+    for (let idx = messages.length - 1; idx >= 0; idx -= 1) {
+      const message = messages[idx];
+      if (message.role === "assistant") {
+        latestAssistantContent = message.content || "";
+        break;
+      }
+    }
+
+    lastAssistantResponseContentRef.current = latestAssistantContent;
+  }, [messages]);
+
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!loading && !isLoggedIn) {
@@ -392,6 +490,7 @@ const AIChatPageContent = () => {
     shouldStickToBottomRef.current = true;
     clearAutoFollowUpTimers();
     autoFollowUpGenerationRef.current += 1;
+    autoFollowUpRemainingCountRef.current = 0;
     userActivityAtRef.current = Date.now();
   }, [currentSessionId, clearAutoFollowUpTimers]);
 
@@ -534,6 +633,7 @@ const AIChatPageContent = () => {
       // This cleanup only runs when component unmounts
       clearAutoFollowUpTimers();
       autoFollowUpGenerationRef.current += 1;
+      autoFollowUpRemainingCountRef.current = 0;
       stopChatTimer();
       stopVoiceTimer();
     };
@@ -1369,6 +1469,13 @@ const AIChatPageContent = () => {
         messageText.trim()
       );
 
+      const normalizedAiResponseContent = normalizeAssistantGreetingText(
+        response.aiMessage.content,
+        astrologerId,
+        astrologerName
+      );
+      lastAssistantResponseContentRef.current = normalizedAiResponseContent;
+
       // Remove temp message and add real messages
       setMessages((prev) => {
         const withoutTemp = prev.filter((m) => m.id !== tempUserMessage.id);
@@ -1382,18 +1489,20 @@ const AIChatPageContent = () => {
         const aiMsg: AIChatMessage = {
           ...response.aiMessage,
           sessionId: currentSessionId,
-          content: normalizeAssistantGreetingText(
-            response.aiMessage.content,
-            astrologerId,
-            astrologerName
-          ),
+          content: normalizedAiResponseContent,
           updatedAt: response.aiMessage.createdAt,
         };
 
         return [...withoutTemp, userMsg, aiMsg];
       });
 
-      startDynamicAutoFollowUps(currentSessionId);
+      if (response.disableAutoFollowUp) {
+        clearAutoFollowUpTimers();
+        autoFollowUpGenerationRef.current += 1;
+        autoFollowUpRemainingCountRef.current = 0;
+      } else {
+        startDynamicAutoFollowUps(currentSessionId);
+      }
 
       // Update session title in list if it changed
       const sessionIndex = sessions.findIndex((s) => s.id === currentSessionId);
@@ -1441,6 +1550,7 @@ const AIChatPageContent = () => {
   const handleStopChat = () => {
     clearAutoFollowUpTimers();
     autoFollowUpGenerationRef.current += 1;
+    autoFollowUpRemainingCountRef.current = 0;
     setIsChatSessionActive(false);
     stopChatTimer();
     showToast("Chat session ended", "success");

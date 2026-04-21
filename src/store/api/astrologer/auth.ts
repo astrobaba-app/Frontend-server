@@ -45,7 +45,8 @@ export interface SendOtpResponse {
 
 export interface VerifyOtpRequest {
   phoneNumber: string;
-  otp: string;
+  firebaseIdToken: string;
+  // Legacy Twilio payload retained for reference: otp: string;
 }
 
 export interface VerifyOtpResponse {
@@ -162,6 +163,7 @@ export const sendRegistrationOTP = async (data: SendOtpRequest): Promise<SendOtp
 // Verify OTP
 export const verifyRegistrationOTP = async (data: VerifyOtpRequest): Promise<VerifyOtpResponse> => {
   try {
+    // Legacy Twilio payload retained for reference: { phoneNumber, otp }
     const response: AxiosResponse<VerifyOtpResponse> = await api.post('/astrologer/auth/verify-otp', data);
     return response.data;
   } catch (error: any) {

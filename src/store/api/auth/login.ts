@@ -45,6 +45,11 @@ export interface ErrorResponseData {
   error?: string;
 }
 
+export interface VerifyOtpRequestData {
+  firebaseIdToken: string;
+  mobile: string;
+}
+
 export const generateOtp = async (mobile: string): Promise<AxiosResponse> => {
   try {
     const response = await api.post('/auth/generate-otp', { mobile });
@@ -54,9 +59,10 @@ export const generateOtp = async (mobile: string): Promise<AxiosResponse> => {
   }
 };
 
-export const verifyOtp = async (otp: string): Promise<VerifyOtpSuccessData> => {
+export const verifyOtp = async (data: VerifyOtpRequestData): Promise<VerifyOtpSuccessData> => {
   try {
-    const response: AxiosResponse<VerifyOtpSuccessData> = await api.post('/auth/verify-otp', { otp });
+    // Legacy Twilio payload retained for reference: { otp }
+    const response: AxiosResponse<VerifyOtpSuccessData> = await api.post('/auth/verify-otp', data);
     return response.data;
   } catch (error: any) {
     throw error.response?.data as ErrorResponseData || { message: 'Failed to verify OTP or network error', success: false };

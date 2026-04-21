@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import type { ConfirmationResult } from "firebase/auth";
 import { X, ArrowLeft } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
-import { generateOtp, verifyOtp } from "@/store/api/auth/login";
+import { verifyOtp } from "@/store/api/auth/login";
 import { initiateGoogleLogin } from "@/store/api/auth/google";
 import { initiateAppleLogin } from "@/store/api/auth/apple";
 import Toast from "@/components/atoms/Toast";
@@ -16,6 +17,14 @@ import { Button } from "@/components/atoms";
 import { Suspense } from "react";
 import Link from "next/link";
 import ContactModal from "@/components/modals/ContactModal";
+import {
+  clearRecaptchaVerifier,
+  confirmFirebaseOtp,
+  sendFirebaseOtp,
+} from "@/utils/firebasePhoneAuth";
+
+const LOGIN_RECAPTCHA_CONTAINER_ID = "login-firebase-recaptcha";
+
 function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -26,6 +35,8 @@ function LoginPage() {
   const [step, setStep] = useState<"initial" | "otp">("initial");
   const [resendTimer, setResendTimer] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [confirmationResult, setConfirmationResult] =
+    useState<ConfirmationResult | null>(null);
 
   const [isContactOpen, setIsContactOpen] = useState(false);
 
@@ -64,6 +75,12 @@ function LoginPage() {
     }
   }, [step, resendTimer]);
 
+  useEffect(() => {
+    return () => {
+      clearRecaptchaVerifier();
+    };
+  }, []);
+
   const handleMobileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, "").slice(0, 10);
     setMobile(value);
@@ -76,7 +93,13 @@ function LoginPage() {
     }
     setLoading(true);
     try {
-      await generateOtp(mobile);
+      // Legacy Twilio flow retained for reference:
+      // await generateOtp(mobile);
+      const confirmation = await sendFirebaseOtp(
+        mobile,
+        LOGIN_RECAPTCHA_CONTAINER_ID
+      );
+      setConfirmationResult(confirmation);
       showToast("OTP sent successfully!", "success");
       setStep("otp");
       setResendTimer(120);
@@ -103,9 +126,25 @@ function LoginPage() {
       showToast("Please enter the complete 6-digit OTP", "error");
       return;
     }
+
+    if (!confirmationResult) {
+      showToast("Please request OTP again", "error");
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await verifyOtp(otpString);
+      const { firebaseIdToken } = await confirmFirebaseOtp(
+        confirmationResult,
+        otpString
+      );
+
+      // Legacy Twilio flow retained for reference:
+      // const response = await verifyOtp(otpString);
+      const response = await verifyOtp({
+        firebaseIdToken,
+        mobile,
+      });
 
       // Store middlewareToken and user id in localStorage
       if (typeof window !== "undefined") {
@@ -115,6 +154,8 @@ function LoginPage() {
       }
 
       login(response.user, response.token, response.middlewareToken);
+      clearRecaptchaVerifier();
+      setConfirmationResult(null);
       sessionStorage.setItem("loginSuccess", "true");
       const redirectPath = searchParams.get("redirect") || "/";
       router.push(redirectPath);
@@ -130,7 +171,13 @@ function LoginPage() {
   const handleResendOtp = async () => {
     setLoading(true);
     try {
-      await generateOtp(mobile);
+      // Legacy Twilio flow retained for reference:
+      // await generateOtp(mobile);
+      const confirmation = await sendFirebaseOtp(
+        mobile,
+        LOGIN_RECAPTCHA_CONTAINER_ID
+      );
+      setConfirmationResult(confirmation);
       showToast("OTP resent successfully!", "success");
       setResendTimer(120);
       setOtp(["", "", "", "", "", ""]);
@@ -303,7 +350,10 @@ function LoginPage() {
             ) : (
               <div className="space-y-6">
                 <button
-                  onClick={() => setStep("initial")}
+                  onClick={() => {
+                    setStep("initial");
+                    setConfirmationResult(null);
+                  }}
                   className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors font-medium mb-4 text-sm"
                 >
                   <ArrowLeft className="w-4 h-4" /> Edit Number
@@ -380,6 +430,7 @@ function LoginPage() {
       {toast.show && (
         <Toast message={toast.message} type={toast.type} onClose={hideToast} />
       )}
+      <div id={LOGIN_RECAPTCHA_CONTAINER_ID}></div>
     </div>
   );
 }
