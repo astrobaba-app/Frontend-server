@@ -285,6 +285,7 @@ const AIChatPageContent = () => {
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const nextPlayTimeRef = useRef<number>(0);
+  const hasAppliedInsufficientModalLockRef = useRef(false);
 
   const handleBack = () => {
     router.back();
@@ -292,6 +293,7 @@ const AIChatPageContent = () => {
   // Wallet integration
   const {
     balance,
+    isLoading: isWalletLoading,
     isChatting,
     isVoiceCalling,
     chatDuration,
@@ -307,7 +309,7 @@ const AIChatPageContent = () => {
     userId: user?.id ? String(user.id) : "",
     onInsufficientBalance: () => {
       setShowInsufficientBalanceModal(true);
-      showToast("Insufficient balance. Please recharge your wallet.", "error");
+      showToast("You are out of balance. Recharge immediately to continue chat.", "error");
     },
   });
 
@@ -1368,7 +1370,7 @@ const AIChatPageContent = () => {
   };
 
   // End voice call
-  const handleEndCall = () => {
+  const handleEndCall = useCallback(() => {
     console.log("=== ENDING VOICE CALL ===");
 
     // Stop audio processor
@@ -1401,7 +1403,55 @@ const AIChatPageContent = () => {
     setIsCallActive(false);
     setIsMuted(false);
     setCallDuration(0);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (loading || !isLoggedIn || isWalletLoading) return;
+    if (balance > 0) return;
+
+    setShowInsufficientBalanceModal(true);
+  }, [balance, isLoggedIn, isWalletLoading, loading]);
+
+  useEffect(() => {
+    if (!showInsufficientBalanceModal) {
+      hasAppliedInsufficientModalLockRef.current = false;
+      return;
+    }
+
+    if (hasAppliedInsufficientModalLockRef.current) {
+      return;
+    }
+
+    hasAppliedInsufficientModalLockRef.current = true;
+
+    clearAutoFollowUpTimers();
+    autoFollowUpGenerationRef.current += 1;
+    autoFollowUpRemainingCountRef.current = 0;
+
+    if (isChatSessionActiveRef.current) {
+      setIsChatSessionActive(false);
+      isChatSessionActiveRef.current = false;
+    }
+
+    if (isVoiceSessionActive) {
+      setIsVoiceSessionActive(false);
+    }
+
+    stopChatTimer();
+    stopVoiceTimer();
+
+    if (isCallActive) {
+      handleEndCall();
+    }
+  }, [
+    clearAutoFollowUpTimers,
+    handleEndCall,
+    isCallActive,
+    isVoiceSessionActive,
+    showInsufficientBalanceModal,
+    stopChatTimer,
+    stopVoiceTimer,
+  ]);
 
   // Toggle mute
   const handleToggleMute = () => {
@@ -1535,7 +1585,7 @@ const AIChatPageContent = () => {
   const handleStartChat = () => {
     if (!hasSufficientBalance(10)) {
       setShowInsufficientBalanceModal(true);
-      showToast("Insufficient balance to start chat", "error");
+      showToast("You are out of balance. Recharge immediately to continue chat.", "error");
       return;
     }
     setIsChatSessionActive(true);
@@ -1560,7 +1610,7 @@ const AIChatPageContent = () => {
   const handleStartVoiceSession = async () => {
     if (!hasSufficientBalance(15)) {
       setShowInsufficientBalanceModal(true);
-      showToast("Insufficient balance to start voice call", "error");
+      showToast("You are out of balance. Recharge immediately to continue chat.", "error");
       return;
     }
 
@@ -2535,7 +2585,7 @@ const AIChatPageContent = () => {
 
       {/* Insufficient Balance Modal */}
       {showInsufficientBalanceModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
           <div
             className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-5 sm:p-6 animate-fade-in"
             onClick={(e) => e.stopPropagation()}
@@ -2556,29 +2606,18 @@ const AIChatPageContent = () => {
                 className="text-lg sm:text-xl font-bold mb-2"
                 style={{ color: colors.darkGray }}
               >
-                Insufficient Balance
+                You&apos;re Out Of Balance
               </h3>
 
               <p
                 className="text-xs sm:text-sm mb-5 sm:mb-6"
                 style={{ color: colors.gray }}
               >
-                You don't have enough balance to continue chatting with AI
-                Astrologer. Please recharge your wallet to continue.
+                Your wallet balance is zero. Recharge immediately to start or continue chatting with AI Astrologer.
               </p>
 
-              <div className="flex gap-2 sm:gap-3 w-full">
-                <button
-                  onClick={() => setShowInsufficientBalanceModal(false)}
-                  className="flex-1 px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl border hover:bg-gray-50 transition-colors text-sm sm:text-base"
-                  style={{
-                    borderColor: colors.gray,
-                    color: colors.darkGray,
-                  }}
-                >
-                  Cancel
-                </button>
-                <Link href="/profile/wallet" className="flex-1">
+              <div className="w-full">
+                <Link href="/profile/wallet" className="block w-full">
                   <button
                     className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl hover:opacity-90 transition-opacity text-sm sm:text-base"
                     style={{

@@ -135,6 +135,7 @@ function ChatPage() {
   const messageCacheRef = useRef<Map<string, SessionMessageCache>>(new Map());
   const messageFetchRef = useRef<Map<string, Promise<ChatMessageDto[]>>>(new Map());
   const olderMessageFetchRef = useRef<Map<string, Promise<void>>>(new Map());
+  const isForceEndingForBalanceRef = useRef(false);
   const pendingScrollAnchorRef = useRef<
     { sessionId: string; previousHeight: number; previousTop: number } | null
   >(null);
@@ -284,6 +285,9 @@ function ChatPage() {
   // Wallet integration
   const {
     balance,
+    isLoading: isWalletLoading,
+    error: walletError,
+    hasFetchedBalance,
     isChatting,
     chatDuration,
     chatCost,
@@ -295,10 +299,40 @@ function ChatPage() {
     userId: user?.id ? String(user.id) : undefined,
     astrologerPricePerMinute,
     onInsufficientBalance: () => {
+      const activeSessionId = selectedSessionIdRef.current;
+
       setShowInsufficientBalanceModal(true);
-      showToast("Insufficient balance. Please recharge your wallet.", "error");
+      showToast("You are out of balance. Recharge immediately to continue chat.", "error");
+
+      if (!activeSessionId || !isChatSessionActiveRef.current || isForceEndingForBalanceRef.current) {
+        return;
+      }
+
+      isForceEndingForBalanceRef.current = true;
+
+      setIsChatSessionActive(false);
+      isChatSessionActiveRef.current = false;
+      setIsWaitingForApproval(false);
+      isWaitingForApprovalRef.current = false;
+      setPendingRequestSessionId(null);
+      setInviteSecondsLeft(0);
+      if (inviteTimerRef.current) {
+        clearInterval(inviteTimerRef.current);
+        inviteTimerRef.current = null;
+      }
+      stopChatTimerRef.current();
+
+      void endChatSession(activeSessionId, "insufficient_balance")
+        .catch((error) => {
+          console.error("Failed to auto-end chat on insufficient balance", error);
+        })
+        .finally(() => {
+          isForceEndingForBalanceRef.current = false;
+        });
     },
   });
+
+  const hasPositiveBalance = hasSufficientBalance(0.01);
 
   const showToastRef = useRef(showToast);
   const startChatTimerRef = useRef(startChatTimer);
@@ -335,6 +369,19 @@ function ChatPage() {
   useEffect(() => {
     stopChatTimerRef.current = stopChatTimer;
   }, [stopChatTimer]);
+
+  useEffect(() => {
+    if (loading || !isLoggedIn || isWalletLoading || !hasFetchedBalance || walletError) return;
+    if (balance > 0) return;
+
+    setShowInsufficientBalanceModal(true);
+  }, [balance, hasFetchedBalance, isLoggedIn, isWalletLoading, loading, walletError]);
+
+  useEffect(() => {
+    if (balance > 0) {
+      setShowInsufficientBalanceModal(false);
+    }
+  }, [balance]);
 
   const cacheSessionMessages = useCallback(
     (
@@ -873,6 +920,7 @@ function ChatPage() {
 
     const handleChatEnded = (payload: { sessionId: string; endedBy: string; reason?: string }) => {
       if (payload.sessionId !== selectedSessionIdRef.current) return;
+      isForceEndingForBalanceRef.current = false;
       setIsWaitingForApproval(false);
       isWaitingForApprovalRef.current = false;
       setPendingRequestSessionId(null);
@@ -883,6 +931,16 @@ function ChatPage() {
         isChatSessionActiveRef.current = false;
         stopChatTimerRef.current();
       }
+
+      if (payload.reason === "insufficient_balance") {
+        setShowInsufficientBalanceModal(true);
+        showToastRef.current(
+          "You are out of balance. Recharge immediately to continue chat.",
+          "error"
+        );
+        return;
+      }
+
       showToastRef.current("Chat session ended", "info");
     };
 
@@ -1383,9 +1441,9 @@ function ChatPage() {
       return;
     }
 
-    if (!hasSufficientBalance(pricePerMinute)) {
+    if (!hasPositiveBalance) {
       setShowInsufficientBalanceModal(true);
-      showToast("Insufficient balance to start chat", "error");
+      showToast("You are out of balance. Recharge immediately to continue chat.", "error");
       return;
     }
 
@@ -1540,7 +1598,7 @@ function ChatPage() {
             <button
               onClick={handleStartStopChat}
               disabled={
-                (!isChatSessionActive && !isWaitingForApproval && !hasSufficientBalance(pricePerMinute)) ||
+                (!isChatSessionActive && !isWaitingForApproval && !hasPositiveBalance) ||
                 isWaitingForApproval
               }
               className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm"
@@ -1618,7 +1676,7 @@ function ChatPage() {
                 <button
                   onClick={handleStartStopChat}
                   disabled={
-                    (!isChatSessionActive && !isWaitingForApproval && !hasSufficientBalance(pricePerMinute)) ||
+                    (!isChatSessionActive && !isWaitingForApproval && !hasPositiveBalance) ||
                     isWaitingForApproval
                   }
                   className="flex items-center gap-0.5 sm:gap-1.5 px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-[10px] sm:text-xs font-semibold shrink-0"
@@ -1994,7 +2052,7 @@ function ChatPage() {
                 <button
                   type="button"
                   onClick={handleStartStopChat}
-                  disabled={!isWaitingForApproval && !hasSufficientBalance(pricePerMinute)}
+                  disabled={!isWaitingForApproval && !hasPositiveBalance}
                   className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     backgroundColor: isWaitingForApproval ? "#9CA3AF" : colors.primeGreen,
@@ -2042,7 +2100,7 @@ function ChatPage() {
 
       {/* Insufficient Balance Modal */}
       {showInsufficientBalanceModal && (
-        <div className="fixed inset-0 bg-white/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div
             className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-in"
             onClick={(e) => e.stopPropagation()}
@@ -2059,26 +2117,15 @@ function ChatPage() {
                 className="text-xl font-bold mb-2"
                 style={{ color: colors.darkGray }}
               >
-                Insufficient Balance
+                You&apos;re Out Of Balance
               </h3>
 
               <p className="text-sm mb-6" style={{ color: colors.gray }}>
-                You don't have enough balance to chat with {astrologerInfo?.name || 'this astrologer'}.
-                Price: ₹{pricePerMinute}/minute. Please recharge your wallet to continue.
+                Your wallet balance is too low. Recharge immediately to start or continue chatting with {astrologerInfo?.name || "this astrologer"}.
               </p>
 
-              <div className="flex gap-3 w-full">
-                <button
-                  onClick={() => setShowInsufficientBalanceModal(false)}
-                  className="flex-1 px-4 py-3 rounded-xl border hover:bg-gray-50 transition-colors"
-                  style={{
-                    borderColor: colors.gray,
-                    color: colors.darkGray,
-                  }}
-                >
-                  Cancel
-                </button>
-                <Link href="/profile/wallet" className="flex-1">
+              <div className="w-full">
+                <Link href="/profile/wallet" className="block w-full">
                   <button
                     className="w-full px-4 py-3 rounded-xl hover:opacity-90 transition-opacity"
                     style={{

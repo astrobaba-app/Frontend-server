@@ -13,6 +13,7 @@ interface UseAstrologerChatWalletReturn {
   balance: number;
   isLoading: boolean;
   error: string | null;
+  hasFetchedBalance: boolean;
   fetchBalance: () => Promise<void>;
   hasSufficientBalance: (minAmount: number) => boolean;
   
@@ -39,6 +40,7 @@ export const useAstrologerChatWallet = ({
   const [balance, setBalance] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasFetchedBalance, setHasFetchedBalance] = useState<boolean>(false);
   
   // Chat timer state
   const [isChatting, setIsChatting] = useState<boolean>(false);
@@ -47,6 +49,8 @@ export const useAstrologerChatWallet = ({
   // Refs for timers and tracking
   const chatTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastChatDeductionRef = useRef<number>(0);
+  const latestBalanceRef = useRef<number>(0);
+  const insufficientBalanceNotifiedRef = useRef<boolean>(false);
 
   /**
    * Fetch wallet balance from API
@@ -62,6 +66,7 @@ export const useAstrologerChatWallet = ({
       console.error('Failed to fetch wallet balance:', err);
       setError(err.message || 'Failed to fetch balance');
     } finally {
+      setHasFetchedBalance(true);
       setIsLoading(false);
     }
   }, [onBalanceUpdate]);
@@ -83,9 +88,10 @@ export const useAstrologerChatWallet = ({
     setIsChatting(true);
     setChatMinutes(0);
     lastChatDeductionRef.current = 0;
+    insufficientBalanceNotifiedRef.current = false;
 
-    // Check initial balance
-    if (!checkSufficientBalance(astrologerPricePerMinute)) {
+    // Keep start eligibility aligned with backend: allow chat as long as balance is positive.
+    if (!checkSufficientBalance(0.01)) {
       console.log('Insufficient balance to start chat');
       setIsChatting(false);
       onInsufficientBalance?.();
@@ -104,17 +110,25 @@ export const useAstrologerChatWallet = ({
           lastChatDeductionRef.current = completedMinutes;
 
           const projectedCost = completedMinutes * astrologerPricePerMinute;
-          if (projectedCost > balance) {
+          if (projectedCost > latestBalanceRef.current) {
             console.log('Insufficient balance during chat');
-            stopChatTimer();
-            onInsufficientBalance?.();
+            if (!insufficientBalanceNotifiedRef.current) {
+              insufficientBalanceNotifiedRef.current = true;
+              stopChatTimer();
+              onInsufficientBalance?.();
+            }
           }
         }
 
         return newMinutes;
       });
     }, 1000); // Update every second
-  }, [isChatting, balance, astrologerPricePerMinute, onInsufficientBalance]);
+  }, [
+    isChatting,
+    astrologerPricePerMinute,
+    checkSufficientBalance,
+    onInsufficientBalance,
+  ]);
 
   /**
    * Stop chat timer
@@ -130,7 +144,22 @@ export const useAstrologerChatWallet = ({
 
     setChatMinutes(0);
     lastChatDeductionRef.current = 0;
+    insufficientBalanceNotifiedRef.current = false;
   }, []);
+
+  useEffect(() => {
+    latestBalanceRef.current = balance;
+  }, [balance]);
+
+  useEffect(() => {
+    if (!isChatting) return;
+    if (balance > 0) return;
+    if (insufficientBalanceNotifiedRef.current) return;
+
+    insufficientBalanceNotifiedRef.current = true;
+    stopChatTimer();
+    onInsufficientBalance?.();
+  }, [balance, isChatting, onInsufficientBalance, stopChatTimer]);
 
   /**
    * Format minutes to MM:SS
@@ -181,6 +210,7 @@ export const useAstrologerChatWallet = ({
     balance,
     isLoading,
     error,
+    hasFetchedBalance,
     fetchBalance,
     hasSufficientBalance: checkSufficientBalance,
     

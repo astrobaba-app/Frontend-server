@@ -85,8 +85,11 @@ export async function getMyChatSessions(params?: {
   return response.data;
 }
 
-export async function endChatSession(sessionId: string) {
-  const response = await api.post(`/chat/${sessionId}/end`);
+export async function endChatSession(
+  sessionId: string,
+  reason?: "user_ended_chat" | "insufficient_balance"
+) {
+  const response = await api.post(`/chat/${sessionId}/end`, reason ? { reason } : {});
   return response.data as { success: boolean; message: string };
 }
 

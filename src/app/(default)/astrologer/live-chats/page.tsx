@@ -514,17 +514,23 @@ function LiveChatsPageContent() {
       reason?: string;
     }) => {
       const endedSession = chatSessions.find((s) => s.id === payload.sessionId);
+      const endedUserName = endedSession?.user?.fullName || "User";
       setChatSessions((prev) => prev.filter((s) => s.id !== payload.sessionId));
 
-      if (payload.endedBy === "user") {
-        setUserEndedModalName(endedSession?.user?.fullName || "User");
+      if (payload.reason !== "insufficient_balance" && payload.endedBy === "user") {
+        setUserEndedModalName(endedUserName);
         setShowUserEndedModal(true);
       }
 
       if (payload.sessionId === selectedSessionId) {
         setSelectedSessionId(null);
         setMessages([]);
-        showToast("Chat ended", "info");
+
+        if (payload.reason === "insufficient_balance") {
+          showToast(`${endedUserName} is out of balance. Chat ended automatically.`, "info");
+        } else {
+          showToast("Chat ended", "info");
+        }
       }
     };
 
