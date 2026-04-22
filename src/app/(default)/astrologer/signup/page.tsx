@@ -10,12 +10,14 @@ import Toast from "@/components/atoms/Toast";
 import { useToast } from "@/hooks/useToast";
 import { colors } from "@/utils/colors";
 import {
+  sendRegistrationOTP,
   verifyRegistrationOTP,
 } from "@/store/api/astrologer/auth";
 import { ArrowLeft } from "lucide-react";
 import {
   clearRecaptchaVerifier,
   confirmFirebaseOtp,
+  preloadRecaptchaVerifier,
   sendFirebaseOtp,
 } from "@/utils/firebasePhoneAuth";
 
@@ -53,6 +55,12 @@ export default function AstrologerSignup() {
     };
   }, []);
 
+  useEffect(() => {
+    preloadRecaptchaVerifier(ASTROLOGER_SIGNUP_RECAPTCHA_CONTAINER_ID).catch(() => {
+      // Best effort warmup only.
+    });
+  }, []);
+
   const handleSendOTP = async () => {
     // Validate phone number
     if (!/^\d{10}$/.test(phoneNumber)) {
@@ -62,8 +70,7 @@ export default function AstrologerSignup() {
 
     setLoading(true);
     try {
-      // Legacy Twilio flow retained for reference:
-      // const response = await sendRegistrationOTP({ phoneNumber });
+      await sendRegistrationOTP({ phoneNumber });
       const confirmation = await sendFirebaseOtp(
         phoneNumber,
         ASTROLOGER_SIGNUP_RECAPTCHA_CONTAINER_ID

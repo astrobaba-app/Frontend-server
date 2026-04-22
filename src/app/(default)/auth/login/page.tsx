@@ -6,7 +6,7 @@ import { X, ArrowLeft } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
-import { verifyOtp } from "@/store/api/auth/login";
+import { generateOtp, verifyOtp } from "@/store/api/auth/login";
 import { initiateGoogleLogin } from "@/store/api/auth/google";
 import { initiateAppleLogin } from "@/store/api/auth/apple";
 import Toast from "@/components/atoms/Toast";
@@ -20,6 +20,7 @@ import ContactModal from "@/components/modals/ContactModal";
 import {
   clearRecaptchaVerifier,
   confirmFirebaseOtp,
+  preloadRecaptchaVerifier,
   sendFirebaseOtp,
 } from "@/utils/firebasePhoneAuth";
 
@@ -81,6 +82,12 @@ function LoginPage() {
     };
   }, []);
 
+  useEffect(() => {
+    preloadRecaptchaVerifier(LOGIN_RECAPTCHA_CONTAINER_ID).catch(() => {
+      // Best effort warmup only.
+    });
+  }, []);
+
   const handleMobileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, "").slice(0, 10);
     setMobile(value);
@@ -93,8 +100,7 @@ function LoginPage() {
     }
     setLoading(true);
     try {
-      // Legacy Twilio flow retained for reference:
-      // await generateOtp(mobile);
+      await generateOtp(mobile);
       const confirmation = await sendFirebaseOtp(
         mobile,
         LOGIN_RECAPTCHA_CONTAINER_ID
@@ -171,8 +177,7 @@ function LoginPage() {
   const handleResendOtp = async () => {
     setLoading(true);
     try {
-      // Legacy Twilio flow retained for reference:
-      // await generateOtp(mobile);
+      await generateOtp(mobile);
       const confirmation = await sendFirebaseOtp(
         mobile,
         LOGIN_RECAPTCHA_CONTAINER_ID
