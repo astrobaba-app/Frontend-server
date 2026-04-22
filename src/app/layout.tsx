@@ -74,11 +74,6 @@ export default function RootLayout({
           content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover"
         />
 
-        <link rel="preconnect" href="https://www.google.com" crossOrigin="" />
-        <link rel="preconnect" href="https://www.gstatic.com" crossOrigin="" />
-        <link rel="dns-prefetch" href="https://www.google.com" />
-        <link rel="dns-prefetch" href="https://www.gstatic.com" />
-
         {/* Mobile web app capable */}
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
