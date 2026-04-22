@@ -6,6 +6,9 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export interface WalletBalance {
   balance: number;
+  signupBonusBalance?: number;
+  humanChatBalance?: number;
+  aiUsableBalance?: number;
   totalRecharge: number;
   totalSpent: number;
   isActive: boolean;

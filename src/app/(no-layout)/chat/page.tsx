@@ -118,6 +118,9 @@ function ChatPage() {
   const [inviteSecondsLeft, setInviteSecondsLeft] = useState(0);
   const [pendingRequestSessionId, setPendingRequestSessionId] = useState<string | null>(null);
   const [showInsufficientBalanceModal, setShowInsufficientBalanceModal] = useState(false);
+  const [insufficientBalanceMessage, setInsufficientBalanceMessage] = useState<string | null>(null);
+  const [showAiRedirectAction, setShowAiRedirectAction] = useState(false);
+  const [aiRedirectPath, setAiRedirectPath] = useState("/aichat");
   const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
   const [isMobileAppWebView, setIsMobileAppWebView] = useState(false);
   const [visualViewportHeight, setVisualViewportHeight] = useState<number | null>(null);
@@ -374,12 +377,18 @@ function ChatPage() {
     if (loading || !isLoggedIn || isWalletLoading || !hasFetchedBalance || walletError) return;
     if (balance > 0) return;
 
+    setInsufficientBalanceMessage(null);
+    setShowAiRedirectAction(false);
+    setAiRedirectPath("/aichat");
     setShowInsufficientBalanceModal(true);
   }, [balance, hasFetchedBalance, isLoggedIn, isWalletLoading, loading, walletError]);
 
   useEffect(() => {
     if (balance > 0) {
       setShowInsufficientBalanceModal(false);
+      setInsufficientBalanceMessage(null);
+      setShowAiRedirectAction(false);
+      setAiRedirectPath("/aichat");
     }
   }, [balance]);
 
@@ -933,6 +942,9 @@ function ChatPage() {
       }
 
       if (payload.reason === "insufficient_balance") {
+        setInsufficientBalanceMessage(null);
+        setShowAiRedirectAction(false);
+        setAiRedirectPath("/aichat");
         setShowInsufficientBalanceModal(true);
         showToastRef.current(
           "You are out of balance. Recharge immediately to continue chat.",
@@ -1165,8 +1177,23 @@ function ChatPage() {
         console.error("Failed to start chat session from send handler", err);
         if (typeof window !== "undefined") {
           const anyErr: any = err;
+          const backendCode = anyErr?.response?.data?.code;
+          const redirectTo = anyErr?.response?.data?.redirectTo;
           const backendMessage =
             anyErr?.response?.data?.message || anyErr?.response?.data?.error;
+
+          if (backendCode === "RECHARGE_REQUIRED_FOR_HUMAN_CHAT") {
+            setInsufficientBalanceMessage(
+              backendMessage ||
+                "Signup bonus is only for AI astrologer chat. Recharge wallet to chat with human astrologers."
+            );
+            setShowAiRedirectAction(true);
+            if (typeof redirectTo === "string" && redirectTo.trim().length > 0) {
+              setAiRedirectPath(redirectTo);
+            }
+            setShowInsufficientBalanceModal(true);
+          }
+
           showToast(
             backendMessage ||
               "Unable to start chat session. Please refresh the page and try again.",
@@ -1197,7 +1224,28 @@ function ChatPage() {
             (response: { success: boolean; error?: string; message?: ChatMessageDto }) => {
               if (!response?.success && response?.error) {
                 console.error("Failed to send message via socket:", response.error);
-                shouldFallbackToHttp = true;
+
+                const responseCode = (response as any)?.code;
+                if (responseCode === "RECHARGE_REQUIRED_FOR_HUMAN_CHAT") {
+                  setInsufficientBalanceMessage(
+                    response.error ||
+                      "Signup bonus is only for AI astrologer chat. Recharge wallet to chat with human astrologers."
+                  );
+                  setShowAiRedirectAction(true);
+                  setAiRedirectPath("/aichat");
+                  setShowInsufficientBalanceModal(true);
+                  showToast("Recharge required for human astrologer chat.", "error");
+                  shouldFallbackToHttp = false;
+                } else if (responseCode === "INSUFFICIENT_BALANCE") {
+                  setInsufficientBalanceMessage(null);
+                  setShowAiRedirectAction(false);
+                  setAiRedirectPath("/aichat");
+                  setShowInsufficientBalanceModal(true);
+                  showToast(response.error || "Insufficient wallet balance.", "error");
+                  shouldFallbackToHttp = false;
+                } else {
+                  shouldFallbackToHttp = true;
+                }
               } else if (response?.success) {
                 shouldFallbackToHttp = false;
 
@@ -1241,6 +1289,25 @@ function ChatPage() {
     } catch (error) {
       console.error("Send message error", error);
       if (typeof window !== "undefined") {
+        const anyErr: any = error;
+        const backendCode = anyErr?.response?.data?.code;
+        const redirectTo = anyErr?.response?.data?.redirectTo;
+        const backendMessage = anyErr?.response?.data?.message;
+
+        if (backendCode === "RECHARGE_REQUIRED_FOR_HUMAN_CHAT") {
+          setInsufficientBalanceMessage(
+            backendMessage ||
+              "Signup bonus is only for AI astrologer chat. Recharge wallet to chat with human astrologers."
+          );
+          setShowAiRedirectAction(true);
+          if (typeof redirectTo === "string" && redirectTo.trim().length > 0) {
+            setAiRedirectPath(redirectTo);
+          }
+          setShowInsufficientBalanceModal(true);
+          showToast(backendMessage || "Recharge required for human astrologer chat.", "error");
+          return;
+        }
+
         showToast("Failed to send message. Please try again.", "error");
       }
     } finally {
@@ -1442,6 +1509,9 @@ function ChatPage() {
     }
 
     if (!hasPositiveBalance) {
+      setInsufficientBalanceMessage(null);
+      setShowAiRedirectAction(false);
+      setAiRedirectPath("/aichat");
       setShowInsufficientBalanceModal(true);
       showToast("You are out of balance. Recharge immediately to continue chat.", "error");
       return;
@@ -1482,8 +1552,23 @@ function ChatPage() {
       }
     } catch (error: any) {
       console.error("Failed to start chat session", error);
+      const backendCode = error?.response?.data?.code;
+      const redirectTo = error?.response?.data?.redirectTo;
       const backendMessage =
         error?.response?.data?.message || "Unable to start chat session";
+
+      if (backendCode === "RECHARGE_REQUIRED_FOR_HUMAN_CHAT") {
+        setInsufficientBalanceMessage(
+          backendMessage ||
+            "Signup bonus is only for AI astrologer chat. Recharge wallet to chat with human astrologers."
+        );
+        setShowAiRedirectAction(true);
+        if (typeof redirectTo === "string" && redirectTo.trim().length > 0) {
+          setAiRedirectPath(redirectTo);
+        }
+        setShowInsufficientBalanceModal(true);
+      }
+
       showToast(backendMessage, "error");
     }
   };
@@ -2121,10 +2206,11 @@ function ChatPage() {
               </h3>
 
               <p className="text-sm mb-6" style={{ color: colors.gray }}>
-                Your wallet balance is too low. Recharge immediately to start or continue chatting with {astrologerInfo?.name || "this astrologer"}.
+                {insufficientBalanceMessage ||
+                  `Your wallet balance is too low. Recharge immediately to start or continue chatting with ${astrologerInfo?.name || "this astrologer"}.`}
               </p>
 
-              <div className="w-full">
+              <div className="w-full space-y-3">
                 <Link href="/profile/wallet" className="block w-full">
                   <button
                     className="w-full px-4 py-3 rounded-xl hover:opacity-90 transition-opacity"
@@ -2136,6 +2222,16 @@ function ChatPage() {
                     Recharge Wallet
                   </button>
                 </Link>
+
+                {showAiRedirectAction && (
+                  <Link href={aiRedirectPath} className="block w-full">
+                    <button
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-900 bg-white hover:bg-gray-50 transition-colors"
+                    >
+                      Continue With AI Astrologer
+                    </button>
+                  </Link>
+                )}
               </div>
             </div>
           </div>

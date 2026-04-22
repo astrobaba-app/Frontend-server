@@ -59,8 +59,13 @@ export const useAstrologerChatWallet = ({
     try {
       setIsLoading(true);
       const walletData = await getWalletBalance();
-      setBalance(walletData.balance);
-      onBalanceUpdate?.(walletData.balance);
+      const humanChatBalance =
+        typeof walletData.humanChatBalance === "number"
+          ? walletData.humanChatBalance
+          : walletData.balance;
+
+      setBalance(humanChatBalance);
+      onBalanceUpdate?.(humanChatBalance);
       setError(null);
     } catch (err: any) {
       console.error('Failed to fetch wallet balance:', err);
