@@ -933,16 +933,6 @@ function MyProfilePageContent() {
                   : "Your details are locked. Tap Edit to make changes."}
               </p>
             </div>
-            {!isEditMode && (
-              <Button
-                type="button"
-                size="sm"
-                className="hidden md:inline-flex md:w-auto md:min-w-[120px]"
-                onClick={() => setIsEditMode(true)}
-              >
-                Edit Profile
-              </Button>
-            )}
           </div>
 
           {isEditMode ? (
@@ -1173,7 +1163,7 @@ function MyProfilePageContent() {
               <Button
                 type="button"
                 size="sm"
-                className="w-full md:hidden"
+                className="w-full md:w-auto md:min-w-40"
                 onClick={() => setIsEditMode(true)}
               >
                 Edit Profile
