@@ -68,11 +68,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://www.google.com" />
-        <link rel="preconnect" href="https://www.gstatic.com" crossOrigin="" />
-        <link rel="dns-prefetch" href="//www.google.com" />
-        <link rel="dns-prefetch" href="//www.gstatic.com" />
-
         {/* Mobile viewport for React Native WebView and mobile browsers */}
         <meta
           name="viewport"
