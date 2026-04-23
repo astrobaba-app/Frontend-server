@@ -141,6 +141,7 @@ function MyProfilePageContent() {
   const [profileHydrated, setProfileHydrated] = useState(false);
   const [setupStep, setSetupStep] = useState(1);
   const [submittingSetup, setSubmittingSetup] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const [showGiftModal, setShowGiftModal] = useState(false);
   const [signupBonusAmount, setSignupBonusAmount] = useState(0);
@@ -166,6 +167,9 @@ function MyProfilePageContent() {
     country: "India",
     pincode: "",
   });
+  const [savedFormData, setSavedFormData] = useState<null | typeof formData>(
+    null,
+  );
 
   const [placeSuggestions, setPlaceSuggestions] = useState<
     {
@@ -271,6 +275,26 @@ function MyProfilePageContent() {
           country: p.country || "India",
           pincode: p.pincode || "",
         }));
+        setSavedFormData({
+          name: p.fullName || "",
+          gender: p.gender || "",
+          day: dateObj ? String(dateObj.getDate()).padStart(2, "0") : "",
+          month: dateObj ? String(dateObj.getMonth() + 1).padStart(2, "0") : "",
+          year: dateObj ? String(dateObj.getFullYear()) : "",
+          hour: parsedTime.hour,
+          minute: parsedTime.minute,
+          ampm: parsedTime.ampm,
+          dontKnowTime: p.timeOfbirth ? p.timeOfbirth.startsWith("00:00") : false,
+          birthPlace: p.placeOfBirth || "",
+          latitude: p.latitude || "",
+          longitude: p.longitude || "",
+          address: p.currentAddress || "",
+          city: p.city || "",
+          state: p.state || "",
+          country: p.country || "India",
+          pincode: p.pincode || "",
+        });
+        setIsEditMode(false);
       } catch {
         showToast("Failed to load profile", "error");
       } finally {
@@ -521,6 +545,8 @@ function MyProfilePageContent() {
       if (response.success) {
         await refreshUser();
         const kundliCreated = await maybeGenerateKundli(false);
+        setSavedFormData(formData);
+        setIsEditMode(false);
         showToast(
           kundliCreated
             ? "Profile updated and Kundli generated"
@@ -533,13 +559,15 @@ function MyProfilePageContent() {
     }
   };
 
-  const renderBirthPlaceInput = () => (
+  const renderBirthPlaceInput = (disabled = false) => (
     <div className="relative" ref={birthPlaceRef}>
       <Input
         label="Birth Place"
         required
         value={formData.birthPlace}
+        disabled={disabled}
         onChange={(e) => {
+          if (disabled) return;
           const value = e.target.value;
           setFormData((prev) => ({
             ...prev,
@@ -551,7 +579,7 @@ function MyProfilePageContent() {
         }}
         placeholder="Mumbai, India"
       />
-      {placeSuggestions.length > 0 && (
+      {!disabled && placeSuggestions.length > 0 && (
         <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-xl max-h-60 overflow-auto">
           {placeSuggestions.map((s) => (
             <button
@@ -570,6 +598,25 @@ function MyProfilePageContent() {
       {isLoadingPlaces && (
         <p className="mt-2 text-xs text-gray-500">Loading places...</p>
       )}
+    </div>
+  );
+
+  const handleEditCancel = () => {
+    if (savedFormData) {
+      setFormData(savedFormData);
+    }
+    setPlaceSuggestions([]);
+    setIsEditMode(false);
+  };
+
+  const renderReadOnlyItem = (label: string, value: string) => (
+    <div className="rounded-lg border border-gray-100 bg-gray-50 px-2.5 py-2 sm:px-3 sm:py-2.5">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+        {label}
+      </p>
+      <p className="mt-0.5 text-sm sm:text-[15px] font-semibold text-gray-900 wrap-break-word leading-snug">
+        {value || "Not provided"}
+      </p>
     </div>
   );
 
@@ -875,187 +922,264 @@ function MyProfilePageContent() {
         </Card>
       ) : !authLoading && profileHydrated ? (
         <Card padding="lg" className="shadow-sm border-gray-100">
-          <Heading level={2} className="text-lg sm:text-2xl mb-5 sm:mb-6">
-            Personal Details
-          </Heading>
-
-          <form
-            onSubmit={handleRegularProfileUpdate}
-            className="space-y-5 sm:space-y-6"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              <Input
-                label="Full Name"
-                required
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, name: e.target.value }))
-                }
-              />
-              <Select
-                label="Gender"
-                required
-                value={formData.gender}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, gender: e.target.value }))
-                }
-              >
-                <option value="">Select Gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </Select>
-            </div>
-
-            <hr className="border-gray-100" />
-
-            <div className="space-y-4 sm:space-y-5 rounded-xl border border-gray-100 bg-gray-50/40 p-3 sm:p-4">
-              <Heading
-                level={3}
-                className="text-base sm:text-lg font-semibold text-gray-800"
-              >
-                Birth Date & Time
+          <div className="mb-4 sm:mb-5 flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between">
+            <div>
+              <Heading level={2} className="text-lg sm:text-2xl">
+                Personal Details
               </Heading>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Select
-                  label="Day"
-                  required
-                  value={formData.day}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, day: e.target.value }))
-                  }
-                >
-                  {Array.from({ length: 31 }, (_, i) =>
-                    String(i + 1).padStart(2, "0"),
-                  ).map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </Select>
-                <Select
-                  label="Month"
-                  required
-                  value={formData.month}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, month: e.target.value }))
-                  }
-                >
-                  {[
-                    "01",
-                    "02",
-                    "03",
-                    "04",
-                    "05",
-                    "06",
-                    "07",
-                    "08",
-                    "09",
-                    "10",
-                    "11",
-                    "12",
-                  ].map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </Select>
-                <Select
-                  label="Year"
-                  required
-                  value={formData.year}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, year: e.target.value }))
-                  }
-                >
-                  {Array.from({ length: 100 }, (_, i) => 2026 - i).map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Select
-                  label="Hour"
-                  value={formData.hour}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, hour: e.target.value }))
-                  }
-                  disabled={formData.dontKnowTime}
-                >
-                  <option value="">HH</option>
-                  {Array.from({ length: 12 }, (_, i) =>
-                    String(i + 1).padStart(2, "0"),
-                  ).map((h) => (
-                    <option key={h} value={h}>
-                      {h}
-                    </option>
-                  ))}
-                </Select>
-                <Select
-                  label="Mins"
-                  value={formData.minute}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, minute: e.target.value }))
-                  }
-                  disabled={formData.dontKnowTime}
-                >
-                  <option value="">MM</option>
-                  {Array.from({ length: 60 }, (_, i) =>
-                    String(i).padStart(2, "0"),
-                  ).map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </Select>
-                <Select
-                  label="AM/PM"
-                  value={formData.ampm}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, ampm: e.target.value }))
-                  }
-                  disabled={formData.dontKnowTime}
-                >
-                  <option value="AM">AM</option>
-                  <option value="PM">PM</option>
-                </Select>
-              </div>
-
-              <label className="inline-flex items-start gap-2 text-sm text-gray-700 leading-snug">
-                <input
-                  type="checkbox"
-                  checked={formData.dontKnowTime}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      dontKnowTime: e.target.checked,
-                    }))
-                  }
-                  className="w-4 h-4 mt-0.5"
-                />
-                I do not know my birth time
-              </label>
-
-              {renderBirthPlaceInput()}
+              <p className="mt-1 text-xs sm:text-sm text-gray-500">
+                {isEditMode
+                  ? "Edit your details and save changes."
+                  : "Your details are locked. Tap Edit to make changes."}
+              </p>
             </div>
+            {!isEditMode && (
+              <Button
+                type="button"
+                size="sm"
+                className="hidden md:inline-flex md:w-auto md:min-w-[120px]"
+                onClick={() => setIsEditMode(true)}
+              >
+                Edit Profile
+              </Button>
+            )}
+          </div>
 
-            <Button
-              type="submit"
-              fullWidth
-              size="lg"
-              variant="custom"
-              customColors={{
-                backgroundColor: "#facd05",
-                textColor: "#111827",
-              }}
-              className="rounded-xl font-black text-base sm:text-lg py-3.5 sm:py-4"
+          {isEditMode ? (
+            <form
+              onSubmit={handleRegularProfileUpdate}
+              className="space-y-5 sm:space-y-6"
             >
-              Update Profile
-            </Button>
-          </form>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                <Input
+                  label="Full Name"
+                  required
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                />
+                <Select
+                  label="Gender"
+                  required
+                  value={formData.gender}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, gender: e.target.value }))
+                  }
+                >
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </Select>
+              </div>
+
+              <hr className="border-gray-100" />
+
+              <div className="space-y-4 sm:space-y-5 rounded-xl border border-gray-100 bg-gray-50/40 p-3 sm:p-4">
+                <Heading
+                  level={3}
+                  className="text-base sm:text-lg font-semibold text-gray-800"
+                >
+                  Birth Date & Time
+                </Heading>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Select
+                    label="Day"
+                    required
+                    value={formData.day}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, day: e.target.value }))
+                    }
+                  >
+                    {Array.from({ length: 31 }, (_, i) =>
+                      String(i + 1).padStart(2, "0"),
+                    ).map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </Select>
+                  <Select
+                    label="Month"
+                    required
+                    value={formData.month}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, month: e.target.value }))
+                    }
+                  >
+                    {[
+                      "01",
+                      "02",
+                      "03",
+                      "04",
+                      "05",
+                      "06",
+                      "07",
+                      "08",
+                      "09",
+                      "10",
+                      "11",
+                      "12",
+                    ].map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </Select>
+                  <Select
+                    label="Year"
+                    required
+                    value={formData.year}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, year: e.target.value }))
+                    }
+                  >
+                    {Array.from({ length: 100 }, (_, i) => 2026 - i).map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Select
+                    label="Hour"
+                    value={formData.hour}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, hour: e.target.value }))
+                    }
+                    disabled={formData.dontKnowTime}
+                  >
+                    <option value="">HH</option>
+                    {Array.from({ length: 12 }, (_, i) =>
+                      String(i + 1).padStart(2, "0"),
+                    ).map((h) => (
+                      <option key={h} value={h}>
+                        {h}
+                      </option>
+                    ))}
+                  </Select>
+                  <Select
+                    label="Mins"
+                    value={formData.minute}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, minute: e.target.value }))
+                    }
+                    disabled={formData.dontKnowTime}
+                  >
+                    <option value="">MM</option>
+                    {Array.from({ length: 60 }, (_, i) =>
+                      String(i).padStart(2, "0"),
+                    ).map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </Select>
+                  <Select
+                    label="AM/PM"
+                    value={formData.ampm}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, ampm: e.target.value }))
+                    }
+                    disabled={formData.dontKnowTime}
+                  >
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                  </Select>
+                </div>
+
+                <label className="inline-flex items-start gap-2 text-sm text-gray-700 leading-snug">
+                  <input
+                    type="checkbox"
+                    checked={formData.dontKnowTime}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        dontKnowTime: e.target.checked,
+                      }))
+                    }
+                    className="w-4 h-4 mt-0.5"
+                  />
+                  I do not know my birth time
+                </label>
+
+                {renderBirthPlaceInput()}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  fullWidth
+                  size="lg"
+                  className="rounded-xl font-bold text-base py-3.5"
+                  onClick={handleEditCancel}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  fullWidth
+                  size="lg"
+                  variant="custom"
+                  customColors={{
+                    backgroundColor: "#facd05",
+                    textColor: "#111827",
+                  }}
+                  className="rounded-xl font-black text-base sm:text-lg py-3.5 sm:py-4"
+                >
+                  Update Profile
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <div className="space-y-4 sm:space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3">
+                {renderReadOnlyItem("Full Name", formData.name)}
+                {renderReadOnlyItem("Gender", formData.gender)}
+              </div>
+
+              <div className="space-y-3 rounded-lg border border-gray-100 bg-gray-50/40 p-2.5 sm:p-3">
+                <Heading
+                  level={3}
+                  className="text-base sm:text-lg font-semibold text-gray-800"
+                >
+                  Birth Date & Time
+                </Heading>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {renderReadOnlyItem("Day", formData.day)}
+                  {renderReadOnlyItem("Month", formData.month)}
+                  {renderReadOnlyItem("Year", formData.year)}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {renderReadOnlyItem("Hour", formData.dontKnowTime ? "--" : formData.hour)}
+                  {renderReadOnlyItem("Mins", formData.dontKnowTime ? "--" : formData.minute)}
+                  {renderReadOnlyItem("AM/PM", formData.dontKnowTime ? "--" : formData.ampm)}
+                </div>
+                {renderReadOnlyItem(
+                  "Birth Time",
+                  formData.dontKnowTime
+                    ? "I do not know my birth time"
+                    : formData.hour && formData.minute
+                      ? `${formData.hour}:${formData.minute} ${formData.ampm}`
+                      : "Not provided",
+                )}
+                {renderReadOnlyItem("Birth Place", formData.birthPlace)}
+              </div>
+
+              <Button
+                type="button"
+                size="sm"
+                className="w-full md:hidden"
+                onClick={() => setIsEditMode(true)}
+              >
+                Edit Profile
+              </Button>
+            </div>
+          )}
         </Card>
       ) : null}
       </div>

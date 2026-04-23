@@ -25,6 +25,7 @@ export default function AstrologerProfilePage() {
   const [imagePreview, setImagePreview] = useState<string>("");
   const [newImage, setNewImage] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -37,6 +38,7 @@ export default function AstrologerProfilePage() {
     skills: [] as string[],
     bio: "",
   });
+  const [savedFormData, setSavedFormData] = useState<null | typeof formData>(null);
 
   useEffect(() => {
     fetchProfile();
@@ -76,7 +78,7 @@ export default function AstrologerProfilePage() {
       const response = await getAstrologerProfile();
       if (response.success) {
         setProfile(response.astrologer);
-        setFormData({
+        const nextFormData = {
           fullName: response.astrologer.fullName || "",
           phoneNumber: response.astrologer.phoneNumber || "",
           yearsOfExperience: response.astrologer.yearsOfExperience?.toString() || "",
@@ -90,7 +92,10 @@ export default function AstrologerProfilePage() {
             ? response.astrologer.skills 
             : [],
           bio: response.astrologer.bio || "",
-        });
+        };
+        setFormData(nextFormData);
+        setSavedFormData(nextFormData);
+        setIsEditMode(false);
         if (response.astrologer.photo) {
           setImagePreview(response.astrologer.photo);
         }
@@ -170,6 +175,8 @@ export default function AstrologerProfilePage() {
         if (response.astrologer.photo) {
           setImagePreview(response.astrologer.photo);
         }
+        setSavedFormData(formData);
+        setIsEditMode(false);
         setNewImage(null);
         showToast("Profile updated successfully!", "success");
 
@@ -188,6 +195,24 @@ export default function AstrologerProfilePage() {
     }
   };
 
+  const handleEditCancel = () => {
+    if (savedFormData) {
+      setFormData(savedFormData);
+    }
+    setIsEditMode(false);
+  };
+
+  const renderReadOnlyItem = (label: string, value: string) => (
+    <div className="rounded-lg border border-gray-100 bg-gray-50 px-2.5 py-2 sm:px-3 sm:py-2.5">
+      <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: colors.gray }}>
+        {label}
+      </p>
+      <p className="mt-0.5 text-sm sm:text-[15px] font-semibold leading-snug" style={{ color: colors.black }}>
+        {value || "Not provided"}
+      </p>
+    </div>
+  );
+
   return (
     <div className="md:px-4 py-0 sm:px-6 lg:px-8 lg:py-0">
       <div className="max-w-4xl mx-auto">
@@ -201,318 +226,382 @@ export default function AstrologerProfilePage() {
         {loading ? (
           <AstrologerProfileSkeleton />
         ) : (
-          <form
-            onSubmit={handleSubmit}
-            className="bg-white rounded-lg shadow-md p-4 sm:p-6 lg:p-8"
-          >
-          <div className="mb-6 sm:mb-8">
-            <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4" style={{ color: colors.black }}>
-              Availability Status
-            </h2>
-            <p className="mb-4 sm:mb-6 text-sm sm:text-base" style={{ color: colors.gray }}>
-              Control your online status to receive consultation requests from users.
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:p-6 rounded-lg border-2 gap-4" style={{ borderColor: colors.offYellow }}>
-              <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1">
-                <div
-                  className="w-4 h-4 rounded-full mt-1 sm:mt-0 shrink-0"
-                  style={{ backgroundColor: isOnline ? colors.primeGreen : colors.primeRed }}
-                ></div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-base sm:text-lg" style={{ color: colors.black }}>
-                    {isOnline ? "You are Online" : "You are Offline"}
-                  </h3>
-                  <p className="text-xs sm:text-sm" style={{ color: colors.gray }}>
-                    {isOnline
-                      ? "Users can send you consultation requests"
-                      : "Users cannot send you consultation requests"}
+          <>
+            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 lg:p-8">
+              <div className="mb-4 sm:mb-5 flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-lg sm:text-xl font-bold" style={{ color: colors.black }}>
+                    Profile Details
+                  </h2>
+                  <p className="mt-1 text-xs sm:text-sm" style={{ color: colors.gray }}>
+                    {isEditMode
+                      ? "Edit your details and save changes."
+                      : "Your details are locked. Tap Edit to make changes."}
                   </p>
                 </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleToggleStatus(!isOnline)}
-                disabled={togglingStatus || statusLoading}
-                className="relative inline-flex h-8 w-16 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 shrink-0"
-                style={{
-                  backgroundColor: isOnline ? colors.primeGreen : colors.gray,
-                }}
-              >
-                <span
-                  className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
-                    isOnline ? "translate-x-9" : "translate-x-1"
-                  }`}
-                />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-4">
-              <Button
-                fullWidth
-                type="button"
-                onClick={() => handleToggleStatus(true)}
-                loading={togglingStatus && !isOnline}
-                disabled={isOnline || togglingStatus || statusLoading}
-                customColors={{
-                  backgroundColor: colors.primeGreen,
-                  textColor: colors.white,
-                }}
-                className="py-2.5 sm:py-3 text-base sm:text-lg font-semibold"
-              >
-                {isOnline ? "Already Online" : "Go Online"}
-              </Button>
-
-              <Button
-                fullWidth
-                type="button"
-                onClick={() => handleToggleStatus(false)}
-                loading={togglingStatus && isOnline}
-                disabled={!isOnline || togglingStatus || statusLoading}
-                customColors={{
-                  backgroundColor: colors.primeRed,
-                  textColor: colors.white,
-                }}
-                className="py-2.5 sm:py-3 text-base sm:text-lg font-semibold"
-              >
-                {!isOnline ? "Already Offline" : "Go Offline"}
-              </Button>
-            </div>
-          </div>
-
-          <div className="mb-6 border-t pt-6" style={{ borderColor: colors.offYellow }}></div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
-            {/* Full Name */}
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
-                Full Name
-              </label>
-              <Input
-                type="text"
-                name="fullName"
-                placeholder="John Doe"
-                value={formData.fullName}
-                onChange={handleInputChange}
-                error={errors.fullName}
-              />
-            </div>
-
-            {/* Phone Number */}
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
-                Phone Number
-              </label>
-              <Input
-                type="tel"
-                name="phoneNumber"
-                placeholder="+91 9876543210"
-                value={formData.phoneNumber}
-                disabled
-                className="bg-gray-100"
-              />
-            </div>
-
-            {/* Year of Experience */}
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
-                Year of Experience
-              </label>
-              <Input
-                type="number"
-                name="yearsOfExperience"
-                placeholder="Year of Experience"
-                value={formData.yearsOfExperience}
-                onChange={handleInputChange}
-                min="0"
-              />
-            </div>
-
-            {/* Price Per Minute */}
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
-                Price Per Minute (₹)
-              </label>
-              <Input
-                type="number"
-                name="pricePerMinute"
-                placeholder="Enter your price per minute"
-                value={formData.pricePerMinute}
-                onChange={handleInputChange}
-                min="0"
-                step="0.5"
-              />
-            </div>
-
-            {/* Date of Birth */}
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
-                Date of Birth
-              </label>
-              <Input
-                type="date"
-                name="dateOfBirth"
-                placeholder="DD/MM/YYYY"
-                value={formData.dateOfBirth}
-                onChange={handleInputChange}
-              />
-            </div>
-
-            {/* Gender */}
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
-                Gender
-              </label>
-              <Select
-                name="gender"
-                value={formData.gender}
-                onChange={handleInputChange}
-              >
-                <option value="">Select Gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </Select>
-            </div>
-
-            {/* Languages */}
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
-                Languages
-              </label>
-              <div className="border rounded-lg p-3 min-h-[42px] flex flex-wrap gap-2">
-                {formData.languages.map((lang, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm"
-                    style={{ backgroundColor: colors.offYellow, color: colors.black }}
+                {!isEditMode && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="hidden md:inline-flex md:w-auto md:min-w-[120px]"
+                    onClick={() => setIsEditMode(true)}
                   >
-                    {lang}
-                    <button
-                      type="button"
-                      onClick={() => removeTag("languages", index)}
-                      className="hover:text-red-600"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-                <input
-                  type="text"
-                  placeholder={formData.languages.length === 0 ? "Hindi, English" : ""}
-                  className="flex-1 outline-none min-w-[100px]"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === ",") {
-                      e.preventDefault();
-                      addTag("languages", e.currentTarget.value);
-                      e.currentTarget.value = "";
-                    }
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Skills */}
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
-                Skills
-              </label>
-              <div className="border rounded-lg p-3 min-h-[42px] flex flex-wrap gap-2">
-                {formData.skills.map((skill, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm"
-                    style={{ backgroundColor: colors.offYellow, color: colors.black }}
-                  >
-                    {skill}
-                    <button
-                      type="button"
-                      onClick={() => removeTag("skills", index)}
-                      className="hover:text-red-600"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-                <input
-                  type="text"
-                  placeholder={formData.skills.length === 0 ? "Numerology, Vedic" : ""}
-                  className="flex-1 outline-none min-w-[100px]"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === ",") {
-                      e.preventDefault();
-                      addTag("skills", e.currentTarget.value);
-                      e.currentTarget.value = "";
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Bio */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
-              Bio
-            </label>
-            <Textarea
-              name="bio"
-              placeholder="Tell us about yourself and your expertise..."
-              value={formData.bio}
-              onChange={handleInputChange}
-              rows={4}
-            />
-          </div>
-
-          {/* Profile Image Upload / Preview */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
-              Profile Image
-            </label>
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="relative w-24 h-24 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
-                {imagePreview ? (
-                  <img
-                    src={imagePreview}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <span className="text-sm text-gray-400">No Image</span>
+                    Edit Profile
+                  </Button>
                 )}
               </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageSelect}
-                className="hidden"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {imagePreview ? "Change Image" : "Upload Image"}
-              </Button>
-            </div>
-          </div>
 
-          {/* Update Button */}
-          <Button
-            type="submit"
-            fullWidth
-            loading={updating}
-            customColors={{
-              backgroundColor: colors.primeYellow,
-              textColor: colors.black,
-            }}
-            className="py-3 text-lg font-semibold"
-          >
-            Update Profile
-          </Button>
-          </form>
+              {isEditMode ? (
+                <form onSubmit={handleSubmit}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
+                        Full Name
+                      </label>
+                      <Input
+                        type="text"
+                        name="fullName"
+                        placeholder="John Doe"
+                        value={formData.fullName}
+                        onChange={handleInputChange}
+                        error={errors.fullName}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
+                        Phone Number
+                      </label>
+                      <Input
+                        type="tel"
+                        name="phoneNumber"
+                        placeholder="+91 9876543210"
+                        value={formData.phoneNumber}
+                        disabled
+                        className="bg-gray-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
+                        Year of Experience
+                      </label>
+                      <Input
+                        type="number"
+                        name="yearsOfExperience"
+                        placeholder="Year of Experience"
+                        value={formData.yearsOfExperience}
+                        onChange={handleInputChange}
+                        min="0"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
+                        Price Per Minute (₹)
+                      </label>
+                      <Input
+                        type="number"
+                        name="pricePerMinute"
+                        placeholder="Enter your price per minute"
+                        value={formData.pricePerMinute}
+                        onChange={handleInputChange}
+                        min="0"
+                        step="0.5"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
+                        Date of Birth
+                      </label>
+                      <Input
+                        type="date"
+                        name="dateOfBirth"
+                        placeholder="DD/MM/YYYY"
+                        value={formData.dateOfBirth}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
+                        Gender
+                      </label>
+                      <Select
+                        name="gender"
+                        value={formData.gender}
+                        onChange={handleInputChange}
+                      >
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
+                        Languages
+                      </label>
+                      <div className="border rounded-lg p-3 min-h-[42px] flex flex-wrap gap-2">
+                        {formData.languages.map((lang, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm"
+                            style={{ backgroundColor: colors.offYellow, color: colors.black }}
+                          >
+                            {lang}
+                            <button
+                              type="button"
+                              onClick={() => removeTag("languages", index)}
+                              className="hover:text-red-600"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                        <input
+                          type="text"
+                          placeholder={formData.languages.length === 0 ? "Hindi, English" : ""}
+                          className="flex-1 outline-none min-w-[100px]"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === ",") {
+                              e.preventDefault();
+                              addTag("languages", e.currentTarget.value);
+                              e.currentTarget.value = "";
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
+                        Skills
+                      </label>
+                      <div className="border rounded-lg p-3 min-h-[42px] flex flex-wrap gap-2">
+                        {formData.skills.map((skill, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm"
+                            style={{ backgroundColor: colors.offYellow, color: colors.black }}
+                          >
+                            {skill}
+                            <button
+                              type="button"
+                              onClick={() => removeTag("skills", index)}
+                              className="hover:text-red-600"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                        <input
+                          type="text"
+                          placeholder={formData.skills.length === 0 ? "Numerology, Vedic" : ""}
+                          className="flex-1 outline-none min-w-[100px]"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === ",") {
+                              e.preventDefault();
+                              addTag("skills", e.currentTarget.value);
+                              e.currentTarget.value = "";
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
+                      Bio
+                    </label>
+                    <Textarea
+                      name="bio"
+                      placeholder="Tell us about yourself and your expertise..."
+                      value={formData.bio}
+                      onChange={handleInputChange}
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium mb-2" style={{ color: colors.black }}>
+                      Profile Image
+                    </label>
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <div className="relative w-24 h-24 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                        {imagePreview ? (
+                          <img
+                            src={imagePreview}
+                            alt="Profile"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-sm text-gray-400">No Image</span>
+                        )}
+                      </div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageSelect}
+                        className="hidden"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {imagePreview ? "Change Image" : "Upload Image"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      fullWidth
+                      className="py-3 text-base font-semibold"
+                      onClick={handleEditCancel}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      fullWidth
+                      loading={updating}
+                      customColors={{
+                        backgroundColor: colors.primeYellow,
+                        textColor: colors.black,
+                      }}
+                      className="py-3 text-lg font-semibold"
+                    >
+                      Update Profile
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <div className="space-y-4 sm:space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3">
+                    {renderReadOnlyItem("Full Name", formData.fullName)}
+                    {renderReadOnlyItem("Phone Number", formData.phoneNumber)}
+                    {renderReadOnlyItem("Year of Experience", formData.yearsOfExperience)}
+                    {renderReadOnlyItem("Price Per Minute", formData.pricePerMinute ? `₹${formData.pricePerMinute}` : "")}
+                    {renderReadOnlyItem("Date of Birth", formData.dateOfBirth)}
+                    {renderReadOnlyItem("Gender", formData.gender)}
+                  </div>
+
+                  <div className="rounded-lg border border-gray-100 bg-gray-50 px-2.5 py-2 sm:px-3 sm:py-2.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: colors.gray }}>
+                      Languages
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-2">
+                      {formData.languages.length > 0 ? formData.languages.map((lang, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+                          style={{ backgroundColor: colors.offYellow, color: colors.black }}
+                        >
+                          {lang}
+                        </span>
+                      )) : (
+                        <span className="text-sm" style={{ color: colors.black }}>Not provided</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-gray-100 bg-gray-50 px-2.5 py-2 sm:px-3 sm:py-2.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: colors.gray }}>
+                      Skills
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-2">
+                      {formData.skills.length > 0 ? formData.skills.map((skill, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+                          style={{ backgroundColor: colors.offYellow, color: colors.black }}
+                        >
+                          {skill}
+                        </span>
+                      )) : (
+                        <span className="text-sm" style={{ color: colors.black }}>Not provided</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {renderReadOnlyItem("Bio", formData.bio)}
+
+                  <div className="rounded-lg border border-gray-100 bg-gray-50 px-2.5 py-2 sm:px-3 sm:py-2.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: colors.gray }}>
+                      Profile Image
+                    </p>
+                    <div className="mt-1">
+                      <div className="relative w-20 h-20 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                        {imagePreview ? (
+                          <img
+                            src={imagePreview}
+                            alt="Profile"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-xs text-gray-400">No Image</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="w-full md:hidden"
+                    onClick={() => setIsEditMode(true)}
+                  >
+                    Edit Profile
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 lg:p-8 mt-4 sm:mt-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:p-6 rounded-lg border-2 gap-4" style={{ borderColor: colors.offYellow }}>
+                <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1">
+                  <div
+                    className="w-4 h-4 rounded-full mt-1 sm:mt-0 shrink-0"
+                    style={{ backgroundColor: isOnline ? colors.primeGreen : colors.primeRed }}
+                  ></div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-base sm:text-lg" style={{ color: colors.black }}>
+                      {isOnline ? "You are Online" : "You are Offline"}
+                    </h3>
+                    <p className="text-xs sm:text-sm" style={{ color: colors.gray }}>
+                      {isOnline
+                        ? "Users can send you consultation requests"
+                        : "Users cannot send you consultation requests"}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleStatus(!isOnline)}
+                  disabled={togglingStatus || statusLoading}
+                  className="relative inline-flex h-8 w-16 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 shrink-0"
+                  style={{
+                    backgroundColor: isOnline ? colors.primeGreen : colors.gray,
+                  }}
+                >
+                  <span
+                    className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                      isOnline ? "translate-x-9" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
 
