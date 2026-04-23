@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { User, Wallet, Heart, ShoppingBag, MessageSquare, Settings, LogOut, Star, ChevronRight, HelpCircle } from "lucide-react";
+import { User, Wallet, Heart, ShoppingBag, MessageSquare, Settings, LogOut, Star, ChevronRight, HelpCircle, FileText } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LuShoppingCart } from "react-icons/lu";
@@ -16,9 +16,8 @@ const MENU_ITEMS = [
   { icon: Wallet, label: "My Wallet", href: "/profile/wallet" },
   { icon: Heart, label: "My Following", href: "/profile/following" },
   { icon: Heart, label: "Free Kundli", href: "/profile/kundli" },
+  //{ icon: FileText, label: "Kundli Report", href: "/profile/kundli-report" },
   { icon: MessageSquare, label: "My Posts", href: "/profile/my-posts" },
-  // TEMPORARILY HIDDEN: Uncomment the line below to show Generate Kundli Report feature
-  // { icon: FileText, label: "Generate Kundli Report (PDF)", href: "/profile/kundli-report" },
   { icon: ShoppingBag, label: "My Orders", href: "/profile/orders" },
   { icon: LuShoppingCart, label: "My cart", href: "/cart" },
   { icon: Star, label: "My Reviews", href: "/profile/reviews" },

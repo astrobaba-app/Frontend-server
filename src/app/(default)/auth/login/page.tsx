@@ -20,6 +20,7 @@ import ContactModal from "@/components/modals/ContactModal";
 import {
   clearRecaptchaVerifier,
   confirmFirebaseOtp,
+  preloadRecaptchaVerifier,
   sendFirebaseOtp,
 } from "@/utils/firebasePhoneAuth";
 
@@ -78,6 +79,47 @@ function LoginPage() {
   useEffect(() => {
     return () => {
       clearRecaptchaVerifier();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    let cancelled = false;
+    let timeoutId: number | undefined;
+    let idleId: number | undefined;
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (
+        callback: () => void,
+        options?: { timeout: number }
+      ) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+
+    const warmupRecaptcha = () => {
+      if (cancelled) return;
+
+      void preloadRecaptchaVerifier(LOGIN_RECAPTCHA_CONTAINER_ID).catch(() => {
+        // Ignore warmup failures; send flow will handle user-visible errors.
+      });
+    };
+
+    if (idleWindow.requestIdleCallback) {
+      idleId = idleWindow.requestIdleCallback(warmupRecaptcha, { timeout: 1500 });
+    } else {
+      timeoutId = window.setTimeout(warmupRecaptcha, 200);
+    }
+
+    return () => {
+      cancelled = true;
+
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId);
+      }
+
+      if (idleId !== undefined && idleWindow.cancelIdleCallback) {
+        idleWindow.cancelIdleCallback(idleId);
+      }
     };
   }, []);
 

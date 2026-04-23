@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Card from "@/components/atoms/Card";
 import Heading from "@/components/atoms/Heading";
@@ -9,11 +9,27 @@ import Toast from "@/components/atoms/Toast";
 import {
   getUserKundlisForReport,
   generateKundliReport,
+  getGeneratedKundliReport,
   downloadKundliReportPDF,
   KundliListItem,
-  ReportData,
+  KundliReportResponse,
 } from "@/store/api/kundliReport";
-import { FileText, Download, Eye, Loader2, Calendar, MapPin, Clock } from "lucide-react";
+import { FileText, Download, Eye, Loader2, Calendar, MapPin, Clock, CheckCircle2 } from "lucide-react";
+
+type ErrorWithResponse = {
+  response?: {
+    data?: {
+      message?: string;
+      error?: string;
+    };
+  };
+  message?: string;
+};
+
+const getApiErrorMessage = (error: unknown, fallback: string) => {
+  const typedError = error as ErrorWithResponse;
+  return typedError.response?.data?.message || typedError.response?.data?.error || typedError.message || fallback;
+};
 
 export default function KundliReportPage() {
   const router = useRouter();
@@ -23,26 +39,29 @@ export default function KundliReportPage() {
   const [selectedKundli, setSelectedKundli] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [reportData, setReportData] = useState<any>(null);
+  const [reportData, setReportData] = useState<KundliReportResponse["reportData"] | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchKundlis();
-  }, []);
+  const selectedKundliData = kundlis.find((kundli) => kundli.id === selectedKundli) || null;
 
-  const fetchKundlis = async () => {
+  const fetchKundlis = useCallback(async () => {
     try {
       setLoading(true);
       const response = await getUserKundlisForReport();
       if (response.success) {
         setKundlis(response.kundlis);
       }
-    } catch (error: any) {
-      showToast(error.response?.data?.message || "Failed to load kundlis", "error");
+    } catch (error: unknown) {
+      showToast(getApiErrorMessage(error, "Failed to load kundlis"), "error");
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    void fetchKundlis();
+  }, [fetchKundlis]);
 
   const handleGenerateReport = async () => {
     if (!selectedKundli) {
@@ -57,37 +76,75 @@ export default function KundliReportPage() {
       if (response.success) {
         setReportData(response.reportData);
         setShowPreview(true);
-        showToast("Report generated successfully!", "success");
+        setKundlis((prev) =>
+          prev.map((kundli) =>
+            kundli.id === selectedKundli
+              ? {
+                  ...kundli,
+                  hasReport: true,
+                  reportGeneratedAt:
+                    response.reportData.generatedAt || kundli.reportGeneratedAt || new Date().toISOString(),
+                }
+              : kundli
+          )
+        );
+        showToast(
+          response.alreadyGenerated
+            ? "Showing your saved report"
+            : "Report generated and saved successfully!",
+          "success"
+        );
       }
-    } catch (error: any) {
-      showToast(error.response?.data?.message || "Failed to generate report", "error");
+    } catch (error: unknown) {
+      showToast(getApiErrorMessage(error, "Failed to generate report"), "error");
     } finally {
       setGenerating(false);
     }
   };
 
-  const handleDownloadPDF = async () => {
-    if (!selectedKundli) return;
-
+  const handleViewGeneratedReport = async (userRequestId: string) => {
     try {
       setLoading(true);
-      const blob = await downloadKundliReportPDF(selectedKundli);
+      const response = await getGeneratedKundliReport(userRequestId);
+
+      if (response.success) {
+        setSelectedKundli(userRequestId);
+        setReportData(response.reportData);
+        setShowPreview(true);
+      }
+    } catch (error: unknown) {
+      showToast(getApiErrorMessage(error, "Failed to fetch generated report"), "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadPDF = async (userRequestId?: string) => {
+    const targetUserRequestId = userRequestId || selectedKundli;
+    if (!targetUserRequestId) return;
+
+    try {
+      setDownloadingId(targetUserRequestId);
+      const blob = await downloadKundliReportPDF(targetUserRequestId);
       
       // Create download link
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Kundli_Report_${new Date().getFullYear()}.pdf`;
+      const targetKundli = kundlis.find((kundli) => kundli.id === targetUserRequestId);
+      const sanitizedName =
+        targetKundli?.fullName?.trim().replace(/\s+/g, "_") || "Kundli";
+      a.download = `Kundli_Report_${sanitizedName}_${new Date().getFullYear()}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
       showToast("PDF downloaded successfully!", "success");
-    } catch (error: any) {
-      showToast(error.response?.data?.message || "Failed to download PDF", "error");
+    } catch (error: unknown) {
+      showToast(getApiErrorMessage(error, "Failed to download PDF"), "error");
     } finally {
-      setLoading(false);
+      setDownloadingId(null);
     }
   };
 
@@ -96,6 +153,17 @@ export default function KundliReportPage() {
       day: "2-digit",
       month: "short",
       year: "numeric",
+    });
+  };
+
+  const formatDateTime = (dateStr: string | null) => {
+    if (!dateStr) return "";
+    return new Date(dateStr).toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -119,7 +187,7 @@ export default function KundliReportPage() {
           </div>
 
           <p className="text-gray-600 mb-6">
-            Select a kundli to generate a comprehensive yearly Vedic astrology report with AI-enhanced insights.
+            Select a kundli to generate a comprehensive yearly Vedic astrology report.
           </p>
 
           {kundlis.length === 0 ? (
@@ -148,9 +216,17 @@ export default function KundliReportPage() {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h3 className="font-semibold text-lg text-gray-900 mb-2">
-                          {kundli.fullName}
-                        </h3>
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-lg text-gray-900">
+                            {kundli.fullName}
+                          </h3>
+                          {kundli.hasReport && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              Report Ready
+                            </span>
+                          )}
+                        </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600">
                           <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4" />
@@ -165,6 +241,33 @@ export default function KundliReportPage() {
                             <span>{kundli.placeOfBirth}</span>
                           </div>
                         </div>
+                        {kundli.hasReport && kundli.reportGeneratedAt && (
+                          <p className="mt-3 text-xs font-medium text-emerald-700">
+                            Generated: {formatDateTime(kundli.reportGeneratedAt)}
+                          </p>
+                        )}
+                        {kundli.hasReport && (
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void handleDownloadPDF(kundli.id);
+                              }}
+                              loading={downloadingId === kundli.id}
+                            >
+                              {downloadingId === kundli.id ? (
+                                "Downloading..."
+                              ) : (
+                                <>
+                                  <Download className="w-4 h-4" />
+                                  Download PDF
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        )}
                       </div>
                       <div
                         className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
@@ -183,25 +286,47 @@ export default function KundliReportPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button
-                  variant="primary"
-                  size="lg"
-                  onClick={handleGenerateReport}
-                  disabled={!selectedKundli || generating}
-                  className="flex-1"
-                >
-                  {generating ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                      Generating Report...
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="w-5 h-5 mr-2" />
-                      Generate Report
-                    </>
-                  )}
-                </Button>
+                {selectedKundliData?.hasReport ? (
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    onClick={() => void handleDownloadPDF(selectedKundliData.id)}
+                    disabled={!selectedKundli || downloadingId === selectedKundliData.id}
+                    className="flex-1"
+                  >
+                    {downloadingId === selectedKundliData.id ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-5 h-5 mr-2" />
+                        Download Saved PDF
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    onClick={handleGenerateReport}
+                    disabled={!selectedKundli || generating}
+                    className="flex-1"
+                  >
+                    {generating ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                        Generating Report...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="w-5 h-5 mr-2" />
+                        Generate & Save Report
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             </>
           )}
@@ -234,7 +359,7 @@ export default function KundliReportPage() {
         {reportData && (
           <>
             {/* User Details */}
-            <div className="bg-gradient-to-r from-primary-50 to-secondary-50 rounded-lg p-6 mb-6">
+            <div className="bg-linear-to-r from-primary-50 to-secondary-50 rounded-lg p-6 mb-6">
               <h3 className="font-semibold text-lg mb-3">
                 Yearly Vedic Astrology Report - {reportData.userDetails.fullName}
               </h3>
@@ -293,14 +418,14 @@ export default function KundliReportPage() {
               <Button
                 variant="primary"
                 size="lg"
-                onClick={handleDownloadPDF}
-                disabled={loading}
+                onClick={() => void handleDownloadPDF()}
+                disabled={!selectedKundli || downloadingId === selectedKundli}
                 className="w-full sm:w-auto"
               >
-                {loading ? (
+                {selectedKundli && downloadingId === selectedKundli ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                    Generating PDF...
+                    Downloading PDF...
                   </>
                 ) : (
                   <>
