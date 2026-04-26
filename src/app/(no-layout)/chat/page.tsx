@@ -12,7 +12,10 @@ import { useRouter } from 'next/navigation';
 import { useSearchParams } from "next/navigation";
 import { getChatSocket } from "@/utils/chatSocket";
 import AgoraCall from "@/components/AgoraCall";
-import type { ChatMessageDto, ChatSessionSummary } from "@/store/api/chat";
+import type {
+  ChatMessageDto,
+  ChatSessionSummary,
+} from "@/store/api/chat";
 import type { CallSession } from "@/store/api/call";
 import {
   endChatSession,
@@ -1862,7 +1865,7 @@ function ChatPage() {
                 />
                 <h2 className="text-3xl font-bold text-gray-900 mb-2">Namaste, {userDisplayName}</h2>
                 <p className="text-gray-600 max-w-sm mx-auto">
-                  Start a conversation with your astrologer. Your previous chats and new messages will appear here.
+                  Start a conversation with your astrologer. Messages from this active chat will appear here.
                 </p>
               </div>
             </div>

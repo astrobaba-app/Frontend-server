@@ -3,6 +3,7 @@
 import { io, Socket } from "socket.io-client";
 
 let socket: Socket | null = null;
+let currentSocketToken: string | null = null;
 
 function getApiBaseUrl() {
   if (typeof window === "undefined") return "";
@@ -40,12 +41,28 @@ function getAuthToken() {
 export function getChatSocket(): Socket | null {
   if (typeof window === "undefined") return null;
 
+  const latestToken = getAuthToken();
+
+  // If auth context changed (user <-> astrologer, relogin, token refresh),
+  // recreate socket so server room binding uses the latest role token.
+  if (socket && currentSocketToken !== latestToken) {
+    socket.disconnect();
+    socket = null;
+    currentSocketToken = null;
+  }
+
   if (socket) {
+    if (!socket.connected) {
+      socket.auth = latestToken ? { token: latestToken } : {};
+      socket.connect();
+    }
     return socket;
   }
 
   const baseUrl = getApiBaseUrl();
   const socketPath = process.env.NEXT_PUBLIC_SOCKET_PATH || "/socket.io";
+
+  currentSocketToken = latestToken;
 
   socket = io(baseUrl, {
     path: socketPath,
@@ -58,10 +75,7 @@ export function getChatSocket(): Socket | null {
     reconnectionDelay: 1000,
     reconnectionAttempts: 10,
     timeout: 20000,
-    auth: (cb) => {
-      const token = getAuthToken();
-      cb(token ? { token } : {});
-    },
+    auth: latestToken ? { token: latestToken } : {},
   });
 
   socket.on("connect", () => {
@@ -83,5 +97,6 @@ export function disconnectChatSocket() {
   if (socket) {
     socket.disconnect();
     socket = null;
+    currentSocketToken = null;
   }
 }

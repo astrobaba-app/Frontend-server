@@ -51,6 +51,48 @@ export interface ChatMessageDto {
   updatedAt: string;
 }
 
+export interface ChatHistoryMessageDto {
+  id: string;
+  historySessionId: string;
+  senderId: string;
+  senderType: "user" | "astrologer";
+  message: string | null;
+  messageType: "text" | "image" | "file";
+  fileUrl: string | null;
+  isDeleted: boolean;
+  replyToMessageId: string | null;
+  originalMessageId: string | null;
+  originalCreatedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatHistorySessionDto {
+  id: string;
+  sourceSessionId: string;
+  userId: string;
+  astrologerId: string;
+  status: "completed" | "cancelled";
+  requestStatus: "pending" | "approved" | "rejected";
+  startTime: string;
+  endTime: string | null;
+  totalMinutes: number;
+  totalCost: string;
+  billedAmount: string;
+  pricePerMinute: string;
+  endReason: string | null;
+  lastMessagePreview: string | null;
+  lastMessageAt: string | null;
+  astrologer?: {
+    id: string;
+    fullName: string;
+    photo: string | null;
+    rating?: number;
+    pricePerMinute?: string;
+  };
+  messages?: ChatHistoryMessageDto[];
+}
+
 interface PaginatedResponse<T> {
   success: boolean;
   sessions?: T[];
@@ -156,4 +198,40 @@ export async function sendChatMessageHttp(
     replyToMessageId: data.replyToMessageId,
   });
   return response.data as { success: boolean; chatMessage: ChatMessageDto };
+}
+
+export async function getUserChatHistory(params?: {
+  page?: number;
+  limit?: number;
+}) {
+  const response = await api.get<{
+    success: boolean;
+    historySessions: ChatHistorySessionDto[];
+    pagination: {
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
+  }>("/chat/history", { params });
+
+  return response.data;
+}
+
+export async function getUserAstrologerChatHistory(
+  astrologerId: string,
+  params?: { page?: number; limit?: number }
+) {
+  const response = await api.get<{
+    success: boolean;
+    historySessions: ChatHistorySessionDto[];
+    pagination: {
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
+  }>(`/chat/history/${astrologerId}`, { params });
+
+  return response.data;
 }

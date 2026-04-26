@@ -21,6 +21,7 @@ const MENU_ITEMS = [
   { icon: ShoppingBag, label: "My Orders", href: "/profile/orders" },
   { icon: LuShoppingCart, label: "My cart", href: "/cart" },
   { icon: Star, label: "My Reviews", href: "/profile/reviews" },
+  { icon: MessageSquare, label: "Chat History", href: "/profile/chat-history" },
   { icon: HelpCircle, label: "Support Tickets", href: "/support" },
   { icon: Settings, label: "Settings", href: "/profile/settings" },
 ];
