@@ -41,7 +41,7 @@ export interface ChatMessageDto {
   senderId: string;
   senderType: "user" | "astrologer";
   message: string | null;
-  messageType: "text" | "image" | "file";
+  messageType: "text" | "image" | "file" | "voice";
   fileUrl: string | null;
   isRead: boolean;
   readAt: string | null;
@@ -57,7 +57,7 @@ export interface ChatHistoryMessageDto {
   senderId: string;
   senderType: "user" | "astrologer";
   message: string | null;
-  messageType: "text" | "image" | "file";
+  messageType: "text" | "image" | "file" | "voice";
   fileUrl: string | null;
   isDeleted: boolean;
   replyToMessageId: string | null;
@@ -178,7 +178,13 @@ export async function getChatMessages(
 
 export async function sendChatMessageHttp(
   sessionId: string,
-  data: { message: string; messageType?: "text" | "image" | "file"; replyToMessageId?: string | null; file?: File }
+  data: {
+    message: string;
+    messageType?: "text" | "image" | "file" | "voice";
+    replyToMessageId?: string | null;
+    file?: File;
+    voiceDurationSec?: number;
+  }
 ) {
   if (data.file) {
     const formData = new FormData();
@@ -186,6 +192,9 @@ export async function sendChatMessageHttp(
     formData.append("messageType", data.messageType || "image");
     if (data.replyToMessageId) {
       formData.append("replyToMessageId", data.replyToMessageId);
+    }
+    if (typeof data.voiceDurationSec === "number") {
+      formData.append("voiceDurationSec", String(data.voiceDurationSec));
     }
     formData.append("file", data.file);
     const response = await api.post(`/chat/${sessionId}/message`, formData);

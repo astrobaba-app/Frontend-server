@@ -178,6 +178,11 @@ export default function AstrologerHistoryDetailPage() {
                               alt="History image"
                               className="max-h-40 rounded-md object-cover"
                             />
+                          ) : message.messageType === "voice" && message.fileUrl ? (
+                            <audio controls preload="metadata" className="w-[260px] max-w-full">
+                              <source src={message.fileUrl} />
+                              Your browser does not support audio playback.
+                            </audio>
                           ) : (
                             <p className="whitespace-pre-wrap wrap-break-word">
                               {message.isDeleted

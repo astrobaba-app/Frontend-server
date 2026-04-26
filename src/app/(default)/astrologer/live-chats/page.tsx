@@ -8,6 +8,8 @@ import {
   FiPaperclip,
   FiSend,
   FiCheck,
+  FiMic,
+  FiStopCircle,
 } from "react-icons/fi";
 import { RxCross2 } from "react-icons/rx";
 import { IoMdArrowBack } from "react-icons/io";
@@ -63,6 +65,14 @@ type MessageGroup = {
   items: ChatMessageDto[];
 };
 
+const MAX_VOICE_NOTE_SECONDS = 120;
+
+function formatVoiceSeconds(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
 function groupMessagesByDate(messages: ChatMessageDto[]): MessageGroup[] {
   const groups: Record<string, MessageGroup> = {};
 
@@ -107,6 +117,11 @@ function LiveChatsPageContent() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [recordedVoiceBlob, setRecordedVoiceBlob] = useState<Blob | null>(null);
+  const [recordedVoiceUrl, setRecordedVoiceUrl] = useState<string | null>(null);
+  const [recordedVoiceDurationSec, setRecordedVoiceDurationSec] = useState(0);
+  const [isVoiceUploading, setIsVoiceUploading] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [incomingCall, setIncomingCall] = useState<CallSession | null>(null);
   const [activeCall, setActiveCall] = useState<CallSession | null>(null);
@@ -129,6 +144,12 @@ function LiveChatsPageContent() {
   );
   const [isMobileAppWebView, setIsMobileAppWebView] = useState(false);
   const typingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const voiceRecordTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const voiceRecorderRef = React.useRef<MediaRecorder | null>(null);
+  const voiceStreamRef = React.useRef<MediaStream | null>(null);
+  const voiceChunksRef = React.useRef<Blob[]>([]);
+  const voiceElapsedRef = React.useRef(0);
+  const voiceDiscardOnStopRef = React.useRef(false);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const messageInputRef = React.useRef<HTMLInputElement | null>(null);
   const chatScrollRef = React.useRef<HTMLDivElement | null>(null);
@@ -615,6 +636,220 @@ function LiveChatsPageContent() {
       }
     };
   }, [selectedSessionId, showToast, chatSessions]);
+
+  const clearVoiceRecordTimer = React.useCallback(() => {
+    if (voiceRecordTimerRef.current) {
+      clearInterval(voiceRecordTimerRef.current);
+      voiceRecordTimerRef.current = null;
+    }
+  }, []);
+
+  const stopVoiceMediaTracks = React.useCallback(() => {
+    if (voiceStreamRef.current) {
+      voiceStreamRef.current.getTracks().forEach((track) => track.stop());
+      voiceStreamRef.current = null;
+    }
+  }, []);
+
+  const resetRecordedVoiceDraft = React.useCallback(() => {
+    if (recordedVoiceUrl) {
+      URL.revokeObjectURL(recordedVoiceUrl);
+    }
+
+    setRecordedVoiceBlob(null);
+    setRecordedVoiceUrl(null);
+    setRecordedVoiceDurationSec(0);
+    voiceChunksRef.current = [];
+    voiceElapsedRef.current = 0;
+  }, [recordedVoiceUrl]);
+
+  const handleStopVoiceRecording = React.useCallback(() => {
+    if (!voiceRecorderRef.current) return;
+    if (voiceRecorderRef.current.state === "inactive") return;
+    voiceRecorderRef.current.stop();
+  }, []);
+
+  const handleStartVoiceRecording = React.useCallback(async () => {
+    if (!selectedSessionId) {
+      showToast("Please select an active chat first", "error");
+      return;
+    }
+
+    if (isVoiceUploading || isUploading) {
+      showToast("Please wait for current upload to finish", "info");
+      return;
+    }
+
+    if (typeof window === "undefined" || !("MediaRecorder" in window)) {
+      showToast("Voice recording is not supported in this browser", "error");
+      return;
+    }
+
+    try {
+      resetRecordedVoiceDraft();
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      voiceStreamRef.current = stream;
+
+      const mimeCandidates = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/ogg;codecs=opus",
+        "audio/mp4",
+      ];
+
+      const supportedMime = mimeCandidates.find((type) => MediaRecorder.isTypeSupported(type));
+      const recorder = supportedMime
+        ? new MediaRecorder(stream, { mimeType: supportedMime })
+        : new MediaRecorder(stream);
+
+      voiceRecorderRef.current = recorder;
+      voiceChunksRef.current = [];
+      voiceElapsedRef.current = 0;
+      voiceDiscardOnStopRef.current = false;
+      setRecordedVoiceDurationSec(0);
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          voiceChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        clearVoiceRecordTimer();
+        stopVoiceMediaTracks();
+        setIsRecordingVoice(false);
+
+        if (voiceDiscardOnStopRef.current) {
+          voiceDiscardOnStopRef.current = false;
+          voiceRecorderRef.current = null;
+          voiceChunksRef.current = [];
+          setRecordedVoiceDurationSec(0);
+          return;
+        }
+
+        const chunks = voiceChunksRef.current;
+        if (chunks.length === 0) {
+          showToast("Voice note recording was empty", "error");
+          voiceRecorderRef.current = null;
+          return;
+        }
+
+        const voiceBlob = new Blob(chunks, {
+          type: recorder.mimeType || "audio/webm",
+        });
+
+        const elapsed = Math.max(1, Math.min(MAX_VOICE_NOTE_SECONDS, voiceElapsedRef.current));
+        setRecordedVoiceBlob(voiceBlob);
+        setRecordedVoiceDurationSec(elapsed);
+        setRecordedVoiceUrl(URL.createObjectURL(voiceBlob));
+        voiceRecorderRef.current = null;
+        voiceChunksRef.current = [];
+      };
+
+      recorder.start(250);
+      setIsRecordingVoice(true);
+
+      voiceRecordTimerRef.current = setInterval(() => {
+        const next = voiceElapsedRef.current + 1;
+        voiceElapsedRef.current = next;
+        setRecordedVoiceDurationSec(next);
+
+        if (next >= MAX_VOICE_NOTE_SECONDS) {
+          handleStopVoiceRecording();
+        }
+      }, 1000);
+    } catch (error) {
+      console.error("Failed to start voice recording", error);
+      clearVoiceRecordTimer();
+      stopVoiceMediaTracks();
+      setIsRecordingVoice(false);
+      showToast("Unable to access microphone", "error");
+    }
+  }, [
+    clearVoiceRecordTimer,
+    handleStopVoiceRecording,
+    isUploading,
+    isVoiceUploading,
+    resetRecordedVoiceDraft,
+    selectedSessionId,
+    showToast,
+    stopVoiceMediaTracks,
+  ]);
+
+  const handleCancelVoiceNote = React.useCallback(() => {
+    if (isRecordingVoice) {
+      voiceDiscardOnStopRef.current = true;
+      handleStopVoiceRecording();
+      return;
+    }
+
+    resetRecordedVoiceDraft();
+  }, [handleStopVoiceRecording, isRecordingVoice, resetRecordedVoiceDraft]);
+
+  const handleSendVoiceNote = React.useCallback(async () => {
+    if (!recordedVoiceBlob || !selectedSessionId) return;
+
+    try {
+      shouldStickToBottomRef.current = true;
+      setIsVoiceUploading(true);
+
+      const mime = recordedVoiceBlob.type || "audio/webm";
+      let extension = "webm";
+      if (mime.includes("ogg")) extension = "ogg";
+      if (mime.includes("mp4")) extension = "mp4";
+      if (mime.includes("mpeg") || mime.includes("mp3")) extension = "mp3";
+      if (mime.includes("wav")) extension = "wav";
+
+      const file = new File(
+        [recordedVoiceBlob],
+        `voice-note-${Date.now()}.${extension}`,
+        { type: mime }
+      );
+
+      const response = await sendChatMessageHttp(selectedSessionId, {
+        message: "[Voice note]",
+        messageType: "voice",
+        file,
+        replyToMessageId: replyTo?.id,
+        voiceDurationSec: Math.max(1, Math.min(MAX_VOICE_NOTE_SECONDS, recordedVoiceDurationSec)),
+      });
+
+      if (response?.success && response.chatMessage) {
+        setMessages((prev) => {
+          if (prev.some((message) => message.id === response.chatMessage.id)) {
+            return prev;
+          }
+          return [...prev, response.chatMessage as ChatMessageDto];
+        });
+      }
+
+      setReplyTo(null);
+      resetRecordedVoiceDraft();
+    } catch (error) {
+      console.error("Failed to send voice note", error);
+      showToast("Failed to send voice note. Please try again.", "error");
+    } finally {
+      setIsVoiceUploading(false);
+    }
+  }, [
+    recordedVoiceBlob,
+    recordedVoiceDurationSec,
+    replyTo?.id,
+    resetRecordedVoiceDraft,
+    selectedSessionId,
+    showToast,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      clearVoiceRecordTimer();
+      stopVoiceMediaTracks();
+      if (recordedVoiceUrl) {
+        URL.revokeObjectURL(recordedVoiceUrl);
+      }
+    };
+  }, [clearVoiceRecordTimer, recordedVoiceUrl, stopVoiceMediaTracks]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -1181,6 +1416,8 @@ function LiveChatsPageContent() {
                                 <span className="truncate block max-w-[220px]">
                                   {repliedTo.messageType === "image"
                                     ? "[Image]"
+                                    : repliedTo.messageType === "voice"
+                                    ? "[Voice note]"
                                     : repliedTo.message || "(message)"}
                                 </span>
                               </div>
@@ -1200,6 +1437,14 @@ function LiveChatsPageContent() {
                                     "/images/image-error.png";
                                 }}
                               />
+                            ) : message.messageType === "voice" &&
+                              message.fileUrl ? (
+                              <div className="py-1">
+                                <audio controls preload="metadata" className="w-[260px] max-w-full">
+                                  <source src={message.fileUrl} />
+                                  Your browser does not support audio playback.
+                                </audio>
+                              </div>
                             ) : (
                               <p className="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">
                                 {message.isDeleted
@@ -1336,6 +1581,54 @@ function LiveChatsPageContent() {
                   </div>
                 </div>
               )}
+
+              {(isRecordingVoice || recordedVoiceUrl) && (
+                <div className="mb-3 bg-white border border-gray-200 rounded-lg p-3 shadow-lg">
+                  <div className="flex justify-between items-center mb-2">
+                    <p className="text-sm font-semibold text-gray-700">
+                      {isRecordingVoice
+                        ? `Recording voice note ${formatVoiceSeconds(recordedVoiceDurationSec)} / 02:00`
+                        : "Voice note ready"}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleCancelVoiceNote}
+                      className="text-gray-500 hover:text-gray-700"
+                      aria-label="Cancel voice note"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {recordedVoiceUrl && !isRecordingVoice && (
+                    <audio controls preload="metadata" className="w-full">
+                      <source src={recordedVoiceUrl} />
+                      Your browser does not support audio playback.
+                    </audio>
+                  )}
+
+                  <div className="flex gap-2 mt-3">
+                    {isRecordingVoice ? (
+                      <button
+                        type="button"
+                        onClick={handleStopVoiceRecording}
+                        className="flex-1 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium"
+                      >
+                        Stop Recording
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSendVoiceNote}
+                        disabled={!recordedVoiceBlob || isVoiceUploading}
+                        className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-4 py-2 rounded-lg font-medium disabled:opacity-50"
+                      >
+                        {isVoiceUploading ? "Uploading voice note..." : "Send Voice Note"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
               {/* Reply Preview */}{" "}
               {replyTo && (
                 <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-full max-w-4xl px-3">
@@ -1379,10 +1672,25 @@ function LiveChatsPageContent() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-3 hover:bg-gray-100 rounded-full transition-colors shrink-0"
+                  disabled={isRecordingVoice || isVoiceUploading}
+                  className="p-3 hover:bg-gray-100 rounded-full transition-colors shrink-0 disabled:opacity-50"
                   title="Attach file"
                 >
                   <FiPaperclip className="w-5 h-5 text-gray-600" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={isRecordingVoice ? handleStopVoiceRecording : handleStartVoiceRecording}
+                  disabled={isVoiceUploading || isUploading || !selectedSessionId}
+                  className="p-3 hover:bg-gray-100 rounded-full transition-colors shrink-0 disabled:opacity-50"
+                  title={isRecordingVoice ? "Stop recording" : "Record voice note"}
+                >
+                  {isRecordingVoice ? (
+                    <FiStopCircle className="w-5 h-5 text-red-500" />
+                  ) : (
+                    <FiMic className="w-5 h-5 text-gray-600" />
+                  )}
                 </button>
 
                 {/* Message Input with Send Button Inside */}
@@ -1404,7 +1712,7 @@ function LiveChatsPageContent() {
                   {/* Send Button Inside Input */}
                   <button
                     type="submit"
-                    disabled={!messageInput.trim() || isSending}
+                    disabled={!messageInput.trim() || isSending || isUploading || isVoiceUploading}
                     onMouseDown={(event) => {
                       event.preventDefault();
                     }}

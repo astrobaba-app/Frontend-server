@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect, useMemo, useCallback, Suspense } from 'react';
-import { Send, ArrowLeft, Phone, ChevronRight, X, MoreVertical, Video, Clock, AlertCircle, Wallet as WalletIcon } from 'lucide-react';
+import { Send, ArrowLeft, Phone, ChevronRight, X, MoreVertical, Video, Clock, AlertCircle, Wallet as WalletIcon, Mic, Square } from 'lucide-react';
 import { IoChatbubblesSharp } from "react-icons/io5";
 import Image from 'next/image';
 import {  FiPaperclip, FiCheck } from 'react-icons/fi';
@@ -70,6 +70,13 @@ const MESSAGE_PAGE_SIZE = 50;
 const MESSAGE_CACHE_TTL_MS = 30_000;
 const LOAD_OLDER_SCROLL_THRESHOLD = 100;
 const STICK_TO_BOTTOM_THRESHOLD = 48;
+const MAX_VOICE_NOTE_SECONDS = 120;
+
+function formatVoiceSeconds(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
 
 function groupMessagesByDate(messages: ChatMessageDto[]): MessageGroup[] {
   const groups: Record<string, MessageGroup> = {};
@@ -127,9 +134,20 @@ function ChatPage() {
   const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
   const [isMobileAppWebView, setIsMobileAppWebView] = useState(false);
   const [visualViewportHeight, setVisualViewportHeight] = useState<number | null>(null);
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [recordedVoiceBlob, setRecordedVoiceBlob] = useState<Blob | null>(null);
+  const [recordedVoiceUrl, setRecordedVoiceUrl] = useState<string | null>(null);
+  const [recordedVoiceDurationSec, setRecordedVoiceDurationSec] = useState(0);
+  const [isVoiceUploading, setIsVoiceUploading] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const astrologerTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const inviteTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const voiceRecordTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const voiceRecorderRef = useRef<MediaRecorder | null>(null);
+  const voiceStreamRef = useRef<MediaStream | null>(null);
+  const voiceChunksRef = useRef<Blob[]>([]);
+  const voiceElapsedRef = useRef(0);
+  const voiceDiscardOnStopRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -147,9 +165,234 @@ function ChatPage() {
   >(null);
   const shouldStickToBottomRef = useRef(true);
 
+  const clearVoiceRecordTimer = useCallback(() => {
+    if (voiceRecordTimerRef.current) {
+      clearInterval(voiceRecordTimerRef.current);
+      voiceRecordTimerRef.current = null;
+    }
+  }, []);
+
+  const stopVoiceMediaTracks = useCallback(() => {
+    if (voiceStreamRef.current) {
+      voiceStreamRef.current.getTracks().forEach((track) => track.stop());
+      voiceStreamRef.current = null;
+    }
+  }, []);
+
+  const resetRecordedVoiceDraft = useCallback(() => {
+    if (recordedVoiceUrl) {
+      URL.revokeObjectURL(recordedVoiceUrl);
+    }
+    setRecordedVoiceBlob(null);
+    setRecordedVoiceUrl(null);
+    setRecordedVoiceDurationSec(0);
+    voiceChunksRef.current = [];
+    voiceElapsedRef.current = 0;
+  }, [recordedVoiceUrl]);
+
+  const handleStopVoiceRecording = useCallback(() => {
+    if (!voiceRecorderRef.current) return;
+    if (voiceRecorderRef.current.state === "inactive") return;
+    voiceRecorderRef.current.stop();
+  }, []);
+
+  const handleStartVoiceRecording = useCallback(async () => {
+    if (!isChatSessionActiveRef.current) {
+      if (isWaitingForApprovalRef.current) {
+        showToast("Please wait for astrologer to accept your request", "info");
+      } else {
+        showToast("Please start chat session first", "error");
+      }
+      return;
+    }
+
+    if (!selectedSessionIdRef.current) {
+      showToast("Please select an active chat first", "error");
+      return;
+    }
+
+    if (isVoiceUploading || isUploading) {
+      showToast("Please wait for current upload to finish", "info");
+      return;
+    }
+
+    if (typeof window === "undefined" || !("MediaRecorder" in window)) {
+      showToast("Voice recording is not supported in this browser", "error");
+      return;
+    }
+
+    try {
+      resetRecordedVoiceDraft();
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      voiceStreamRef.current = stream;
+
+      const mimeCandidates = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/ogg;codecs=opus",
+        "audio/mp4",
+      ];
+
+      const supportedMime = mimeCandidates.find((type) => MediaRecorder.isTypeSupported(type));
+      const recorder = supportedMime
+        ? new MediaRecorder(stream, { mimeType: supportedMime })
+        : new MediaRecorder(stream);
+
+      voiceRecorderRef.current = recorder;
+      voiceChunksRef.current = [];
+      voiceElapsedRef.current = 0;
+      voiceDiscardOnStopRef.current = false;
+      setRecordedVoiceDurationSec(0);
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          voiceChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        clearVoiceRecordTimer();
+        stopVoiceMediaTracks();
+        setIsRecordingVoice(false);
+
+        if (voiceDiscardOnStopRef.current) {
+          voiceDiscardOnStopRef.current = false;
+          voiceRecorderRef.current = null;
+          voiceChunksRef.current = [];
+          setRecordedVoiceDurationSec(0);
+          return;
+        }
+
+        const chunks = voiceChunksRef.current;
+        if (chunks.length === 0) {
+          showToast("Voice note recording was empty", "error");
+          voiceRecorderRef.current = null;
+          return;
+        }
+
+        const voiceBlob = new Blob(chunks, {
+          type: recorder.mimeType || "audio/webm",
+        });
+
+        const elapsed = Math.max(1, Math.min(MAX_VOICE_NOTE_SECONDS, voiceElapsedRef.current));
+        setRecordedVoiceBlob(voiceBlob);
+        setRecordedVoiceDurationSec(elapsed);
+        setRecordedVoiceUrl(URL.createObjectURL(voiceBlob));
+        voiceRecorderRef.current = null;
+        voiceChunksRef.current = [];
+      };
+
+      recorder.start(250);
+      setIsRecordingVoice(true);
+
+      voiceRecordTimerRef.current = setInterval(() => {
+        const next = voiceElapsedRef.current + 1;
+        voiceElapsedRef.current = next;
+        setRecordedVoiceDurationSec(next);
+
+        if (next >= MAX_VOICE_NOTE_SECONDS) {
+          handleStopVoiceRecording();
+        }
+      }, 1000);
+    } catch (error) {
+      console.error("Failed to start voice recording", error);
+      clearVoiceRecordTimer();
+      stopVoiceMediaTracks();
+      setIsRecordingVoice(false);
+      showToast("Unable to access microphone", "error");
+    }
+  }, [
+    clearVoiceRecordTimer,
+    handleStopVoiceRecording,
+    isUploading,
+    isVoiceUploading,
+    resetRecordedVoiceDraft,
+    showToast,
+    stopVoiceMediaTracks,
+  ]);
+
+  const handleCancelVoiceNote = useCallback(() => {
+    if (isRecordingVoice) {
+      voiceDiscardOnStopRef.current = true;
+      handleStopVoiceRecording();
+      return;
+    }
+    resetRecordedVoiceDraft();
+  }, [handleStopVoiceRecording, isRecordingVoice, resetRecordedVoiceDraft]);
+
+  const handleSendVoiceNote = useCallback(async () => {
+    if (!recordedVoiceBlob || !selectedSessionIdRef.current) return;
+
+    if (!isChatSessionActiveRef.current) {
+      showToast("Please start chat session first", "error");
+      return;
+    }
+
+    try {
+      shouldStickToBottomRef.current = true;
+      setIsVoiceUploading(true);
+
+      const mime = recordedVoiceBlob.type || "audio/webm";
+      let extension = "webm";
+      if (mime.includes("ogg")) extension = "ogg";
+      if (mime.includes("mp4")) extension = "mp4";
+      if (mime.includes("mpeg") || mime.includes("mp3")) extension = "mp3";
+      if (mime.includes("wav")) extension = "wav";
+
+      const file = new File(
+        [recordedVoiceBlob],
+        `voice-note-${Date.now()}.${extension}`,
+        { type: mime }
+      );
+
+      const response = await sendChatMessageHttp(selectedSessionIdRef.current, {
+        message: "[Voice note]",
+        messageType: "voice",
+        file,
+        replyToMessageId: replyTo?.id,
+        voiceDurationSec: Math.max(1, Math.min(MAX_VOICE_NOTE_SECONDS, recordedVoiceDurationSec)),
+      });
+
+      if (response?.success && response.chatMessage) {
+        setMessages((prev) => {
+          if (prev.some((message) => message.id === response.chatMessage.id)) {
+            return prev;
+          }
+
+          return [...prev, response.chatMessage as ChatMessageDto];
+        });
+      }
+
+      setReplyTo(null);
+      resetRecordedVoiceDraft();
+    } catch (error) {
+      console.error("Failed to send voice note", error);
+      showToast("Failed to send voice note. Please try again.", "error");
+    } finally {
+      setIsVoiceUploading(false);
+    }
+  }, [
+    recordedVoiceBlob,
+    recordedVoiceDurationSec,
+    replyTo?.id,
+    resetRecordedVoiceDraft,
+    showToast,
+  ]);
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    return () => {
+      clearVoiceRecordTimer();
+      stopVoiceMediaTracks();
+      if (recordedVoiceUrl) {
+        URL.revokeObjectURL(recordedVoiceUrl);
+      }
+    };
+  }, [clearVoiceRecordTimer, recordedVoiceUrl, stopVoiceMediaTracks]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1916,7 +2159,11 @@ function ChatPage() {
                                 Replying to {repliedTo.senderType === "user" ? "You" : astrologerInfo?.name || "Astrologer"}
                               </span>
                               <span className="truncate block max-w-[180px]">
-                                {repliedTo.messageType === "image" ? "[Image]" : (repliedTo.message || "(message)")}
+                                {repliedTo.messageType === "image"
+                                  ? "[Image]"
+                                  : repliedTo.messageType === "voice"
+                                  ? "[Voice note]"
+                                  : (repliedTo.message || "(message)")}
                               </span>
                             </div>
                           )}
@@ -1931,6 +2178,13 @@ function ChatPage() {
                                 e.currentTarget.src = "/images/image-error.png";
                               }}
                             />
+                          ) : message.messageType === "voice" && message.fileUrl ? (
+                            <div className="py-1">
+                              <audio controls preload="metadata" className="w-[260px] max-w-full">
+                                <source src={message.fileUrl} />
+                                Your browser does not support audio playback.
+                              </audio>
+                            </div>
                           ) : (
                             <p className="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">
                               {message.isDeleted ? "This message was deleted" : message.message}
@@ -2061,6 +2315,56 @@ function ChatPage() {
               </div>
             )}
 
+            {(isRecordingVoice || recordedVoiceUrl) && (
+              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-full max-w-4xl px-3">
+                <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <p className="text-sm font-semibold text-gray-700">
+                      {isRecordingVoice
+                        ? `Recording voice note ${formatVoiceSeconds(recordedVoiceDurationSec)} / 02:00`
+                        : "Voice note ready"}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleCancelVoiceNote}
+                      className="text-gray-500 hover:text-gray-700"
+                      aria-label="Cancel voice note"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {recordedVoiceUrl && !isRecordingVoice && (
+                    <audio controls preload="metadata" className="w-full">
+                      <source src={recordedVoiceUrl} />
+                      Your browser does not support audio playback.
+                    </audio>
+                  )}
+
+                  <div className="flex gap-2 mt-3">
+                    {isRecordingVoice ? (
+                      <button
+                        type="button"
+                        onClick={handleStopVoiceRecording}
+                        className="flex-1 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium"
+                      >
+                        Stop Recording
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSendVoiceNote}
+                        disabled={!recordedVoiceBlob || isVoiceUploading}
+                        className="flex-1 bg-[#F0DF20] hover:bg-[#f6e95d] text-gray-900 px-4 py-2 rounded-lg font-medium disabled:opacity-50"
+                      >
+                        {isVoiceUploading ? "Uploading voice note..." : "Send Voice Note"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {replyTo && (
               <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-full max-w-4xl px-3">
                 <div className="bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-xs flex justify-between items-start">
@@ -2086,10 +2390,25 @@ function ChatPage() {
             <button
               type="button"
               onClick={handleAttachClick}
+              disabled={isRecordingVoice || isVoiceUploading}
               className="p-3 rounded-full hover:bg-gray-100 transition-colors shrink-0"
               aria-label="Attach image"
             >
               <FiPaperclip className="w-5 h-5 text-gray-600" />
+            </button>
+
+            <button
+              type="button"
+              onClick={isRecordingVoice ? handleStopVoiceRecording : handleStartVoiceRecording}
+              disabled={isVoiceUploading || isUploading || !isChatSessionActive}
+              className="p-3 rounded-full hover:bg-gray-100 transition-colors shrink-0 disabled:opacity-50"
+              aria-label={isRecordingVoice ? "Stop recording" : "Record voice note"}
+            >
+              {isRecordingVoice ? (
+                <Square className="w-5 h-5 text-red-500" />
+              ) : (
+                <Mic className="w-5 h-5 text-gray-600" />
+              )}
             </button>
 
             <input
@@ -2125,7 +2444,7 @@ function ChatPage() {
               {isChatSessionActive ? (
                 <button
                   type="submit"
-                  disabled={!inputMessage.trim()}
+                  disabled={!inputMessage.trim() || isVoiceUploading || isUploading}
                   onMouseDown={(event) => {
                     event.preventDefault();
                   }}
