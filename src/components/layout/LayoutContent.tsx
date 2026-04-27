@@ -63,6 +63,40 @@ export default function LayoutContent({
     });
   }, [pathname]);
 
+  useEffect(() => {
+    const commonProperties = {
+      page_path: pathname,
+      page_url: typeof window !== "undefined" ? window.location.href : "",
+      page_title: typeof document !== "undefined" ? document.title : "",
+    };
+
+    if (pathname === "/aichat") {
+      trackMixpanelEvent("chat page load", {
+        ...commonProperties,
+        chat_type: "ai_astrologer",
+        actor: "user",
+      });
+      return;
+    }
+
+    if (pathname === "/chat") {
+      trackMixpanelEvent("chat page load", {
+        ...commonProperties,
+        chat_type: "human_astrologer",
+        actor: "user",
+      });
+      return;
+    }
+
+    if (pathname === "/astrologer/live-chats") {
+      trackMixpanelEvent("chat page load", {
+        ...commonProperties,
+        chat_type: "human_astrologer",
+        actor: "astrologer",
+      });
+    }
+  }, [pathname]);
+
   // Track Meta Pixel PageView on every route change (SPA navigation)
   useEffect(() => {
     if (typeof window !== "undefined" && typeof (window as any).fbq === "function") {

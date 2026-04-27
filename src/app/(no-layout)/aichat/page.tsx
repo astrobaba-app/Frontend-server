@@ -149,7 +149,7 @@ const AUTO_FOLLOW_UP_DELAY_LONG_MIN_MS = 4000;
 const AUTO_FOLLOW_UP_DELAY_LONG_MAX_MS = 5000;
 const AUTO_FOLLOW_UP_ESTIMATED_CHARS_PER_LINE = 85;
 const AUTO_FOLLOW_UP_RANDOM_COUNT_MIN = 1;
-const AUTO_FOLLOW_UP_RANDOM_COUNT_MAX = 4;
+const AUTO_FOLLOW_UP_RANDOM_COUNT_MAX = 2;
 
 const randomDelayBetween = (minMs: number, maxMs: number) => {
   if (maxMs <= minMs) return minMs;
