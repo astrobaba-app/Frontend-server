@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getProfile } from '@/store/api/auth/profile';
 import { logoutUser } from '@/store/api/auth/login';
 import { UserProfile } from '@/store/api/auth/login';
+import { identifyMixpanelUser, resetMixpanelUser } from '@/utils/mixpanel';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -26,6 +27,23 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    identifyMixpanelUser(String(user.id), {
+      $name: user.fullName || undefined,
+      $email: user.email || undefined,
+      $phone: user.mobile || undefined,
+      user_id: String(user.id),
+      city: user.city || undefined,
+      state: user.state || undefined,
+      country: user.country || undefined,
+      gender: user.gender || undefined,
+    });
+  }, [user]);
 
   // On mount, check if middlewareToken exists in localStorage or cookies
   useEffect(() => {
@@ -90,6 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     setUser(null);
+    resetMixpanelUser();
     if (typeof window !== 'undefined') {
       // Clear localStorage
       localStorage.removeItem('token_middleware');

@@ -8,6 +8,11 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { LiveStreamProvider } from "@/contexts/LiveStreamContext";
 import { RouteProtection } from "@/components/RouteProtection";
+import {
+  identifyAnonymousMixpanelUser,
+  initializeMixpanel,
+  trackMixpanelEvent,
+} from "@/utils/mixpanel";
 
 export default function LayoutContent({
   children,
@@ -27,6 +32,35 @@ export default function LayoutContent({
     const isInsideIframe = window.self !== window.top;
 
     setIsEmbed(hasEmbedParam || isInsideIframe);
+  }, [pathname]);
+
+  useEffect(() => {
+    initializeMixpanel();
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const hasUserToken = Boolean(localStorage.getItem("token_middleware"));
+    const hasAstrologerToken = Boolean(localStorage.getItem("token_astrologer"));
+    const alreadyProfiled = sessionStorage.getItem("mixpanel_anon_profiled") === "1";
+
+    if (!hasUserToken && !hasAstrologerToken && !alreadyProfiled) {
+      identifyAnonymousMixpanelUser();
+      sessionStorage.setItem("mixpanel_anon_profiled", "1");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (pathname !== "/") {
+      return;
+    }
+
+    trackMixpanelEvent("homepage load", {
+      page_path: pathname,
+      page_url: typeof window !== "undefined" ? window.location.href : "",
+      page_title: typeof document !== "undefined" ? document.title : "",
+    });
   }, [pathname]);
 
   // Track Meta Pixel PageView on every route change (SPA navigation)
